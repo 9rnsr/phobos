@@ -158,7 +158,7 @@ STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint		\
         bitmanip compiler complex concurrency container contracts conv	\
         cpuid cstream ctype date datetime datebase dateparse demangle	\
         encoding exception file format functional getopt gregorian		\
-        json loader math mathspecial md5 metastrings mmfile numeric		\
+        json loader math mathspecial md5 meta metastrings mmfile numeric	\
         outbuffer parallelism path perf process random range regex		\
         regexp signals socket socketstream stdint stdio stdiobase		\
         stream string syserror system traits typecons typetuple uni		\
@@ -184,7 +184,8 @@ std/c/, fenv locale math process stdarg stddef stdio stdlib string	\
 time wcharh)
 EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
 	std/internal/math/, biguintcore biguintnoasm biguintx86	\
-	gammafunction errorfunction)
+	gammafunction errorfunction)							\
+	$(addprefix std/internal/meta/, meta)
 
 # Aggregate all D modules relevant to this build
 D_MODULES = crc32 $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES)
@@ -306,6 +307,9 @@ $(DOC_OUTPUT_DIR)/. :
 	mkdir -p $@
 
 $(DOC_OUTPUT_DIR)/std_%.html : std/%.d $(STDDOC)
+	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
+
+$(DOC_OUTPUT_DIR)/std_meta.html : std/internal/meta/meta.d $(STDDOC)
 	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_c_%.html : std/c/%.d $(STDDOC)
