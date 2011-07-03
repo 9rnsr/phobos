@@ -110,6 +110,7 @@ SRCS_12 = std\array.d std\functional.d std\range.d \
 
 SRCS_2 = std\math.d std\complex.d std\numeric.d std\bigint.d \
     std\dateparse.d std\date.d std\datetime.d \
+    std\meta.d std\internal\meta\meta.d \
     std\metastrings.d std\bitmanip.d std\typecons.d \
     std\uni.d std\base64.d std\md5.d std\ctype.d std\ascii.d \
     std\demangle.d std\uri.d std\mmfile.d std\getopt.d \
@@ -206,6 +207,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_math.html \
 	$(DOC)\std_mathspecial.html \
 	$(DOC)\std_md5.html \
+	$(DOC)\std_meta.html \
 	$(DOC)\std_metastrings.html \
 	$(DOC)\std_mmfile.html \
 	$(DOC)\std_numeric.html \
@@ -266,7 +268,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\stdio.d std\perf.d std\uni.d \
 	std\cstream.d std\demangle.d \
 	std\signals.d std\cpuid.d std\typetuple.d std\traits.d std\bind.d \
-	std\metastrings.d std\contracts.d std\getopt.d \
+	std\meta.d std\metastrings.d std\contracts.d std\getopt.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d std\mathspecial.d \
 	std\functional.d std\algorithm.d std\array.d std\typecons.d \
 	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
@@ -297,6 +299,8 @@ SRC_STD_C_FREEBSD= std\c\freebsd\socket.d
 SRC_STD_INTERNAL_MATH= std\internal\math\biguintcore.d \
 	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
     std\internal\math\gammafunction.d std\internal\math\errorfunction.d
+
+SRC_STD_INTERNAL_META= std\internal\meta\meta.d
 
 
 SRC_ETC=
@@ -466,6 +470,12 @@ mathspecial.obj : std\mathspecial.d
 
 md5.obj : std\md5.d
 	$(DMD) -c $(DFLAGS) -inline std\md5.d
+
+meta.obj : std\meta.d
+	$(DMD) -c $(DFLAGS) -inline std\meta.d
+
+internal_meta.obj : std\internal\meta\meta.d
+	$(DMD) -c $(DFLAGS) std\internal\meta\meta.d
 
 metastrings.obj : std\metastrings.d
 	$(DMD) -c $(DFLAGS) -inline std\metastrings.d
@@ -769,6 +779,9 @@ $(DOC)\std_mathspecial.html : $(STDDOC) std\mathspecial.d
 $(DOC)\std_md5.html : $(STDDOC) std\md5.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_md5.html $(STDDOC) std\md5.d
 
+$(DOC)\std_meta.html : $(STDDOC) std\internal\meta\meta.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_meta.html $(STDDOC) std\internal\meta\meta.d
+
 $(DOC)\std_metastrings.html : $(STDDOC) std\metastrings.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_metastrings.html $(STDDOC) std\metastrings.d
 
@@ -925,6 +938,7 @@ zip : win32.mak posix.mak $(STDDOC) $(SRC) \
 	zip32 -u phobos $(SRC_STD_C_OSX)
 	zip32 -u phobos $(SRC_STD_C_FREEBSD)
 	zip32 -u phobos $(SRC_STD_INTERNAL_MATH)
+	zip32 -u phobos $(SRC_STD_INTERNAL_META)
 	zip32 -u phobos $(SRC_ETC) $(SRC_ETC_C)
 	zip32 -u phobos $(SRC_ZLIB)
 	zip32 -u phobos $(SRC_STD_NET)
@@ -956,6 +970,7 @@ install:
 	$(CP) $(SRC_STD_C_OSX) $(DIR)\src\phobos\std\c\osx
 	$(CP) $(SRC_STD_C_FREEBSD) $(DIR)\src\phobos\std\c\freebsd
 	$(CP) $(SRC_STD_INTERNAL_MATH) $(DIR)\src\phobos\std\internal\math
+	$(CP) $(SRC_STD_INTERNAL_META) $(DIR)\src\phobos\std\internal\meta
 	#$(CP) $(SRC_ETC) $(DIR)\src\phobos\etc
 	$(CP) $(SRC_ETC_C) $(DIR)\src\phobos\etc\c
 	$(CP) $(SRC_ZLIB) $(DIR)\src\phobos\etc\c\zlib
@@ -973,6 +988,7 @@ svn:
 	$(CP) $(SRC_STD_C_OSX) $(SVN)\std\c\osx
 	$(CP) $(SRC_STD_C_FREEBSD) $(SVN)\std\c\freebsd
 	$(CP) $(SRC_STD_INTERNAL_MATH) $(SVN)\std\internal\math
+	$(CP) $(SRC_STD_INTERNAL_META) $(SVN)\std\internal\meta
 	#$(CP) $(SRC_ETC) $(SVN)\etc
 	$(CP) $(SRC_ETC_C) $(SVN)\etc\c
 	$(CP) $(SRC_ZLIB) $(SVN)\etc\c\zlib
