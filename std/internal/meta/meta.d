@@ -2301,8 +2301,8 @@ Example:
 alias meta.rotate!(+1, int, double, string) rotL;
 alias meta.rotate!(-1, int, double, string) rotR;
 
-static assert(is(rotL == TypeSeq!(double, string, int));
-static assert(is(rotR == TypeSeq!(string, int, double));
+static assert(is(rotL == TypeSeq!(double, string, int)));
+static assert(is(rotR == TypeSeq!(string, int, double)));
 ----------
  */
 template rotate(sizediff_t n, seq...)
