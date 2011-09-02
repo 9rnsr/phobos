@@ -2,8 +2,8 @@
 // Regular Expressions.
 
 /**
- * $(RED This module has been deprecated. Use $(LINK2 std_regex.html,
- * std.regex) instead.)
+ * $(RED Deprecated. It will be removed in February 2012.
+ *       Please use $(LINK2 std_regex.html, std.regex) instead.)
  *
  * $(LINK2 http://www.digitalmars.com/ctg/regular.html, Regular
  * expressions) are a powerful method of string pattern matching.  The
@@ -124,6 +124,9 @@
 
 module std.regexp;
 
+pragma(msg, "Notice: As of Phobos 2.055, std.regexp has been deprecated. " ~
+            "It will be removed in February 2012. Please use std.regex instead.");
+
 //debug = regexp;       // uncomment to turn on debugging printf's
 
 private
@@ -142,6 +145,8 @@ private
     import std.array;
     import std.traits;
 }
+
+deprecated:
 
 /** Regular expression to extract an _email address.
  * References:
