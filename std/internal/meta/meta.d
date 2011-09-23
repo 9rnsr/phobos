@@ -5,18 +5,6 @@ Auxiliary and algorithm templates for template metaprogramming on compile-time
 entities.  Compile-time entities include types, compile-time values, symbols,
 and sequences of those entities.
 
-All members in this module are defined in the $(D meta) namespace and cannot
-be used without the $(D meta) qualifier:
-----------
-import std.meta;
-
-// Error! reverse is not defined. Use meta.reverse instead.
-alias reverse!(double, "x", double, "y") Rev;
-
-// Okay, qualified with meta.
-alias meta.reverse!(double, "x", double, "y") Rev;
-----------
-
 Macros:
   WIKI = Phobos/StdMeta
  TITLE = std.meta
@@ -25,7 +13,7 @@ Source:      $(PHOBOSSRC std/_meta.d) (which is just a shell around
              $(PHOBOSSRC std/internal/_meta/_meta.d))
 Copyright:   Copyright Shin Fujishiro 2010.
 License:     $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
-Authors:     Shin Fujishiro
+Authors:     Shin Fujishiro, and Kenji Hara
  */
 module std.internal.meta.meta;
 
@@ -36,7 +24,7 @@ module std.internal.meta.meta;
 
 
 // Introduce the symbols visible to user for unaryT etc.
-import std.meta;
+import meta = std.meta;
 
 
 //----------------------------------------------------------------------------//
@@ -886,7 +874,7 @@ unittest
     alias unaryT!q{ A* } Pointify;
     static assert(increment!10 == 11);
     static assert(is(Pointify!int == int*));
-    
+
     // nested
     alias unaryT!q{ apply!(unaryT!q{ a*2 }, a) * 2 } quadruple;
     static assert(quadruple!10 == 40);
@@ -982,7 +970,7 @@ unittest
     static assert(is(ArrayA!(int, 10) == int[10]));
     static assert(is(ArrayB!(10, int) == int[10]));
     static assert(div!(28, -7) == -4);
-    
+
     // nested
     alias binaryT!q{ apply!(binaryT!q{ a / b }, a+b, 2) } Ave;
     static assert(Ave!(10, 20) == 15);
