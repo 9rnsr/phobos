@@ -6,8 +6,3 @@ public import std.internal.meta.meta;
 public import meta = std.internal.meta.meta;
 
 
-// Global templates:
-
-alias meta.TypeSeq TypeSeq;
-
-

@@ -140,10 +140,8 @@ unittest
 
 
 /**
-Synonym of $(D meta.Seq).
-
-This template is specially made available in the global namespace.  That is,
-$(D TypeSeq) can be used without the $(D meta) prefix.
+Makes a sequence of compile-time entities. The sequence can contain only types.
+If the constraint is violated, an error occurs at compile-time.
 
 Params:
  Types = Zero or more types making up the sequence.
@@ -169,10 +167,16 @@ vars[1] = 5.0;
 vars[2] = false;
 vars[3] = "Abcdef";
 ----------
+
+See_Also:
+ $(D meta.isType)
  */
 template TypeSeq(Types...)
 {
-    alias Types TypeSeq;
+    static if (meta.all!("isType!A", Types))
+        alias Types TypeSeq;
+    else
+        static assert(0, Types.stringof ~ " is not type sequence");
 }
 
 
@@ -193,6 +197,45 @@ unittest
     vars[3] = "Abcdef";
 }
 
+
+/**
+Makes a sequence of compile-time entities. The sequence can contain only
+compile-time values. If the constraint is violated, an error occurs at
+compile-time.
+
+Params:
+ Values = Zero or more compile-time values making up the sequence.
+
+Returns:
+ Sequence of the given values.
+
+Examples:
+ Comparing type sequences with the $(D isSame) template.
+----------
+alias ValueSeq!("sin", 3.14, [1,1,2,3]) A;
+static assert( isSame!(pack!A, pack!(ValueSeq!("sin", 3.14, [1,1,2,3]))));
+static assert(!isSame!(pack!A, pack!(ValueSeq!([1,1,2,3], "sin", 3.14))));
+static assert(!isSame!(pack!A, pack!(ValueSeq!())));
+----------
+
+See_Also:
+ $(D meta.isValue)
+ */
+template ValueSeq(Values...)
+{
+    static if (meta.all!("isValue!a", Values))
+        alias Values ValueSeq;
+    else
+        static assert(0, Values.stringof ~ " is not value sequence");
+}
+
+unittest
+{
+    alias ValueSeq!("sin", 3.14, [1,1,2,3]) A;
+    static assert( isSame!(pack!A, pack!(ValueSeq!("sin", 3.14, [1,1,2,3]))));
+    static assert(!isSame!(pack!A, pack!(ValueSeq!([1,1,2,3], "sin", 3.14))));
+    static assert(!isSame!(pack!A, pack!(ValueSeq!())));
+}
 
 
 /**
