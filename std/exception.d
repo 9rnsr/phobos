@@ -44,7 +44,7 @@ string synopsis()
  +/
 module std.exception;
 
-import std.array, std.c.string, std.conv, std.range, std.string, std.traits;
+import std.array, std.c.string, std.conv, std.range, std.traits;
 import core.exception, core.stdc.errno;
 version(unittest)
 {
@@ -57,6 +57,9 @@ version(unittest)
     of $(D Throwable). If a $(D Throwable) of the given type is thrown,
     it is caught and does not escape assertNotThrown. Rather, an
     $(D AssertError) is thrown. However, any other $(D Throwable)s will escape.
+
+    When you want to catch a $(D Throwable) instead of an $(D Exception),
+    whole $(D assertNotThrown) call is inferred as un-$(D @safe).
 
     Params:
         T          = The $(D Throwable) to test for.
@@ -80,7 +83,7 @@ void assertNotThrown(T : Throwable = Exception, E)
                     (lazy E expression,
                      string msg = null,
                      string file = __FILE__,
-                     size_t line = __LINE__)
+                     size_t line = __LINE__) pure
 {
     try
         expression();
@@ -88,9 +91,7 @@ void assertNotThrown(T : Throwable = Exception, E)
     {
         immutable tail = msg.empty ? "." : ": " ~ msg;
 
-        throw new AssertError(format("assertNotThrown failed: %s was thrown%s",
-                                     T.stringof,
-                                     tail),
+        throw new AssertError("assertNotThrown failed: "~T.stringof~" was thrown"~tail,
                               file,
                               line,
                               t);
@@ -191,11 +192,20 @@ unittest
     }
 }
 
+@safe pure unittest
+{
+    assertNotThrown!Exception(true);
+    static assert(!__traits(compiles, assertNotThrown!Throwable(true)));
+}
+
 /++
     Asserts that the given expression throws the given type of $(D Throwable).
     The $(D Throwable) is caught and does not escape assertThrown. However,
     any other $(D Throwable)s $(I will) escape, and if no $(D Throwable)
     of the given type is thrown, then an $(D AssertError) is thrown.
+
+    When you want to catch a $(D Throwable) instead of an $(D Exception),
+    whole $(D assertThrown) call is inferred as un-$(D @safe).
 
     Params:
         T          = The $(D Throwable) to test for.
@@ -219,7 +229,7 @@ void assertThrown(T : Throwable = Exception, E)
                  (lazy E expression,
                   string msg = null,
                   string file = __FILE__,
-                  size_t line = __LINE__)
+                  size_t line = __LINE__) pure
 {
     bool thrown = false;
 
@@ -232,9 +242,7 @@ void assertThrown(T : Throwable = Exception, E)
     {
         immutable tail = msg.empty ? "." : ": " ~ msg;
 
-        throw new AssertError(format("assertThrown failed: No %s was thrown%s",
-                                     T.stringof,
-                                     tail),
+        throw new AssertError("assertThrown failed: No "~T.stringof~" was thrown"~tail,
                               file,
                               line);
     }
@@ -330,6 +338,17 @@ unittest
     }
 }
 
+@safe pure unittest
+{
+    void throwEx()
+    {
+        throw new Exception("");
+    }
+
+    assertThrown!Exception(throwEx());
+    static assert(!__traits(compiles, assertThrown!Throwable(throwEx())));
+}
+
 /++
     If $(D !!value) is true, $(D value) is returned. Otherwise,
     $(D new Exception(msg)) is thrown.
@@ -346,7 +365,7 @@ unittest
 --------------------
 auto f = enforce(fopen("data.txt"));
 auto line = readln(f);
-enforce(line.length, "Expected a non-empty line."));
+enforce(line.length, "Expected a non-empty line.");
 --------------------
  +/
 T enforce(T, string file = __FILE__, size_t line = __LINE__)
