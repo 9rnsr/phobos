@@ -499,7 +499,7 @@ T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
  enforceEx!DataCorruptionException(line.length);
 --------------------
  +/
-T enforceEx(E, T)(T value, lazy string msg = "", string file = __FILE__, size_t line = __LINE__) @safe pure
+T enforceEx(E : Throwable, T)(T value, lazy string msg = "", string file = __FILE__, size_t line = __LINE__) @safe pure
     if (is(typeof(new E(msg, file, line))))
 {
     if (!value) throw new E(msg, file, line);
@@ -514,7 +514,7 @@ T enforceEx(E, T)(T value, lazy string msg = "", string file = __FILE__, size_t 
     If $(D !!value) is $(D true), $(D value) is returned. Otherwise,
     $(D new E(msg)) is thrown.
   +/
-T enforceEx(E, T)(T value, lazy string msg = "") @safe pure
+T enforceEx(E : Throwable, T)(T value, lazy string msg = "") @safe pure
     if (is(typeof(new E(msg))) && !is(typeof(new E(msg, __FILE__, __LINE__))))
 {
     import std.metastrings;
@@ -580,7 +580,7 @@ int b;
 assert(collectException(a[4], b));
 --------------------
 +/
-T collectException(T = Exception, E)(lazy E expression, ref E result) pure
+T collectException(T : Throwable = Exception, E)(lazy E expression, ref E result) pure
 {
     try
     {
@@ -673,7 +673,7 @@ void throwEmptyFunc() {throw new Exception("");}
 assert(collectExceptionMsg(throwEmptyFunc()) == emptyExceptionMsg);
 --------------------
 +/
-string collectExceptionMsg(T = Exception, E)(lazy E expression) pure
+string collectExceptionMsg(T : Throwable = Exception, E)(lazy E expression) pure
 {
     try
     {
