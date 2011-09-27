@@ -565,6 +565,9 @@ unittest
     non-$(D Exception)s unless you're sure that that's what you really want to
     do.
 
+    When you want to collect a $(D Throwable) instead of an $(D Exception),
+    whole $(D collectException) call is inferred as un-$(D @safe).
+
     Params:
         T          = The type of exception to catch.
         expression = The expression which may throw an exception.
@@ -577,7 +580,7 @@ int b;
 assert(collectException(a[4], b));
 --------------------
 +/
-T collectException(T = Exception, E)(lazy E expression, ref E result)
+T collectException(T = Exception, E)(lazy E expression, ref E result) pure
 {
     try
     {
@@ -590,7 +593,7 @@ T collectException(T = Exception, E)(lazy E expression, ref E result)
     return null;
 }
 
-unittest
+@safe pure unittest
 {
     int[] a = new int[3];
     int b;
@@ -610,11 +613,14 @@ unittest
     non-$(D Exception)s unless you're sure that that's what you really want to
     do.
 
+    When you want to collect a $(D Throwable) instead of an $(D Exception),
+    whole $(D collectException) call is inferred as un-$(D @safe).
+
     Params:
         T          = The type of exception to catch.
         expression = The expression which may throw an exception.
 +/
-T collectException(T : Throwable = Exception, E)(lazy E expression)
+T collectException(T : Throwable = Exception, E)(lazy E expression) pure
 {
     try
     {
@@ -627,7 +633,7 @@ T collectException(T : Throwable = Exception, E)(lazy E expression)
     return null;
 }
 
-unittest
+@safe pure unittest
 {
     int foo() { throw new Exception("blah"); }
     assert(collectException(foo()));
@@ -648,6 +654,9 @@ unittest
     non-$(D Exception)s unless you're sure that that's what you really want to
     do.
 
+    When you want to collect a $(D Throwable) instead of an $(D Exception),
+    whole $(D collectExceptionMsg) call is inferred as un-$(D @safe).
+
     Params:
         T          = The type of exception to catch.
         expression = The expression which may throw an exception.
@@ -664,20 +673,20 @@ void throwEmptyFunc() {throw new Exception("");}
 assert(collectExceptionMsg(throwEmptyFunc()) == emptyExceptionMsg);
 --------------------
 +/
-string collectExceptionMsg(T = Exception, E)(lazy E expression)
+string collectExceptionMsg(T = Exception, E)(lazy E expression) pure
 {
     try
     {
         expression();
 
-        return cast(string)null;
+        return null;
     }
     catch(T e)
         return e.msg.empty ? emptyExceptionMsg : e.msg;
 }
 
 //Verify Examples.
-unittest
+@safe pure unittest
 {
     void throwFunc() {throw new Exception("My Message.");}
     assert(collectExceptionMsg(throwFunc()) == "My Message.");
