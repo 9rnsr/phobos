@@ -496,8 +496,8 @@ private void _send(T...)( Tid tid, T vals )
  */
 private void _send(T...)( MsgType type, Tid tid, T vals )
 {
-    auto msg = Message( type, vals );
-    tid.mbox.put( msg );
+    auto m = Message( type, vals );
+    tid.mbox.put( m );
 }
 
 
@@ -652,7 +652,7 @@ bool receiveTimeout(T...)( Duration duration, T ops )
     return mbox.get( duration, ops );
 }
 
-unittest
+deprecated unittest
 {
     assert( __traits( compiles,
                       {
@@ -669,7 +669,10 @@ unittest
                        {
                            receiveTimeout( 0, (int x) {}, (int x) {} );
                        } ) );
+}
 
+unittest
+{
     assert( __traits( compiles,
                       {
                           receiveTimeout( dur!"msecs"(10), (int x) {}, (Variant x) {} );
@@ -1043,8 +1046,8 @@ private
                     if( *depends && tid != owner )
                     {
                         auto e = new LinkTerminated( tid );
-                        auto msg = Message( MsgType.standard, e );
-                        if( onStandardMsg( msg ) )
+                        auto m = Message( MsgType.standard, e );
+                        if( onStandardMsg( m ) )
                             return true;
                         throw e;
                     }
@@ -1053,8 +1056,8 @@ private
                 {
                     owner = Tid.init;
                     auto e = new OwnerTerminated( tid );
-                    auto msg = Message( MsgType.standard, e );
-                    if( onStandardMsg( msg ) )
+                    auto m = Message( MsgType.standard, e );
+                    if( onStandardMsg( m ) )
                         return true;
                     throw e;
                 }
