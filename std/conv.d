@@ -2108,7 +2108,7 @@ unittest
 }
 
 Target parse(Target, Source)(ref Source p)
-    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
+    if (isSomeChar!(ElementType!Source) &&
         isFloatingPoint!Target)
 {
     static immutable real negtab[14] =
@@ -2624,7 +2624,7 @@ unittest
 }
 
 Target parse(Target, Source)(ref Source s)
-    if (!isSomeString!Source && isInputRange!Source && isSomeChar!(ElementType!Source) &&
+    if (!isSomeString!Source && isSomeChar!(ElementType!Source) &&
         isSomeChar!Target && Target.sizeof >= ElementType!Source.sizeof)
 {
     Target result = s.front;
@@ -2702,7 +2702,7 @@ private void skipWS(R)(ref R r)
  * default $(D ',')).
  */
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
-    if (isSomeString!Source &&
+    if (isSomeChar!(ElementType!Source) &&
         isDynamicArray!Target)
 {
     Target result;
@@ -2764,7 +2764,7 @@ unittest
 
 /// ditto
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
-    if (isSomeString!Source &&
+    if (isSomeChar!(ElementType!Source) &&
         isStaticArray!Target)
 {
     Target result = void;
@@ -2830,7 +2830,7 @@ unittest
  * ':')), and element seprator (by default $(D ',')).
  */
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar keyval = ':', dchar comma = ',')
-    if (isSomeString!Source &&
+    if (isSomeChar!(ElementType!Source) &&
         isAssociativeArray!Target)
 {
     alias typeof(Target.keys[0]) KeyType;
@@ -2935,7 +2935,7 @@ private dchar parseEscape(Source)(ref Source s)
 
 // Undocumented
 Target parseElement(Target, Source)(ref Source s)
-    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
+    if (isSomeChar!(ElementType!Source) &&
         isSomeString!Target)
 {
     auto result = appender!Target();
@@ -2973,7 +2973,7 @@ Target parseElement(Target, Source)(ref Source s)
 
 // ditto
 Target parseElement(Target, Source)(ref Source s)
-    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
+    if (isSomeChar!(ElementType!Source) &&
         isSomeChar!Target)
 {
     Target c;
@@ -2993,7 +2993,7 @@ Target parseElement(Target, Source)(ref Source s)
 
 // ditto
 Target parseElement(Target, Source)(ref Source s)
-    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
+    if (isSomeChar!(ElementType!Source) &&
         !isSomeString!Target && !isSomeChar!Target)
 {
     return parse!Target(s);
