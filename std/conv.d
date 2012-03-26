@@ -2634,18 +2634,32 @@ Target parse(Target, Source)(ref Source s)
 
 // string to bool conversions
 Target parse(Target, Source)(ref Source s)
-    if (isSomeString!Source &&
+    if (isSomeChar!(ElementType!Source) &&
         is(Unqual!Target == bool))
 {
-    if (s.length >= 4 && icmp(s[0 .. 4], "true")==0)
+    if (!s.empty)
     {
-        s = s[4 .. $];
-        return true;
-    }
-    if (s.length >= 5 && icmp(s[0 .. 5], "false")==0)
-    {
-        s = s[5 .. $];
-        return false;
+        static if (isForwardRange!Source)
+            auto save = s.save;
+        auto ch = s.front;
+        if (std.ascii.toLower(ch) == 't')
+        {   s.popFront();
+            if (startsWith!((a, b) => std.ascii.toLower(a) == b)(s, "rue"))
+            {
+                s.popFront();
+                return true;
+            }
+        }
+        else if (std.ascii.toLower(ch) == 'f')
+        {   s.popFront();
+            if (startsWith!((a, b) => std.ascii.toLower(a) == b)(s, "alse"))
+            {
+                s.popFront();
+                return false;
+            }
+        }
+        static if (isForwardRange!Source)
+            s = save;
     }
     parseError("bool should be case-insensive 'true' or 'false'");
     assert(0);
