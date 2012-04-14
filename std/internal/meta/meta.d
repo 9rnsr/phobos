@@ -26,6 +26,9 @@ module std.internal.meta.meta;
 // Introduce the symbols visible to user for unaryT etc.
 import meta = std.meta;
 
+// Introduce the symbols visible to use from string lambda templates.
+import std.traits;
+import std.typetuple;
 
 //----------------------------------------------------------------------------//
 // Fundamental Templates
