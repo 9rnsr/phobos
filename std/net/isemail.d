@@ -24,7 +24,8 @@
  */
 module std.net.isemail;
 
-import std.algorithm : ElementType, equal, uniq, filter, contains = canFind;
+import std.algorithm : equal, uniq, filter, contains = canFind;
+import std.range : ElementType;
 import std.array;
 import std.ascii;
 import std.conv;
@@ -375,7 +376,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                 switch (token)
                 {
                     case Token.closeBracket:
-                        if (returnStatus.max < EmailStatusCode.deprecated_)
+                        if (returnStatus.max() < EmailStatusCode.deprecated_)
                         {
                             auto maxGroups = 8;
                             size_t index = -1;
@@ -450,7 +451,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                         atomList[EmailPart.componentDomain][elementCount] ~= token;
                         elementLength++;
                         contextPrior = context;
-                        context = contextStack.pop;
+                        context = contextStack.pop();
                     break;
 
                     case Token.backslash:
@@ -524,7 +525,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                         atomList[EmailPart.componentLocalPart][elementCount] ~= token;
                         elementLength++;
                         contextPrior = context;
-                        context = contextStack.pop;
+                        context = contextStack.pop();
                     break;
 
                     default:
@@ -552,7 +553,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                     returnStatus ~= EmailStatusCode.deprecatedQuotedPair;
 
                 contextPrior = context;
-                context = contextStack.pop;
+                context = contextStack.pop();
                 token = Token.backslash ~ token;
 
                 switch (context)
@@ -586,7 +587,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
 
                     case Token.closeParenthesis:
                         contextPrior = context;
-                        context = contextStack.pop;
+                        context = contextStack.pop();
                     break;
 
                     case Token.backslash:
@@ -663,7 +664,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
 
                         crlfCount = int.min; // int.min == not defined
                         contextPrior = context;
-                        context = contextStack.pop;
+                        context = contextStack.pop();
                         i--;
                     break;
                 }
@@ -675,11 +676,11 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                 throw new Exception("Unkown context: " ~ to!(string)(context));
         }
 
-        if (returnStatus.max > EmailStatusCode.rfc5322)
+        if (returnStatus.max() > EmailStatusCode.rfc5322)
             break;
     }
 
-    if (returnStatus.max < EmailStatusCode.rfc5322)
+    if (returnStatus.max() < EmailStatusCode.rfc5322)
     {
         if (context == EmailPart.contextQuotedString)
             returnStatus ~= EmailStatusCode.errorUnclosedQuotedString;
@@ -718,12 +719,12 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
 
     auto dnsChecked = false;
 
-    if (checkDNS == CheckDns.yes && returnStatus.max < EmailStatusCode.dnsWarning)
+    if (checkDNS == CheckDns.yes && returnStatus.max() < EmailStatusCode.dnsWarning)
     {
         assert(false, "DNS check is currently not implemented");
     }
 
-    if (!dnsChecked && returnStatus.max < EmailStatusCode.dnsWarning)
+    if (!dnsChecked && returnStatus.max() < EmailStatusCode.dnsWarning)
     {
         if (elementCount == 0)
             returnStatus ~= EmailStatusCode.rfc5321TopLevelDomain;
@@ -733,10 +734,10 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
     }
 
     returnStatus = array(std.algorithm.uniq(returnStatus));
-    auto finalStatus = returnStatus.max;
+    auto finalStatus = returnStatus.max();
 
     if (returnStatus.length != 1)
-        returnStatus.popFront;
+        returnStatus.popFront();
 
     parseData[EmailPart.status] = to!(tstring)(returnStatus);
 
@@ -1277,31 +1278,31 @@ struct EmailStatus
     }
 
     /// Indicates if the email address is valid or not.
-    bool valid ()
+    @property bool valid ()
     {
         return valid_;
     }
 
     /// The local part of the email address, that is, the part before the @ sign.
-    string localPart ()
+    @property string localPart ()
     {
         return localPart_;
     }
 
     /// The domain part of the email address, that is, the part after the @ sign.
-    string domainPart ()
+    @property string domainPart ()
     {
         return domainPart_;
     }
 
     /// The email status code
-    EmailStatusCode statusCode ()
+    @property EmailStatusCode statusCode ()
     {
         return statusCode_;
     }
 
     /// Returns a describing string of the status code
-    string status ()
+    @property string status ()
     {
         return statusCodeDescription(statusCode_);
     }
@@ -1759,9 +1760,9 @@ T max (T) (T[] arr)
 
 unittest
 {
-    assert([1, 2, 3, 4].max == 4);
-    assert([3, 5, 9, 2, 5].max == 9);
-    assert([7, 13, 9, 12, 0].max == 13);
+    assert([1, 2, 3, 4].max() == 4);
+    assert([3, 5, 9, 2, 5].max() == 9);
+    assert([7, 13, 9, 12, 0].max() == 13);
 }
 
 /*
@@ -1938,7 +1939,7 @@ unittest
  * Examples:
  * ---
  * auto array = [0, 1, 2, 3];
- * auto    result = array.pop;
+ * auto    result = array.pop();
  *
  * assert(array == [0, 1, 2]);
  * assert(result == 3);
@@ -1952,14 +1953,14 @@ unittest
 ElementType!(A) pop (A) (ref A a) if (isDynamicArray!(A) && !isNarrowString!(A) && isMutable!(A) && !is(A == void[]))
 {
     auto e = a.back;
-    a.popBack;
+    a.popBack();
     return e;
 }
 
 unittest
 {
     auto array = [0, 1, 2, 3];
-    auto result = array.pop;
+    auto result = array.pop();
 
     assert(array == [0, 1, 2]);
     assert(result == 3);
