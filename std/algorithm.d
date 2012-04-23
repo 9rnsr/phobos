@@ -3739,8 +3739,25 @@ Example:
 int[] a = [ 1, 2, 4, 7, 7, 2, 4, 7, 3, 5];
 assert(equal(a.until(7), [1, 2, 4]));
 assert(equal(a.until(7, OpenRight.no), [1, 2, 4, 7]));
+
+assert(equal(a.until!"a == 7"(), [1, 2, 4]));
+assert(equal(a.until!"a == 2"(OpenRight.no), [1, 2]));
 ----
  */
+auto until(alias pred = "a == b", Range, Sentinel)
+(Range range, Sentinel sentinel, OpenRight openRight = OpenRight.yes)
+if (!is(Sentinel == OpenRight))
+{
+    return Until!(pred, Range, Sentinel)(range, sentinel, openRight);
+}
+
+/// Ditto
+auto until(alias pred, Range)
+(Range range, OpenRight openRight = OpenRight.yes)
+{
+    return Until!(pred, Range, void)(range, openRight);
+}
+
 struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
 {
     private Range _input;
@@ -3839,23 +3856,6 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
     }
 }
 
-/// Ditto
-Until!(pred, Range, Sentinel)
-until(alias pred = "a == b", Range, Sentinel)
-(Range range, Sentinel sentinel, OpenRight openRight = OpenRight.yes)
-if (!is(Sentinel == OpenRight))
-{
-    return typeof(return)(range, sentinel, openRight);
-}
-
-/// Ditto
-Until!(pred, Range, void)
-until(alias pred, Range)
-(Range range, OpenRight openRight = OpenRight.yes)
-{
-    return typeof(return)(range, openRight);
-}
-
 unittest
 {
     //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -3867,7 +3867,9 @@ unittest
     assert(equal(a.until(7), [1, 2, 4]));
     assert(equal(a.until([7, 2]), [1, 2, 4, 7]));
     assert(equal(a.until(7, OpenRight.no), [1, 2, 4, 7]));
-    assert(equal(until!"a == 2"(a, OpenRight.no), [1, 2]));
+
+    assert(equal(a.until!"a == 7"(), [1, 2, 4]));
+    assert(equal(a.until!"a == 2"(OpenRight.no), [1, 2]));
 }
 
 /**
