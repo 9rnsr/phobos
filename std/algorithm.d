@@ -486,8 +486,8 @@ unittest
     int[] arr2 = [ 5, 6 ];
     auto squares = map!("a * a")(arr1Const);
     assert(squares[$ - 1] == 16);
-    assert(equal(squares, [ 1, 4, 9, 16 ][]));
-    assert(equal(map!("a * a")(chain(arr1, arr2)), [ 1, 4, 9, 16, 25, 36 ][]));
+    assert(equal(squares, [ 1, 4, 9, 16 ]));
+    assert(equal(map!("a * a")(chain(arr1, arr2)), [ 1, 4, 9, 16, 25, 36 ]));
 
     // Test the caching stuff.
     assert(squares.back == 16);
@@ -501,7 +501,7 @@ unittest
     assert(squares2.front == 4);
     assert(squares2.back == 9);
 
-    assert(equal(map!("a * a")(chain(arr1, arr2)), [ 1, 4, 9, 16, 25, 36 ][]));
+    assert(equal(map!("a * a")(chain(arr1, arr2)), [ 1, 4, 9, 16, 25, 36 ]));
 
     uint i;
     foreach (e; map!("a", "a * a")(arr1))
@@ -522,7 +522,7 @@ unittest
 
     // Test slicing.
     auto squareSlice = squares[1..squares.length - 1];
-    assert(equal(squareSlice, [4, 9][]));
+    assert(equal(squareSlice, [4, 9]));
     assert(squareSlice.back == 9);
     assert(squareSlice[1] == 9);
 
@@ -1136,16 +1136,16 @@ unittest
     int[] a = [ 3, 4, 2 ];
     auto r = filter!("a > 3")(a);
     static assert(isForwardRange!(typeof(r)));
-    assert(equal(r, [ 4 ][]));
+    assert(equal(r, [ 4 ]));
 
     a = [ 1, 22, 3, 42, 5 ];
     auto under10 = filter!("a < 10")(a);
-    assert(equal(under10, [1, 3, 5][]));
+    assert(equal(under10, [1, 3, 5]));
     static assert(isForwardRange!(typeof(under10)));
     under10.front() = 4;
-    assert(equal(under10, [4, 3, 5][]));
+    assert(equal(under10, [4, 3, 5]));
     under10.front() = 40;
-    assert(equal(under10, [40, 3, 5][]));
+    assert(equal(under10, [40, 3, 5]));
     under10.front() = 1;
 
     auto infinite = filter!"a > 2"(repeat(3));
@@ -1186,12 +1186,12 @@ unittest
     int[] a = [ 3, 4 ];
     const aConst = a;
     auto r = filter!("a > 3")(aConst);
-    assert(equal(r, [ 4 ][]));
+    assert(equal(r, [ 4 ]));
 
     a = [ 1, 22, 3, 42, 5 ];
     auto under10 = filter!("a < 10")(a);
-    assert(equal(under10, [1, 3, 5][]));
-    assert(equal(under10.save, [1, 3, 5][]));
+    assert(equal(under10, [1, 3, 5]));
+    assert(equal(under10.save, [1, 3, 5]));
     assert(equal(under10.save, under10));
 
     // With copying of inner struct Filter to Map
@@ -1786,11 +1786,11 @@ unittest
     // }
     assert(equal(splitter(a, 0), w));
     a = null;
-    assert(equal(splitter(a, 0), [ (int[]).init ][]));
+    assert(equal(splitter(a, 0), [ (int[]).init ]));
     a = [ 0 ];
-    assert(equal(splitter(a, 0), [ (int[]).init, (int[]).init ][]));
+    assert(equal(splitter(a, 0), [ (int[]).init, (int[]).init ]));
     a = [ 0, 1 ];
-    assert(equal(splitter(a, 0), [ [], [1] ][]));
+    assert(equal(splitter(a, 0), [ [], [1] ]));
 
     // Thoroughly exercise the bidirectional stuff.
     auto str = "abc abcd abcde ab abcdefg abcdefghij ab ac ar an at ada";
@@ -1999,12 +1999,12 @@ unittest
     auto s = ",abc, de, fg,hi,";
     auto sp0 = splitter(s, ',');
     // //foreach (e; sp0) writeln("[", e, "]");
-    assert(equal(sp0, ["", "abc", " de", " fg", "hi", ""][]));
+    assert(equal(sp0, ["", "abc", " de", " fg", "hi", ""]));
 
     auto s1 = ", abc, de,  fg, hi, ";
     auto sp1 = splitter(s1, ", ");
     //foreach (e; sp1) writeln("[", e, "]");
-    assert(equal(sp1, ["", "abc", "de", " fg", "hi", ""][]));
+    assert(equal(sp1, ["", "abc", "de", " fg", "hi", ""]));
     static assert(isForwardRange!(typeof(sp1)));
 
     int[] a = [ 1, 2, 0, 3, 0, 4, 5, 0 ];
@@ -2041,7 +2041,7 @@ unittest
     {
         //writeln("{", e, "}");
     }
-    assert(equal(sp6, ["", ""][]));
+    assert(equal(sp6, ["", ""]));
 }
 
 auto splitter(alias isTerminator, Range)(Range input)
@@ -2460,7 +2460,7 @@ bidirectional, $(D uniq) also yields a bidirectional range.
 Example:
 ----
 int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
-assert(equal(uniq(arr), [ 1, 2, 3, 4, 5 ][]));
+assert(equal(uniq(arr), [ 1, 2, 3, 4, 5 ]));
 ----
 */
 auto uniq(alias pred = "a == b", Range)(Range r)
@@ -2535,8 +2535,8 @@ unittest
     auto r = uniq(arr);
     static assert(isForwardRange!(typeof(r)));
 
-    assert(equal(r, [ 1, 2, 3, 4, 5 ][]));
-    assert(equal(retro(r), retro([ 1, 2, 3, 4, 5 ][])));
+    assert(equal(r, [ 1, 2, 3, 4, 5 ]));
+    assert(equal(retro(r), retro([ 1, 2, 3, 4, 5 ])));
 
     foreach(DummyType; AllDummyRanges) {
         DummyType d;
@@ -2566,7 +2566,7 @@ Example:
 ----
 int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
 assert(equal(group(arr), [ tuple(1, 1u), tuple(2, 4u), tuple(3, 1u),
-    tuple(4, 3u), tuple(5, 1u) ][]));
+    tuple(4, 3u), tuple(5, 1u) ]));
 ----
 */
 struct Group(alias pred, R) if (isInputRange!R)
@@ -2640,7 +2640,7 @@ unittest
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
     assert(equal(group(arr), [ tuple(1, 1u), tuple(2, 4u), tuple(3, 1u),
-                            tuple(4, 3u), tuple(5, 1u) ][]));
+                            tuple(4, 3u), tuple(5, 1u) ]));
     static assert(isForwardRange!(typeof(group(arr))));
 
     foreach(DummyType; AllDummyRanges) {
@@ -3148,7 +3148,7 @@ unittest
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 3, 2, 6 ];
     assert(find(std.range.retro(a), 5).empty);
-    assert(equal(find(std.range.retro(a), 2), [ 2, 3, 2, 1 ][]));
+    assert(equal(find(std.range.retro(a), 2), [ 2, 3, 2, 1 ]));
 
     foreach (T; TypeTuple!(int, double))
     {
@@ -3737,8 +3737,8 @@ which point it stops.
 Example:
 ----
 int[] a = [ 1, 2, 4, 7, 7, 2, 4, 7, 3, 5];
-assert(equal(a.until(7), [1, 2, 4][]));
-assert(equal(a.until(7, OpenRight.no), [1, 2, 4, 7][]));
+assert(equal(a.until(7), [1, 2, 4]));
+assert(equal(a.until(7, OpenRight.no), [1, 2, 4, 7]));
 ----
  */
 struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
@@ -3864,10 +3864,10 @@ unittest
     static assert(isForwardRange!(typeof(a.until(7))));
     static assert(isForwardRange!(typeof(until!"a == 2"(a, OpenRight.no))));
 
-    assert(equal(a.until(7), [1, 2, 4][]));
-    assert(equal(a.until([7, 2]), [1, 2, 4, 7][]));
-    assert(equal(a.until(7, OpenRight.no), [1, 2, 4, 7][]));
-    assert(equal(until!"a == 2"(a, OpenRight.no), [1, 2][]));
+    assert(equal(a.until(7), [1, 2, 4]));
+    assert(equal(a.until([7, 2]), [1, 2, 4, 7]));
+    assert(equal(a.until(7, OpenRight.no), [1, 2, 4, 7]));
+    assert(equal(until!"a == 2"(a, OpenRight.no), [1, 2]));
 }
 
 /**
@@ -4531,9 +4531,9 @@ unittest
     int[] a = [ -1, 0, 2, 1, 2, 3, 4, 5 ];
     int[] b = [ 1, 2, 3 ];
     assert(findAmong(a, b) == [2, 1, 2, 3, 4, 5 ]);
-    assert(findAmong(b, [ 4, 6, 7 ][]).empty);
+    assert(findAmong(b, [ 4, 6, 7 ]).empty);
     assert(findAmong!("a==b")(a, b).length == a.length - 2);
-    assert(findAmong!("a==b")(b, [ 4, 6, 7 ][]).empty);
+    assert(findAmong!("a==b")(b, [ 4, 6, 7 ]).empty);
 }
 
 // count
@@ -7994,9 +7994,9 @@ int[] a = [ 1, 2, 4, 5, 7, 9 ];
 int[] b = [ 0, 1, 2, 4, 7, 8 ];
 int[] c = [ 10 ];
 assert(setUnion(a, b).length == a.length + b.length);
-assert(equal(setUnion(a, b), [0, 1, 1, 2, 2, 4, 4, 5, 7, 7, 8, 9][]));
+assert(equal(setUnion(a, b), [0, 1, 1, 2, 2, 4, 4, 5, 7, 7, 8, 9]));
 assert(equal(setUnion(a, c, b),
-    [0, 1, 1, 2, 2, 4, 4, 5, 7, 7, 8, 9, 10][]));
+    [0, 1, 1, 2, 2, 4, 4, 5, 7, 7, 8, 9, 10]));
 ----
  */
 struct SetUnion(alias less = "a < b", Rs...) if (allSatisfy!(isInputRange, Rs))
@@ -8124,9 +8124,9 @@ unittest
     int[] c = [ 10 ];
     //foreach (e; setUnion(a, b)) writeln(e);
     assert(setUnion(a, b).length == a.length + b.length);
-    assert(equal(setUnion(a, b), [0, 1, 1, 2, 2, 4, 4, 5, 7, 7, 8, 9][]));
+    assert(equal(setUnion(a, b), [0, 1, 1, 2, 2, 4, 4, 5, 7, 7, 8, 9]));
     assert(equal(setUnion(a, c, b),
-                    [0, 1, 1, 2, 2, 4, 4, 5, 7, 7, 8, 9, 10][]));
+                    [0, 1, 1, 2, 2, 4, 4, 5, 7, 7, 8, 9, 10]));
 
     static assert(isForwardRange!(typeof(setUnion(a, b))));
 }
@@ -8142,8 +8142,8 @@ int[] a = [ 1, 2, 4, 5, 7, 9 ];
 int[] b = [ 0, 1, 2, 4, 7, 8 ];
 int[] c = [ 0, 1, 4, 5, 7, 8 ];
 assert(equal(setIntersection(a, a), a));
-assert(equal(setIntersection(a, b), [1, 2, 4, 7][]));
-assert(equal(setIntersection(a, b, c), [1, 4, 7][]));
+assert(equal(setIntersection(a, b), [1, 2, 4, 7]));
+assert(equal(setIntersection(a, b, c), [1, 4, 7]));
 ----
  */
 struct SetIntersection(alias less = "a < b", Rs...)
@@ -8239,17 +8239,17 @@ unittest
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
     int[] c = [ 0, 1, 4, 5, 7, 8 ];
     //foreach (e; setIntersection(a, b, c)) writeln(e);
-    assert(equal(setIntersection(a, b), [1, 2, 4, 7][]));
+    assert(equal(setIntersection(a, b), [1, 2, 4, 7]));
     assert(equal(setIntersection(a, a), a));
 
     static assert(isForwardRange!(typeof(setIntersection(a, a))));
-    // assert(equal(setIntersection(a, b, b, a), [1, 2, 4, 7][]));
-    // assert(equal(setIntersection(a, b, c), [1, 4, 7][]));
-    // assert(equal(setIntersection(a, c, b), [1, 4, 7][]));
-    // assert(equal(setIntersection(b, a, c), [1, 4, 7][]));
-    // assert(equal(setIntersection(b, c, a), [1, 4, 7][]));
-    // assert(equal(setIntersection(c, a, b), [1, 4, 7][]));
-    // assert(equal(setIntersection(c, b, a), [1, 4, 7][]));
+    // assert(equal(setIntersection(a, b, b, a), [1, 2, 4, 7]));
+    // assert(equal(setIntersection(a, b, c), [1, 4, 7]));
+    // assert(equal(setIntersection(a, c, b), [1, 4, 7]));
+    // assert(equal(setIntersection(b, a, c), [1, 4, 7]));
+    // assert(equal(setIntersection(b, c, a), [1, 4, 7]));
+    // assert(equal(setIntersection(c, a, b), [1, 4, 7]));
+    // assert(equal(setIntersection(c, b, a), [1, 4, 7]));
 }
 
 /**
@@ -8261,7 +8261,7 @@ Example:
 ----
 int[] a = [ 1, 2, 4, 5, 7, 9 ];
 int[] b = [ 0, 1, 2, 4, 7, 8 ];
-assert(equal(setDifference(a, b), [5, 9][]));
+assert(equal(setDifference(a, b), [5, 9]));
 ----
  */
 struct SetDifference(alias less = "a < b", R1, R2)
@@ -8339,7 +8339,7 @@ unittest
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
     //foreach (e; setDifference(a, b)) writeln(e);
-    assert(equal(setDifference(a, b), [5, 9][]));
+    assert(equal(setDifference(a, b), [5, 9]));
     static assert(isForwardRange!(typeof(setDifference(a, b))));
 }
 
@@ -8354,7 +8354,7 @@ Example:
 ----
 int[] a = [ 1, 2, 4, 5, 7, 9 ];
 int[] b = [ 0, 1, 2, 4, 7, 8 ];
-assert(equal(setSymmetricDifference(a, b), [0, 5, 8, 9][]));
+assert(equal(setSymmetricDifference(a, b), [0, 5, 8, 9]));
 ----
  */
 struct SetSymmetricDifference(alias less = "a < b", R1, R2)
@@ -8452,7 +8452,7 @@ unittest
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
     //foreach (e; setSymmetricDifference(a, b)) writeln(e);
-    assert(equal(setSymmetricDifference(a, b), [0, 5, 8, 9][]));
+    assert(equal(setSymmetricDifference(a, b), [0, 5, 8, 9]));
 
     static assert(isForwardRange!(typeof(setSymmetricDifference(a, b))));
 }
@@ -8745,7 +8745,7 @@ unittest
     largestPartialIntersection(a, b, SortOutput.yes);
     //sort(b);
     //writeln(b);
-    assert(b == [ tuple(7., 4u), tuple(1., 3u) ][], text(b));
+    assert(b == [ tuple(7., 4u), tuple(1., 3u) ], text(b));
     assert(a[0].empty);
 }
 
@@ -8764,7 +8764,7 @@ unittest
     auto b = new Tuple!(string, uint)[2];
     largestPartialIntersection(a, b, SortOutput.yes);
     //writeln(b);
-    assert(b == [ tuple("7", 4u), tuple("1", 3u) ][], text(b));
+    assert(b == [ tuple("7", 4u), tuple("1", 3u) ], text(b));
 }
 
 unittest
