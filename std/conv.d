@@ -3060,38 +3060,53 @@ enum y = octal!160;
 auto z = octal!"1_000_000u";
 ----
  */
-@property int octal(string num)()
-    if((octalFitsInInt!(num) && !literalIsLong!(num)) && !literalIsUnsigned!(num))
+@property auto octal(string num)()
 {
-    return octal!(int, num);
+    // Take a look at int.max and int.max+1 in octal.
+    // Note it is important to strip the literal of all
+    // non-numbers. Kill the suffix and underscores lest they mess up
+    // the number of digits here that we depend on.
+    enum stripped =
+    {
+        string res = "";
+        foreach (c; num)
+            if (c >= '0' && c <= '7')
+                res ~= c;
+        return res;
+    }();
+    enum bool fitsInInt = stripped.length < 11 ||
+        stripped.length == 11 && stripped[0] == '1';
+
+    // can be xxL or xxLu according to spec
+    enum isLong = num.length > 1 &&
+        (num[$-1] == 'L' || num[$-2] == 'L');
+
+    // can be xxU or xxUL according to spec
+    enum isUnsigned = num.length > 1 &&
+        // both cases are allowed too
+        ((num[$-1] == 'u' || num[$-2] == 'u') ||
+         (num[$-1] == 'U' || num[$-2] == 'U'));
+
+    static if (fitsInInt && !isLong)
+        alias int LiteralType;
+    else
+        alias long LiteralType;
+
+    static if (isUnsigned)
+        alias Unsigned!LiteralType ResultType;
+    else
+        alias LiteralType ResultType;
+
+    //enum ResultType result = octal!(LiteralType, num);
+    //return result;
+    return octal!(ResultType, num);
 }
 
 /// Ditto
-@property long octal(string num)()
-    if((!octalFitsInInt!(num) || literalIsLong!(num)) && !literalIsUnsigned!(num))
+@property auto octal(alias num)()
+    if (isIntegral!(typeof(num)))
 {
-    return octal!(long, num);
-}
-
-/// Ditto
-@property uint octal(string num)()
-    if((octalFitsInInt!(num) && !literalIsLong!(num)) && literalIsUnsigned!(num))
-{
-    return octal!(int, num);
-}
-
-/// Ditto
-@property ulong octal(string num)()
-    if((!octalFitsInInt!(num) || literalIsLong!(num)) && literalIsUnsigned!(num))
-{
-    return octal!(long, num);
-}
-
-/// Ditto
-template octal(alias s)
-    if (isIntegral!(typeof(s)))
-{
-    enum auto octal = octal!(typeof(s), toStringNow!(s));
+    return octal!(typeof(num), toStringNow!num);
 }
 
 /*
@@ -3126,99 +3141,59 @@ template octal(alias s)
 }
 
 /*
-Take a look at int.max and int.max+1 in octal and the logic for this
-function follows directly.
- */
-template octalFitsInInt(string octalNum)
-{
-    // note it is important to strip the literal of all
-    // non-numbers. kill the suffix and underscores lest they mess up
-    // the number of digits here that we depend on.
-    enum bool octalFitsInInt = strippedOctalLiteral(octalNum).length < 11 ||
-        strippedOctalLiteral(octalNum).length == 11 &&
-        strippedOctalLiteral(octalNum)[0] == '1';
-}
+    Returns true if the given compile time string is a correctly formatted octal literal.
 
-string strippedOctalLiteral(string original)
-{
-    string stripped = "";
-    foreach (c; original)
-        if (c >= '0' && c <= '7')
-            stripped ~= c;
-    return stripped;
-}
-
-template literalIsLong(string num)
-{
-    static if (num.length > 1)
-    // can be xxL or xxLu according to spec
-        enum literalIsLong = (num[$-1] == 'L' || num[$-2] == 'L');
-    else
-        enum literalIsLong = false;
-}
-
-template literalIsUnsigned(string num)
-{
-    static if (num.length > 1)
-    // can be xxU or xxUL according to spec
-        enum literalIsUnsigned = (num[$-1] == 'u' || num[$-2] == 'u')
-            // both cases are allowed too
-            || (num[$-1] == 'U' || num[$-2] == 'U');
-    else
-        enum literalIsUnsigned = false;
-}
-
-/*
-Returns if the given string is a correctly formatted octal literal.
-
-The format is specified in lex.html. The leading zero is allowed, but
-not required.
- */
-bool isOctalLiteralString(string num)
-{
-    if (num.length == 0)
-        return false;
-
-    // Must start with a number. To avoid confusion, literals that
-    // start with a '0' are not allowed
-    if (num[0] == '0' && num.length > 1)
-        return false;
-    if (num[0] < '0' || num[0] > '7')
-        return false;
-
-    foreach (i, c; num)
-    {
-        if ((c < '0' || c > '7') && c != '_') // not a legal character
-        {
-            if (i < num.length - 2)
-                    return false;
-            else   // gotta check for those suffixes
-            {
-                if (c != 'U' && c != 'u' && c != 'L')
-                        return false;
-                if (i != num.length - 1)
-                {
-                    // if we're not the last one, the next one must
-                    // also be a suffix to be valid
-                    char c2 = num[$-1];
-                    if (c2 != 'U' && c2 != 'u' && c2 != 'L')
-                        return false; // spam at the end of the string
-                    if (c2 == c)
-                        return false; // repeats are disallowed
-                }
-            }
-        }
-    }
-
-    return true;
-}
-
-/*
-    Returns true if the given compile time string is an octal literal.
+    The format is specified in lex.html. The leading zero is allowed, but
+    not required.
 */
 template isOctalLiteral(string num)
 {
-    enum bool isOctalLiteral = isOctalLiteralString(num);
+    bool isOctalLiteralString()
+    {
+        static if (num.length == 0)
+        {
+            return false;
+        }
+        // Must start with a number. To avoid confusion, literals that
+        // start with a '0' are not allowed
+        else static if (num[0] == '0' && num.length > 1)
+        {
+            return false;
+        }
+        else static if (num[0] < '0' || num[0] > '7')
+        {
+            return false;
+        }
+        else
+        {
+            foreach (i, c; num)
+            {
+                if ((c < '0' || c > '7') && c != '_') // not a legal character
+                {
+                    if (i < num.length - 2)
+                        return false;
+                    else   // gotta check for those suffixes
+                    {
+                        if (c != 'U' && c != 'u' && c != 'L')
+                            return false;
+                        if (i != num.length - 1)
+                        {
+                            // if we're not the last one, the next one must
+                            // also be a suffix to be valid
+                            char c2 = num[$-1];
+                            if (c2 != 'U' && c2 != 'u' && c2 != 'L')
+                                return false; // spam at the end of the string
+                            if (c2 == c)
+                                return false; // repeats are disallowed
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+    }
+
+    enum bool isOctalLiteral = isOctalLiteralString();
 }
 
 unittest
@@ -3268,11 +3243,7 @@ unittest
     static assert(__traits(compiles, b = octal!"20000000000"));
 
     static assert(!__traits(compiles, a = octal!"1L"));
-
-    // this should pass, but it doesn't, since the int converter
-    // doesn't pass along its suffix to helper templates
-
-    //static assert(!__traits(compiles, a = octal!1L));
+    static assert(!__traits(compiles, a = octal!1L));
 
     static assert(__traits(compiles, b = octal!"1L"));
     static assert(__traits(compiles, b = octal!1L));
