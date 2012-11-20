@@ -448,8 +448,9 @@ struct CustomFloat(
 
     /// Assigns from any $(D real) compatible type.
     void opAssign(F)(F input)
-        if (__traits(compiles, cast(real)input ))
+        //if (__traits(compiles, cast(real)input ))
     {
+        static assert(__traits(compiles, cast(real)input ));
 
         static if( staticIndexOf!(Unqual!F, float, double, real) >= 0 )
                 auto value = ToBinary!(Unqual!F)(input);
