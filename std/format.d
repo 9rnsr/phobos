@@ -405,9 +405,14 @@ My friends are "John", "Nancy".
 My friends are John, Nancy.
 </pre>
  */
-uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
+uint formattedWrite(Writer, Char, A...)(auto ref Writer w, in Char[] fmt, A args)
 {
-    alias FPfmt = void function(Writer, const(void)*, ref FormatSpec!Char) @safe pure nothrow;
+    return formattedWriteImpl(w, fmt, args);
+}
+
+uint formattedWriteImpl(Writer, Char, A...)(ref Writer w, in Char[] fmt, ref A args)
+{
+    alias FPfmt = void function(ref Writer, const(void)*, ref FormatSpec!Char) @safe pure nothrow;
 
     auto spec = FormatSpec!Char(fmt);
 
@@ -773,7 +778,7 @@ struct FormatSpec(Char)
         trailing = fmt;
     }
 
-    bool writeUpToNextSpec(OutputRange)(OutputRange writer)
+    bool writeUpToNextSpec(OutputRange)(ref OutputRange writer)
     {
         if (trailing.empty)
             return false;
@@ -1221,7 +1226,7 @@ unittest
    $(D bool)s are formatted as "true" or "false" with %s and as "1" or
    "0" with integral-specific format specs.
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(ref Writer w, T obj, ref FormatSpec!Char f)
 if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     BooleanTypeOf!T val = obj;
@@ -1287,7 +1292,7 @@ unittest
 /**
    $(D null) literal is formatted as $(D "null").
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(ref Writer w, T obj, ref FormatSpec!Char f)
 if (is(T == typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
 {
     enforceFmt(f.spec == 's',
@@ -1307,7 +1312,7 @@ if (is(T == typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
 /**
    Integrals are formatted like $(D printf) does.
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(ref Writer w, T obj, ref FormatSpec!Char f)
 if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     alias U = IntegralTypeOf!T;
@@ -1351,7 +1356,7 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         formatIntegral(w, cast(ulong) val, f, base, U.max);
 }
 
-private void formatIntegral(Writer, T, Char)(Writer w, const(T) val, ref FormatSpec!Char f, uint base, ulong mask)
+private void formatIntegral(Writer, T, Char)(ref Writer w, const(T) val, ref FormatSpec!Char f, uint base, ulong mask)
 {
     FormatSpec!Char fs = f; // fs is copy for change its values.
     T arg = val;
@@ -1366,7 +1371,7 @@ private void formatIntegral(Writer, T, Char)(Writer w, const(T) val, ref FormatS
     formatUnsigned(w, (cast(ulong) arg) & mask, fs, base, negative);
 }
 
-private void formatUnsigned(Writer, Char)(Writer w, ulong arg, ref FormatSpec!Char fs, uint base, bool negative)
+private void formatUnsigned(Writer, Char)(ref Writer w, ulong arg, ref FormatSpec!Char fs, uint base, bool negative)
 {
     if (fs.precision == fs.UNSPECIFIED)
     {
@@ -1535,7 +1540,7 @@ unittest
 /**
  * Floating-point values are formatted like $(D printf) does.
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(ref Writer w, T obj, ref FormatSpec!Char f)
 if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     FormatSpec!Char fs = f; // fs is copy for change its values.
@@ -1652,7 +1657,7 @@ unittest
 /*
    Formatting a $(D creal) is deprecated but still kept around for a while.
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(ref Writer w, T obj, ref FormatSpec!Char f)
 if (is(Unqual!T : creal) && !is(T == enum) && !hasToString!(T, Char))
 {
     creal val = obj;
@@ -1702,7 +1707,7 @@ unittest
 /*
    Formatting an $(D ireal) is deprecated but still kept around for a while.
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(ref Writer w, T obj, ref FormatSpec!Char f)
 if (is(Unqual!T : ireal) && !is(T == enum) && !hasToString!(T, Char))
 {
     ireal val = obj;
@@ -1743,7 +1748,7 @@ unittest
    formatted as Unicode characters with %s and as integers with
    integral-specific format specs.
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(ref Writer w, T obj, ref FormatSpec!Char f)
 if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     CharTypeOf!T val = obj;
@@ -1784,7 +1789,7 @@ unittest
 /**
    Strings are formatted like $(D printf) does.
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(ref Writer w, T obj, ref FormatSpec!Char f)
 if (is(StringTypeOf!T) && !is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     Unqual!(StringTypeOf!T) val = obj;  // for `alias this`, see bug5371
@@ -1825,7 +1830,7 @@ unittest
 /**
    Static-size arrays are formatted as dynamic arrays.
  */
-void formatValue(Writer, T, Char)(Writer w, auto ref T obj, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(ref Writer w, auto ref T obj, ref FormatSpec!Char f)
 if (is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     formatValue(w, obj[], f);
@@ -1850,7 +1855,7 @@ unittest    // Test for issue 8310
      $(UL $(LI $(D void[]) is formatted like $(D ubyte[]).)
           $(LI Const array is converted to input range by removing its qualifier.))
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(ref Writer w, T obj, ref FormatSpec!Char f)
 if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     static if (is(const(ArrayTypeOf!T) == const(void[])))
@@ -2232,7 +2237,7 @@ private void formatChar(Writer)(Writer w, in dchar c, in char quote)
 
 // undocumented
 // string elements are formatted like UTF-8 string literals.
-void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+void formatElement(Writer, T, Char)(ref Writer w, T val, ref FormatSpec!Char f)
 if (is(StringTypeOf!T) && !is(T == enum))
 {
     StringTypeOf!T str = val;   // bug 8015
@@ -2302,7 +2307,7 @@ unittest
 
 // undocumented
 // character elements are formatted like UTF-8 character literals.
-void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+void formatElement(Writer, T, Char)(ref Writer w, T val, ref FormatSpec!Char f)
 if (is(CharTypeOf!T) && !is(T == enum))
 {
     if (f.spec == 's')
@@ -2317,7 +2322,7 @@ if (is(CharTypeOf!T) && !is(T == enum))
 
 // undocumented
 // Maybe T is noncopyable struct, so receive it by 'auto ref'.
-void formatElement(Writer, T, Char)(Writer w, auto ref T val, ref FormatSpec!Char f)
+void formatElement(Writer, T, Char)(ref Writer w, auto ref T val, ref FormatSpec!Char f)
 if (!is(StringTypeOf!T) && !is(CharTypeOf!T) || is(T == enum))
 {
     formatValue(w, val, f);
@@ -2327,7 +2332,7 @@ if (!is(StringTypeOf!T) && !is(CharTypeOf!T) || is(T == enum))
    Associative arrays are formatted by using $(D ':') and $(D ", ") as
    separators, and enclosed by $(D '[') and $(D ']').
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(ref Writer w, T obj, ref FormatSpec!Char f)
 if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     AssocArrayTypeOf!T val = obj;
@@ -2544,7 +2549,7 @@ const string toString();
 
    Otherwise, are formatted just as their type name.
  */
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(ref Writer w, T val, ref FormatSpec!Char f)
 if (is(T == class) && !is(T == enum))
 {
     enforceValidFormatSpec!(T, Char)(f);
@@ -2646,7 +2651,7 @@ unittest
 }
 
 /// ditto
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(ref Writer w, T val, ref FormatSpec!Char f)
 if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is(T == enum))
 {
     enforceValidFormatSpec!(T, Char)(f);
@@ -2690,7 +2695,7 @@ unittest
 
 /// ditto
 // Maybe T is noncopyable struct, so receive it by 'auto ref'.
-void formatValue(Writer, T, Char)(Writer w, auto ref T val, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(ref Writer w, auto ref T val, ref FormatSpec!Char f)
 if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is(T == enum))
 {
     enforceValidFormatSpec!(T, Char)(f);
@@ -2818,7 +2823,7 @@ unittest
 /**
    $(D enum) is formatted like its base value.
  */
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(ref Writer w, T val, ref FormatSpec!Char f)
 if (is(T == enum))
 {
     if (f.spec == 's')
@@ -2872,7 +2877,7 @@ unittest
 /**
    Pointers are formatted as hex integers.
  */
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(ref Writer w, T val, ref FormatSpec!Char f)
 if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
 {
     if (val is null)
@@ -2953,7 +2958,7 @@ unittest
 /**
    Delegates are formatted by 'Attributes ReturnType delegate(Parameters)'
  */
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(ref Writer w, T val, ref FormatSpec!Char f)
 if (is(T == delegate) && !is(T == enum) && !hasToString!(T, Char))
 {
     alias FA = FunctionAttribute;
@@ -2977,7 +2982,7 @@ unittest
 /*
    Formatting a $(D typedef) is deprecated but still kept around for a while.
  */
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(ref Writer w, T val, ref FormatSpec!Char f)
 if (is(T == typedef))
 {
     static if (is(T U == typedef))
@@ -2992,12 +2997,12 @@ if (is(T == typedef))
   'D'. The untyped signature is for the sake of taking this function's
   address.
  */
-private void formatGeneric(Writer, D, Char)(Writer w, const(void)* arg, ref FormatSpec!Char f)
+private void formatGeneric(Writer, D, Char)(ref Writer w, const(void)* arg, ref FormatSpec!Char f)
 {
     formatValue(w, *cast(D*) arg, f);
 }
 
-private void formatNth(Writer, Char, A...)(Writer w, ref FormatSpec!Char f, size_t index, A args)
+private void formatNth(Writer, Char, A...)(ref Writer w, ref FormatSpec!Char f, size_t index, A args)
 {
     static string gencode(size_t count)()
     {
