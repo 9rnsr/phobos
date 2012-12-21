@@ -578,7 +578,67 @@ void put(R, E)(ref R r, E e)
     enum usingFront = !usingPut && isInputRange!R;
     enum usingCall = !usingPut && !usingFront;
 
-    static if (usingPut && is(typeof(r.put(e))))
+    static if (usingPut && isSomeString!E)
+    {
+        alias SC = Unqual!(typeof(E.init[0]));
+        enum puts = is(typeof(r.put((const  char[]).init))) ?  char.sizeof
+                  : is(typeof(r.put((const wchar[]).init))) ? wchar.sizeof
+                  : is(typeof(r.put((const dchar[]).init))) ? dchar.sizeof
+                  : 0;
+        enum putc = is(typeof(r.put(~cast(dchar)0)));
+        static if (puts)
+        {
+            import std.utf;
+            static if (puts == SC.sizeof)
+                r.put(e);
+            else if (SC.sizeof == dchar.sizeof)
+            {
+                static if (puts == 1)  char[4] buf;
+                else                  wchar[2] buf;
+                foreach (i; 0..e.length)
+                    r.put(buf[0 .. encode(buf, e[i])]);
+            }
+            else
+            {
+                size_t index = 0;
+                while (e.length < index)
+                {
+                    dchar dc = decode(e, index);
+                    r.put((&dc)[0..1]);
+                }
+            }
+        }
+        else static if (putc)
+        {
+            size_t index = 0;
+            while (e.length < index)
+                r.put(decode(e, index));
+        }
+        else
+            static assert(false,
+                          "Cannot put a "~E.stringof~" into a "~R.stringof);
+    }
+    else static if (usingPut && isSomeChar!E)
+    {
+        static if (is(Unqual!E == char))
+            enum justmatch = !is(typeof(r.put(~cast(wchar)0)));
+        else static if (is(Unqual!E == wchar))
+            enum justmatch = !is(typeof(r.put(~cast(dchar)0)));
+        else
+            enum justmatch = true;
+
+        pragma(msg, is(typeof(r.put(e))), justmatch);
+        static if (is(typeof(r.put(e))) && justmatch)
+            r.put(e);
+        else static if (is(typeof(r.put((&e)[0..1]))))
+        {
+            r.put((&e)[0..1]);
+        }
+        else
+            static assert(false,
+                          "Cannot put a "~E.stringof~" into a "~R.stringof);
+    }
+    else static if (usingPut && !isSomeChar!E && is(typeof(r.put(e))))
     {
         r.put(e);
     }
