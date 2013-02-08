@@ -3133,7 +3133,7 @@ auto takeNone(R)(R range)
 {
     //Makes it so that calls to takeNone which don't use UFCS still work with a
     //member version if it's defined.
-    static if(is(typeof(R.takeNone)))
+    static if(is(typeof(&R.takeNone)))
         auto retval = range.takeNone();
     //@@@BUG@@@ 8339
     else static if(isDynamicArray!R)/+ ||

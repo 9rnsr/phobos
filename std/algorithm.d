@@ -1269,7 +1269,7 @@ auto r1 = filter!("cast(int) a != a")(chain(c, a, b));
 assert(equal(r1, [ 2.5 ]));
 ----
  */
-template filter(alias pred) if (is(typeof(unaryFun!pred)))
+template filter(alias pred) //if (is(typeof(unaryFun!pred)))
 {
     auto filter(Range)(Range rs) if (isInputRange!(Unqual!Range))
     {
