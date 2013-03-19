@@ -2444,8 +2444,8 @@ private:
     }
 
 public:
-    /**Create an $(D Fft) object for computing fast Fourier transforms of 
-     * power of two sizes of $(D size) or smaller.  $(D size) must be a 
+    /**Create an $(D Fft) object for computing fast Fourier transforms of
+     * power of two sizes of $(D size) or smaller.  $(D size) must be a
      * power of two.
      */
     this(size_t size) {
@@ -2468,7 +2468,7 @@ public:
      *
      * Note:  Pure real FFTs are automatically detected and the relevant
      *        optimizations are performed.
-     * 
+     *
      * Returns:  An array of complex numbers representing the transformed data in
      *           the frequency domain.
      */
@@ -2510,7 +2510,7 @@ public:
             alias ElementType!R E;
             static if(is(E : real)) {
                 return fftImplPureReal(range, buf);
-            } else {                
+            } else {
                 static if(is(R : Stride!R)) {
                     return fftImpl(range, buf);
                 } else {
@@ -2615,13 +2615,13 @@ unittest {
         [36.0, -4, -4, -4, -4, -4, -4, -4]));
     assert(approxEqual(map!"a.im"(fft1),
         [0, 9.6568, 4, 1.6568, 0, -1.6568, -4, -9.6568]));
-    
+
     auto fft1Retro = fft(retro(arr));
     assert(approxEqual(map!"a.re"(fft1Retro),
         [36.0, 4, 4, 4, 4, 4, 4, 4]));
     assert(approxEqual(map!"a.im"(fft1Retro),
-        [0, -9.6568, -4, -1.6568, 0, 1.6568, 4, 9.6568]));  
-        
+        [0, -9.6568, -4, -1.6568, 0, 1.6568, 4, 9.6568]));
+
     auto fft1Float = fft(to!(float[])(arr));
     assert(approxEqual(map!"a.re"(fft1), map!"a.re"(fft1Float)));
     assert(approxEqual(map!"a.im"(fft1), map!"a.im"(fft1Float)));

@@ -1,217 +1,216 @@
 // Written in the D programming language.
 
 /**
-Defines generic _containers.
-
-Source: $(PHOBOSSRC std/_container.d)
-Macros:
-WIKI = Phobos/StdContainer
-TEXTWITHCOMMAS = $0
-
-Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
-copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
-
-License: Distributed under the Boost Software License, Version 1.0.
-(See accompanying file LICENSE_1_0.txt or copy at $(WEB
-boost.org/LICENSE_1_0.txt)).
-
-Authors: Steven Schveighoffer, $(WEB erdani.com, Andrei Alexandrescu)
-
-$(BOOKTABLE $(TEXTWITHCOMMAS Container primitives. Below, $(D C) means
-a _container type, $(D c) is a value of _container type, $(D n$(SUB
-x)) represents the effective length of value $(D x), which could be a
-single element (in which case $(D n$(SUB x)) is $(D 1)), a _container,
-or a range.),
-
-$(TR $(TH Syntax) $(TH $(BIGOH &middot;)) $(TH Description))
-
-$(TR $(TDNW $(D C(x))) $(TDNW $(D n$(SUB x))) $(TD Creates a
-_container of type $(D C) from either another _container or a range.))
-
-$(TR $(TDNW $(D c.dup)) $(TDNW $(D n$(SUB c))) $(TD Returns a
-duplicate of the _container.))
-
-$(TR $(TDNW $(D c ~ x)) $(TDNW $(D n$(SUB c) + n$(SUB x))) $(TD
-Returns the concatenation of $(D c) and $(D r). $(D x) may be a single
-element or an input range.))
-
-$(TR $(TDNW $(D x ~ c)) $(TDNW $(D n$(SUB c) + n$(SUB x))) $(TD
-Returns the concatenation of $(D x) and $(D c).  $(D x) may be a
-single element or an input range type.))
-
-$(LEADINGROW Iteration)
-
-$(TR  $(TD $(D c.Range)) $(TD) $(TD The primary range
-type associated with the _container.))
-
-$(TR $(TD $(D c[])) $(TDNW $(D log n$(SUB c))) $(TD Returns a range
-iterating over the entire _container, in a _container-defined order.))
-
-$(TR $(TDNW $(D c[a .. b])) $(TDNW $(D log n$(SUB c))) $(TD Fetches a
-portion of the _container from key $(D a) to key $(D b).))
-
-$(LEADINGROW Capacity)
-
-$(TR $(TD $(D c.empty)) $(TD $(D 1)) $(TD Returns $(D true) if the
-_container has no elements, $(D false) otherwise.))
-
-$(TR  $(TD $(D c.length)) $(TDNW $(D log n$(SUB c))) $(TD Returns the
-number of elements in the _container.))
-
-$(TR $(TDNW $(D c.length = n)) $(TDNW $(D n$(SUB c) + n)) $(TD Forces
-the number of elements in the _container to $(D n). If the _container
-ends up growing, the added elements are initialized in a
-_container-dependent manner (usually with $(D T.init)).))
-
-$(TR $(TD $(D c.capacity)) $(TDNW $(D log n$(SUB c))) $(TD Returns the
-maximum number of elements that can be stored in the _container
-without triggering a reallocation.))
-
-$(TR $(TD $(D c.reserve(x))) $(TD $(D n$(SUB c))) $(TD Forces $(D
-capacity) to at least $(D x) without reducing it.))
-
-$(LEADINGROW Access)
-
-$(TR $(TDNW $(D c.front)) $(TDNW $(D log n$(SUB c))) $(TD Returns the
-first element of the _container, in a _container-defined order.))
-
-$(TR $(TDNW $(D c.moveFront)) $(TDNW $(D log n$(SUB c))) $(TD
-Destructively reads and returns the first element of the
-_container. The slot is not removed from the _container; it is left
-initalized with $(D T.init). This routine need not be defined if $(D
-front) returns a $(D ref).))
-
-$(TR $(TDNW $(D c.front = v)) $(TDNW $(D log n$(SUB c))) $(TD Assigns
-$(D v) to the first element of the _container.))
-
-$(TR $(TDNW $(D c.back)) $(TDNW $(D log n$(SUB c))) $(TD Returns the
-last element of the _container, in a _container-defined order.))
-
-$(TR $(TDNW $(D c.moveBack)) $(TDNW $(D log n$(SUB c))) $(TD
-Destructively reads and returns the last element of the
-container. The slot is not removed from the _container; it is left
-initalized with $(D T.init). This routine need not be defined if $(D
-front) returns a $(D ref).))
-
-$(TR $(TDNW $(D c.back = v)) $(TDNW $(D log n$(SUB c))) $(TD Assigns
-$(D v) to the last element of the _container.))
-
-$(TR $(TDNW $(D c[x])) $(TDNW $(D log n$(SUB c))) $(TD Provides
-indexed access into the _container. The index type is
-_container-defined. A container may define several index types (and
-consequently overloaded indexing).))
-
-$(TR  $(TDNW $(D c.moveAt(x))) $(TDNW $(D log n$(SUB c))) $(TD
-Destructively reads and returns the value at position $(D x). The slot
-is not removed from the _container; it is left initialized with $(D
-T.init).))
-
-$(TR  $(TDNW $(D c[x] = v)) $(TDNW $(D log n$(SUB c))) $(TD Sets
-element at specified index into the _container.))
-
-$(TR  $(TDNW $(D c[x] $(I op)= v)) $(TDNW $(D log n$(SUB c)))
-$(TD Performs read-modify-write operation at specified index into the
-_container.))
-
-$(LEADINGROW Operations)
-
-$(TR $(TDNW $(D e in c)) $(TDNW $(D log n$(SUB c))) $(TD
-Returns nonzero if e is found in $(D c).))
-
-$(TR  $(TDNW $(D c.lowerBound(v))) $(TDNW $(D log n$(SUB c))) $(TD
-Returns a range of all elements strictly less than $(D v).))
-
-$(TR  $(TDNW $(D c.upperBound(v))) $(TDNW $(D log n$(SUB c))) $(TD
-Returns a range of all elements strictly greater than $(D v).))
-
-$(TR  $(TDNW $(D c.equalRange(v))) $(TDNW $(D log n$(SUB c))) $(TD
-Returns a range of all elements in $(D c) that are equal to $(D v).))
-
-$(LEADINGROW Modifiers)
-
-$(TR $(TDNW $(D c ~= x)) $(TDNW $(D n$(SUB c) + n$(SUB x)))
-$(TD Appends $(D x) to $(D c). $(D x) may be a single element or an
-input range type.))
-
-$(TR  $(TDNW $(D c.clear())) $(TDNW $(D n$(SUB c))) $(TD Removes all
-elements in $(D c).))
-
-$(TR  $(TDNW $(D c.insert(x))) $(TDNW $(D n$(SUB x) * log n$(SUB c)))
-$(TD Inserts $(D x) in $(D c) at a position (or positions) chosen by $(D c).))
-
-$(TR  $(TDNW $(D c.stableInsert(x)))
-$(TDNW $(D n$(SUB x) * log n$(SUB c))) $(TD Same as $(D c.insert(x)),
-but is guaranteed to not invalidate any ranges.))
-
-$(TR  $(TDNW $(D c.linearInsert(v))) $(TDNW $(D n$(SUB c))) $(TD Same
-as $(D c.insert(v)) but relaxes complexity to linear.))
-
-$(TR  $(TDNW $(D c.stableLinearInsert(v))) $(TDNW $(D n$(SUB c)))
-$(TD Same as $(D c.stableInsert(v)) but relaxes complexity to linear.))
-
-$(TR  $(TDNW $(D c.removeAny())) $(TDNW $(D log n$(SUB c)))
-$(TD Removes some element from $(D c) and returns it.))
-
-$(TR  $(TDNW $(D c.stableRemoveAny())) $(TDNW $(D log n$(SUB c)))
-$(TD Same as $(D c.removeAny()), but is guaranteed to not invalidate any
-iterators.))
-
-$(TR  $(TDNW $(D c.insertFront(v))) $(TDNW $(D log n$(SUB c)))
-$(TD Inserts $(D v) at the front of $(D c).))
-
-$(TR  $(TDNW $(D c.stableInsertFront(v))) $(TDNW $(D log n$(SUB c)))
-$(TD Same as $(D c.insertFront(v)), but guarantees no ranges will be
-invalidated.))
-
-$(TR  $(TDNW $(D c.insertBack(v))) $(TDNW $(D log n$(SUB c)))
-$(TD Inserts $(D v) at the back of $(D c).))
-
-$(TR  $(TDNW $(D c.stableInsertBack(v))) $(TDNW $(D log n$(SUB c)))
-$(TD Same as $(D c.insertBack(v)), but guarantees no ranges will be
-invalidated.))
-
-$(TR  $(TDNW $(D c.removeFront())) $(TDNW $(D log n$(SUB c)))
-$(TD Removes the element at the front of $(D c).))
-
-$(TR  $(TDNW $(D c.stableRemoveFront())) $(TDNW $(D log n$(SUB c)))
-$(TD Same as $(D c.removeFront()), but guarantees no ranges will be
-invalidated.))
-
-$(TR  $(TDNW $(D c.removeBack())) $(TDNW $(D log n$(SUB c)))
-$(TD Removes the value at the back of $(D c).))
-
-$(TR  $(TDNW $(D c.stableRemoveBack())) $(TDNW $(D log n$(SUB c)))
-$(TD Same as $(D c.removeBack()), but guarantees no ranges will be
-invalidated.))
-
-$(TR  $(TDNW $(D c.remove(r))) $(TDNW $(D n$(SUB r) * log n$(SUB c)))
-$(TD Removes range $(D r) from $(D c).))
-
-$(TR  $(TDNW $(D c.stableRemove(r)))
-$(TDNW $(D n$(SUB r) * log n$(SUB c)))
-$(TD Same as $(D c.remove(r)), but guarantees iterators are not
-invalidated.))
-
-$(TR  $(TDNW $(D c.linearRemove(r))) $(TDNW $(D n$(SUB c)))
-$(TD Removes range $(D r) from $(D c).))
-
-$(TR  $(TDNW $(D c.stableLinearRemove(r))) $(TDNW $(D n$(SUB c)))
-$(TD Same as $(D c.linearRemove(r)), but guarantees iterators are not
-invalidated.))
-
-$(TR  $(TDNW $(D c.removeKey(k))) $(TDNW $(D log n$(SUB c)))
-$(TD Removes an element from $(D c) by using its key $(D k).
-The key's type is defined by the _container.))
-
-$(TR  $(TDNW $(D )) $(TDNW $(D )) $(TD ))
-
-)
+ * Defines generic _containers.
+ *
+ * Source: $(PHOBOSSRC std/_container.d)
+ * Macros:
+ * WIKI = Phobos/StdContainer
+ * TEXTWITHCOMMAS = $0
+ *
+ * Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
+ * copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
+ *
+ * License: Distributed under the Boost Software License, Version 1.0.
+ * (See accompanying file LICENSE_1_0.txt or copy at $(WEB
+ * boost.org/LICENSE_1_0.txt)).
+ *
+ * Authors: Steven Schveighoffer, $(WEB erdani.com, Andrei Alexandrescu)
+ *
+ * $(BOOKTABLE $(TEXTWITHCOMMAS Container primitives. Below, $(D C) means
+ * a _container type, $(D c) is a value of _container type, $(D n$(SUB
+ * x)) represents the effective length of value $(D x), which could be a
+ * single element (in which case $(D n$(SUB x)) is $(D 1)), a _container,
+ * or a range.),
+ *
+ * $(TR $(TH Syntax) $(TH $(BIGOH &middot;)) $(TH Description))
+ *
+ * $(TR $(TDNW $(D C(x))) $(TDNW $(D n$(SUB x))) $(TD Creates a
+ * _container of type $(D C) from either another _container or a range.))
+ *
+ * $(TR $(TDNW $(D c.dup)) $(TDNW $(D n$(SUB c))) $(TD Returns a
+ * duplicate of the _container.))
+ *
+ * $(TR $(TDNW $(D c ~ x)) $(TDNW $(D n$(SUB c) + n$(SUB x))) $(TD
+ * Returns the concatenation of $(D c) and $(D r). $(D x) may be a single
+ * element or an input range.))
+ *
+ * $(TR $(TDNW $(D x ~ c)) $(TDNW $(D n$(SUB c) + n$(SUB x))) $(TD
+ * Returns the concatenation of $(D x) and $(D c).  $(D x) may be a
+ * single element or an input range type.))
+ *
+ * $(LEADINGROW Iteration)
+ *
+ * $(TR  $(TD $(D c.Range)) $(TD) $(TD The primary range
+ * type associated with the _container.))
+ *
+ * $(TR $(TD $(D c[])) $(TDNW $(D log n$(SUB c))) $(TD Returns a range
+ * iterating over the entire _container, in a _container-defined order.))
+ *
+ * $(TR $(TDNW $(D c[a .. b])) $(TDNW $(D log n$(SUB c))) $(TD Fetches a
+ * portion of the _container from key $(D a) to key $(D b).))
+ *
+ * $(LEADINGROW Capacity)
+ *
+ * $(TR $(TD $(D c.empty)) $(TD $(D 1)) $(TD Returns $(D true) if the
+ * _container has no elements, $(D false) otherwise.))
+ *
+ * $(TR  $(TD $(D c.length)) $(TDNW $(D log n$(SUB c))) $(TD Returns the
+ * number of elements in the _container.))
+ *
+ * $(TR $(TDNW $(D c.length = n)) $(TDNW $(D n$(SUB c) + n)) $(TD Forces
+ * the number of elements in the _container to $(D n). If the _container
+ * ends up growing, the added elements are initialized in a
+ * _container-dependent manner (usually with $(D T.init)).))
+ *
+ * $(TR $(TD $(D c.capacity)) $(TDNW $(D log n$(SUB c))) $(TD Returns the
+ * maximum number of elements that can be stored in the _container
+ * without triggering a reallocation.))
+ *
+ * $(TR $(TD $(D c.reserve(x))) $(TD $(D n$(SUB c))) $(TD Forces $(D
+ * capacity) to at least $(D x) without reducing it.))
+ *
+ * $(LEADINGROW Access)
+ *
+ * $(TR $(TDNW $(D c.front)) $(TDNW $(D log n$(SUB c))) $(TD Returns the
+ * first element of the _container, in a _container-defined order.))
+ *
+ * $(TR $(TDNW $(D c.moveFront)) $(TDNW $(D log n$(SUB c))) $(TD
+ * Destructively reads and returns the first element of the
+ * _container. The slot is not removed from the _container; it is left
+ * initalized with $(D T.init). This routine need not be defined if $(D
+ * front) returns a $(D ref).))
+ *
+ * $(TR $(TDNW $(D c.front = v)) $(TDNW $(D log n$(SUB c))) $(TD Assigns
+ * $(D v) to the first element of the _container.))
+ *
+ * $(TR $(TDNW $(D c.back)) $(TDNW $(D log n$(SUB c))) $(TD Returns the
+ * last element of the _container, in a _container-defined order.))
+ *
+ * $(TR $(TDNW $(D c.moveBack)) $(TDNW $(D log n$(SUB c))) $(TD
+ * Destructively reads and returns the last element of the
+ * container. The slot is not removed from the _container; it is left
+ * initalized with $(D T.init). This routine need not be defined if $(D
+ * front) returns a $(D ref).))
+ *
+ * $(TR $(TDNW $(D c.back = v)) $(TDNW $(D log n$(SUB c))) $(TD Assigns
+ * $(D v) to the last element of the _container.))
+ *
+ * $(TR $(TDNW $(D c[x])) $(TDNW $(D log n$(SUB c))) $(TD Provides
+ * indexed access into the _container. The index type is
+ * _container-defined. A container may define several index types (and
+ * consequently overloaded indexing).))
+ *
+ * $(TR  $(TDNW $(D c.moveAt(x))) $(TDNW $(D log n$(SUB c))) $(TD
+ * Destructively reads and returns the value at position $(D x). The slot
+ * is not removed from the _container; it is left initialized with $(D
+ * T.init).))
+ *
+ * $(TR  $(TDNW $(D c[x] = v)) $(TDNW $(D log n$(SUB c))) $(TD Sets
+ * element at specified index into the _container.))
+ *
+ * $(TR  $(TDNW $(D c[x] $(I op)= v)) $(TDNW $(D log n$(SUB c)))
+ * $(TD Performs read-modify-write operation at specified index into the
+ * _container.))
+ *
+ * $(LEADINGROW Operations)
+ *
+ * $(TR $(TDNW $(D e in c)) $(TDNW $(D log n$(SUB c))) $(TD
+ * Returns nonzero if e is found in $(D c).))
+ *
+ * $(TR  $(TDNW $(D c.lowerBound(v))) $(TDNW $(D log n$(SUB c))) $(TD
+ * Returns a range of all elements strictly less than $(D v).))
+ *
+ * $(TR  $(TDNW $(D c.upperBound(v))) $(TDNW $(D log n$(SUB c))) $(TD
+ * Returns a range of all elements strictly greater than $(D v).))
+ *
+ * $(TR  $(TDNW $(D c.equalRange(v))) $(TDNW $(D log n$(SUB c))) $(TD
+ * Returns a range of all elements in $(D c) that are equal to $(D v).))
+ *
+ * $(LEADINGROW Modifiers)
+ *
+ * $(TR $(TDNW $(D c ~= x)) $(TDNW $(D n$(SUB c) + n$(SUB x)))
+ * $(TD Appends $(D x) to $(D c). $(D x) may be a single element or an
+ * input range type.))
+ *
+ * $(TR  $(TDNW $(D c.clear())) $(TDNW $(D n$(SUB c))) $(TD Removes all
+ * elements in $(D c).))
+ *
+ * $(TR  $(TDNW $(D c.insert(x))) $(TDNW $(D n$(SUB x) * log n$(SUB c)))
+ * $(TD Inserts $(D x) in $(D c) at a position (or positions) chosen by $(D c).))
+ *
+ * $(TR  $(TDNW $(D c.stableInsert(x)))
+ * $(TDNW $(D n$(SUB x) * log n$(SUB c))) $(TD Same as $(D c.insert(x)),
+ * but is guaranteed to not invalidate any ranges.))
+ *
+ * $(TR  $(TDNW $(D c.linearInsert(v))) $(TDNW $(D n$(SUB c))) $(TD Same
+ * as $(D c.insert(v)) but relaxes complexity to linear.))
+ *
+ * $(TR  $(TDNW $(D c.stableLinearInsert(v))) $(TDNW $(D n$(SUB c)))
+ * $(TD Same as $(D c.stableInsert(v)) but relaxes complexity to linear.))
+ *
+ * $(TR  $(TDNW $(D c.removeAny())) $(TDNW $(D log n$(SUB c)))
+ * $(TD Removes some element from $(D c) and returns it.))
+ *
+ * $(TR  $(TDNW $(D c.stableRemoveAny())) $(TDNW $(D log n$(SUB c)))
+ * $(TD Same as $(D c.removeAny()), but is guaranteed to not invalidate any
+ * iterators.))
+ *
+ * $(TR  $(TDNW $(D c.insertFront(v))) $(TDNW $(D log n$(SUB c)))
+ * $(TD Inserts $(D v) at the front of $(D c).))
+ *
+ * $(TR  $(TDNW $(D c.stableInsertFront(v))) $(TDNW $(D log n$(SUB c)))
+ * $(TD Same as $(D c.insertFront(v)), but guarantees no ranges will be
+ * invalidated.))
+ *
+ * $(TR  $(TDNW $(D c.insertBack(v))) $(TDNW $(D log n$(SUB c)))
+ * $(TD Inserts $(D v) at the back of $(D c).))
+ *
+ * $(TR  $(TDNW $(D c.stableInsertBack(v))) $(TDNW $(D log n$(SUB c)))
+ * $(TD Same as $(D c.insertBack(v)), but guarantees no ranges will be
+ * invalidated.))
+ *
+ * $(TR  $(TDNW $(D c.removeFront())) $(TDNW $(D log n$(SUB c)))
+ * $(TD Removes the element at the front of $(D c).))
+ *
+ * $(TR  $(TDNW $(D c.stableRemoveFront())) $(TDNW $(D log n$(SUB c)))
+ * $(TD Same as $(D c.removeFront()), but guarantees no ranges will be
+ * invalidated.))
+ *
+ * $(TR  $(TDNW $(D c.removeBack())) $(TDNW $(D log n$(SUB c)))
+ * $(TD Removes the value at the back of $(D c).))
+ *
+ * $(TR  $(TDNW $(D c.stableRemoveBack())) $(TDNW $(D log n$(SUB c)))
+ * $(TD Same as $(D c.removeBack()), but guarantees no ranges will be
+ * invalidated.))
+ *
+ * $(TR  $(TDNW $(D c.remove(r))) $(TDNW $(D n$(SUB r) * log n$(SUB c)))
+ * $(TD Removes range $(D r) from $(D c).))
+ *
+ * $(TR  $(TDNW $(D c.stableRemove(r)))
+ * $(TDNW $(D n$(SUB r) * log n$(SUB c)))
+ * $(TD Same as $(D c.remove(r)), but guarantees iterators are not
+ * invalidated.))
+ *
+ * $(TR  $(TDNW $(D c.linearRemove(r))) $(TDNW $(D n$(SUB c)))
+ * $(TD Removes range $(D r) from $(D c).))
+ *
+ * $(TR  $(TDNW $(D c.stableLinearRemove(r))) $(TDNW $(D n$(SUB c)))
+ * $(TD Same as $(D c.linearRemove(r)), but guarantees iterators are not
+ * invalidated.))
+ *
+ * $(TR  $(TDNW $(D c.removeKey(k))) $(TDNW $(D log n$(SUB c)))
+ * $(TD Removes an element from $(D c) by using its key $(D k).
+ * The key's type is defined by the _container.))
+ *
+ * $(TR  $(TDNW $(D )) $(TDNW $(D )) $(TD ))
+ * )
  */
 module std.container;
 
-import core.memory, core.stdc.stdlib, core.stdc.string, std.algorithm,
-    std.conv, std.exception, std.functional, std.range, std.traits,
-    std.typecons, std.typetuple;
+import core.memory, core.stdc.stdlib, core.stdc.string;
+import std.algorithm, std.conv, std.exception, std.functional, std.range,
+       std.traits, std.typecons, std.typetuple;
 version(unittest) import std.stdio;
 
 version(unittest) version = RBDoChecks;
@@ -226,624 +225,416 @@ version(RBDoChecks)
 
 
 /* The following documentation and type $(D TotalContainer) are
-intended for developers only.
-
-$(D TotalContainer) is an unimplemented container that illustrates a
-host of primitives that a container may define. It is to some extent
-the bottom of the conceptual container hierarchy. A given container
-most often will choose to only implement a subset of these primitives,
-and define its own additional ones. Adhering to the standard primitive
-names below allows generic code to work independently of containers.
-
-Things to remember: any container must be a reference type, whether
-implemented as a $(D class) or $(D struct). No primitive below
-requires the container to escape addresses of elements, which means
-that compliant containers can be defined to use reference counting or
-other deterministic memory management techniques.
-
-A container may choose to define additional specific operations. The
-only requirement is that those operations bear different names than
-the ones below, lest user code gets confused.
-
-Complexity of operations should be interpreted as "at least as good
-as". If an operation is required to have $(BIGOH n) complexity, it
-could have anything lower than that, e.g. $(BIGOH log(n)). Unless
-specified otherwise, $(D n) inside a $(BIGOH) expression stands for
-the number of elements in the container.
+ * intended for developers only.
+ *
+ * $(D TotalContainer) is an unimplemented container that illustrates a
+ * host of primitives that a container may define. It is to some extent
+ * the bottom of the conceptual container hierarchy. A given container
+ * most often will choose to only implement a subset of these primitives,
+ * and define its own additional ones. Adhering to the standard primitive
+ * names below allows generic code to work independently of containers.
+ *
+ * Things to remember: any container must be a reference type, whether
+ * implemented as a $(D class) or $(D struct). No primitive below
+ * requires the container to escape addresses of elements, which means
+ * that compliant containers can be defined to use reference counting or
+ * other deterministic memory management techniques.
+ *
+ * A container may choose to define additional specific operations. The
+ * only requirement is that those operations bear different names than
+ * the ones below, lest user code gets confused.
+ *
+ * Complexity of operations should be interpreted as "at least as good
+ * as". If an operation is required to have $(BIGOH n) complexity, it
+ * could have anything lower than that, e.g. $(BIGOH log(n)). Unless
+ * specified otherwise, $(D n) inside a $(BIGOH) expression stands for
+ * the number of elements in the container.
  */
 struct TotalContainer(T)
 {
-/**
-If the container has a notion of key-value mapping, $(D KeyType)
-defines the type of the key of the container.
- */
+    /**
+     * If the container has a notion of key-value mapping, $(D KeyType)
+     * defines the type of the key of the container.
+     */
     alias T KeyType;
 
-/**
-If the container has a notion of multikey-value mapping, $(D
-KeyTypes[k]), where $(D k) is a zero-based unsigned number, defines
-the type of the $(D k)th key of the container.
-
-A container may define both $(D KeyType) and $(D KeyTypes), e.g. in
-the case it has the notion of primary/preferred key.
- */
+    /**
+     * If the container has a notion of multikey-value mapping, $(D
+     * KeyTypes[k]), where $(D k) is a zero-based unsigned number, defines
+     * the type of the $(D k)th key of the container.
+     *
+     * A container may define both $(D KeyType) and $(D KeyTypes), e.g. in
+     * the case it has the notion of primary/preferred key.
+     */
     alias TypeTuple!(T) KeyTypes;
 
-/**
-If the container has a notion of key-value mapping, $(D ValueType)
-defines the type of the value of the container. Typically, a map-style
-container mapping values of type $(D K) to values of type $(D V)
-defines $(D KeyType) to be $(D K) and $(D ValueType) to be $(D V).
- */
+    /**
+     * If the container has a notion of key-value mapping, $(D ValueType)
+     * defines the type of the value of the container. Typically, a map-style
+     * container mapping values of type $(D K) to values of type $(D V)
+     * defines $(D KeyType) to be $(D K) and $(D ValueType) to be $(D V).
+     */
     alias T ValueType;
 
-/**
-Defines the container's primary range, which embodies one of the
-ranges defined in $(XREFMODULE range).
-
-Generally a container may define several types of ranges.
- */
+    /**
+     * Defines the container's primary range, which embodies one of the
+     * ranges defined in $(XREFMODULE range).
+     *
+     * Generally a container may define several types of ranges.
+     */
     struct Range
     {
         /// Range primitives.
-        @property bool empty()
-        {
-            assert(0);
-        }
+        @property bool empty() { assert(0); }
         /// Ditto
-        @property T front()
-        {
-            assert(0);
-        }
+        @property T front() { assert(0); }
         /// Ditto
-        T moveFront()
-        {
-            assert(0);
-        }
+        void popFront() { assert(0); }
         /// Ditto
-        void popFront()
-        {
-            assert(0);
-        }
+        @property T back() { assert(0); }
         /// Ditto
-        @property T back()
-        {
-            assert(0);
-        }
+        void popBack() { assert(0); }
         /// Ditto
-        T moveBack()
-        {
-            assert(0);
-        }
+        T opIndex(size_t i) { assert(0); }
         /// Ditto
-        void popBack()
-        {
-            assert(0);
-        }
+        void opIndexAssign(T value, size_t i) { assert(0); }
         /// Ditto
-        T opIndex(size_t i)
-        {
-            assert(0);
-        }
+        void opIndexOpAssign(string op)(T value, uint i) { assert(0); }
         /// Ditto
-        void opIndexAssign(T value, size_t i)
-        {
-            assert(0);
-        }
+        @property size_t length() { assert(0); }
         /// Ditto
-        void opIndexOpAssign(string op)(T value, uint i)
-        {
-            assert(0);
-        }
+        T moveFront() { assert(0); }
         /// Ditto
-        T moveAt(size_t i)
-        {
-            assert(0);
-        }
+        T moveBack() { assert(0); }
         /// Ditto
-        @property size_t length()
-        {
-            assert(0);
-        }
-    }
-
-/**
-Property returning $(D true) if and only if the container has no
-elements.
-
-Complexity: $(BIGOH 1)
- */
-    @property bool empty()
-    {
-        assert(0);
-    }
-
-/**
-Returns a duplicate of the container. The elements themselves are not
-transitively duplicated.
-
-Complexity: $(BIGOH n).
- */
-    @property TotalContainer dup()
-    {
-        assert(0);
-    }
-
-/**
-Returns the number of elements in the container.
-
-Complexity: $(BIGOH log(n)).
-*/
-    @property size_t length()
-    {
-        assert(0);
-    }
-
-/**
-Returns the maximum number of elements the container can store without
-(a) allocating memory, (b) invalidating iterators upon insertion.
-
-Complexity: $(BIGOH log(n)).
- */
-    @property size_t capacity()
-    {
-        assert(0);
-    }
-
-/**
-Ensures sufficient capacity to accommodate $(D n) elements.
-
-Postcondition: $(D capacity >= n)
-
-Complexity: $(BIGOH log(e - capacity)) if $(D e > capacity), otherwise
-$(BIGOH 1).
- */
-    void reserve(size_t e)
-    {
-        assert(0);
-    }
-
-/**
-Returns a range that iterates over all elements of the container, in a
-container-defined order. The container should choose the most
-convenient and fast method of iteration for $(D opSlice()).
-
-Complexity: $(BIGOH log(n))
- */
-    Range opSlice()
-    {
-        assert(0);
+        T moveAt(size_t i) { assert(0); }
     }
 
     /**
-       Returns a range that iterates the container between two
-       specified positions.
-
-       Complexity: $(BIGOH log(n))
+     * Property returning $(D true) if and only if the container has no
+     * elements.
+     *
+     * Complexity: $(BIGOH 1)
      */
-    Range opSlice(size_t a, size_t b)
-    {
-        assert(0);
-    }
+    @property bool empty() { assert(0); }
 
-/**
-Forward to $(D opSlice().front) and $(D opSlice().back), respectively.
-
-Complexity: $(BIGOH log(n))
- */
-    @property T front()
-    {
-        assert(0);
-    }
-    /// Ditto
-    T moveFront()
-    {
-        assert(0);
-    }
-    /// Ditto
-    @property T back()
-    {
-        assert(0);
-    }
-    /// Ditto
-    T moveBack()
-    {
-        assert(0);
-    }
-
-/**
-Indexing operators yield or modify the value at a specified index.
- */
     /**
-       Indexing operators yield or modify the value at a specified index.
+     * Returns a duplicate of the container. The elements themselves are not
+     * transitively duplicated.
+     *
+     * Complexity: $(BIGOH n).
      */
-    ValueType opIndex(KeyType)
-    {
-        assert(0);
-    }
+    @property TotalContainer dup() { assert(0); }
+
+    /**
+     * Returns the number of elements in the container.
+     *
+     * Complexity: $(BIGOH log(n)).
+     */
+    @property size_t length() { assert(0); }
+
+    /**
+     * Returns the maximum number of elements the container can store without
+     * (a) allocating memory, (b) invalidating iterators upon insertion.
+     *
+     * Complexity: $(BIGOH log(n)).
+     */
+    @property size_t capacity() { assert(0); }
+
+    /**
+     * Ensures sufficient capacity to accommodate $(D n) elements.
+     *
+     * Postcondition: $(D capacity >= n)
+     *
+     * Complexity: $(BIGOH log(e - capacity)) if $(D e > capacity), otherwise
+     * $(BIGOH 1).
+     */
+    void reserve(size_t e) { assert(0); }
+
+    /**
+     * Returns a range that iterates over all elements of the container, in a
+     * container-defined order. The container should choose the most
+     * convenient and fast method of iteration for $(D opSlice()).
+     *
+     * Complexity: $(BIGOH log(n))
+     */
+    Range opSlice() const { assert(0); }
+
+    /**
+     * Returns a range that iterates the container between two
+     * specified positions.
+     *
+     * Complexity: $(BIGOH log(n))
+     */
+    Range opSlice(size_t a, size_t b) const { assert(0); }
+
+    /**
+     * Forward to $(D opSlice().front) and $(D opSlice().back), respectively.
+     *
+     * Complexity: $(BIGOH log(n))
+     */
+    @property T front() { assert(0); }
+    /// Ditto
+    T moveFront() { assert(0); }
+    /// Ditto
+    @property T back() { assert(0); }
+    /// Ditto
+    T moveBack() { assert(0); }
+
+    /**
+     * Indexing operators yield or modify the value at a specified index.
+     */
+    /**
+     * Indexing operators yield or modify the value at a specified index.
+     */
+    ValueType opIndex(KeyType) { assert(0); }
     /// ditto
-    void opIndexAssign(KeyType)
-    {
-        assert(0);
-    }
+    void opIndexAssign(KeyType) { assert(0); }
     /// ditto
-    void opIndexOpAssign(string op)(KeyType)
-    {
-        assert(0);
-    }
-    T moveAt(size_t i)
-    {
-        assert(0);
-    }
+    void opIndexOpAssign(string op)(KeyType) { assert(0); }
+    T moveAt(size_t i) { assert(0); }
 
-/**
-$(D k in container) returns true if the given key is in the container.
- */
-    bool opBinary(string op)(KeyType k) if (op == "in")
-    {
-        assert(0);
-    }
+    /**
+     * $(D k in container) returns true if the given key is in the container.
+     */
+    bool opBinary(string op)(KeyType k) if (op == "in") { assert(0); }
 
-/**
-Returns a range of all elements containing $(D k) (could be empty or a
-singleton range).
- */
-    Range equalRange(KeyType k)
-    {
-        assert(0);
-    }
+    /**
+     * Returns a range of all elements containing $(D k) (could be empty or a
+     * singleton range).
+     */
+    Range equalRange(KeyType k) { assert(0); }
 
-/**
-Returns a range of all elements with keys less than $(D k) (could be
-empty or a singleton range). Only defined by containers that store
-data sorted at all times.
- */
-    Range lowerBound(KeyType k)
-    {
-        assert(0);
-    }
+    /**
+     * Returns a range of all elements with keys less than $(D k) (could be
+     * empty or a singleton range). Only defined by containers that store
+     * data sorted at all times.
+     */
+    Range lowerBound(KeyType k) { assert(0); }
 
-/**
-Returns a range of all elements with keys larger than $(D k) (could be
-empty or a singleton range).  Only defined by containers that store
-data sorted at all times.
- */
-    Range upperBound(KeyType k)
-    {
-        assert(0);
-    }
+    /**
+     * Returns a range of all elements with keys larger than $(D k) (could be
+     * empty or a singleton range).  Only defined by containers that store
+     * data sorted at all times.
+     */
+    Range upperBound(KeyType k) { assert(0); }
 
-/**
-Returns a new container that's the concatenation of $(D this) and its
-argument. $(D opBinaryRight) is only defined if $(D Stuff) does not
-define $(D opBinary).
-
-Complexity: $(BIGOH n + m), where m is the number of elements in $(D
-stuff)
- */
-    TotalContainer opBinary(string op)(Stuff rhs) if (op == "~")
-    {
-        assert(0);
-    }
-
+    /**
+     * Returns a new container that's the concatenation of $(D this) and its
+     * argument. $(D opBinaryRight) is only defined if $(D Stuff) does not
+     * define $(D opBinary).
+     *
+     * Complexity: $(BIGOH n + m), where m is the number of elements in $(D
+     * stuff)
+     */
+    TotalContainer opBinary(string op)(Stuff rhs) if (op == "~") { assert(0); }
     /// ditto
-    TotalContainer opBinaryRight(string op)(Stuff lhs) if (op == "~")
-    {
-        assert(0);
-    }
+    TotalContainer opBinaryRight(string op)(Stuff lhs) if (op == "~") { assert(0); }
 
-/**
-Forwards to $(D insertAfter(this[], stuff)).
- */
-    void opOpAssign(string op)(Stuff stuff) if (op == "~")
-    {
-        assert(0);
-    }
+    /**
+     * Forwards to $(D insertAfter(this[], stuff)).
+     */
+    void opOpAssign(string op)(Stuff stuff) if (op == "~") { assert(0); }
 
-/**
-Removes all contents from the container. The container decides how $(D
-capacity) is affected.
+    /**
+     * Removes all contents from the container. The container decides how $(D
+     * capacity) is affected.
+     *
+     * Postcondition: $(D empty)
+     *
+     * Complexity: $(BIGOH n)
+     */
+    void clear() { assert(0); }
 
-Postcondition: $(D empty)
+    /**
+     * Sets the number of elements in the container to $(D newSize). If $(D
+     * newSize) is greater than $(D length), the added elements are added to
+     * unspecified positions in the container and initialized with $(D
+     * .init).
+     *
+     * Complexity: $(BIGOH abs(n - newLength))
+     *
+     * Postcondition: $(D _length == newLength)
+     */
+    @property void length(size_t newLength) { assert(0); }
 
-Complexity: $(BIGOH n)
- */
-    void clear()
-    {
-        assert(0);
-    }
-
-/**
-Sets the number of elements in the container to $(D newSize). If $(D
-newSize) is greater than $(D length), the added elements are added to
-unspecified positions in the container and initialized with $(D
-.init).
-
-Complexity: $(BIGOH abs(n - newLength))
-
-Postcondition: $(D _length == newLength)
- */
-    @property void length(size_t newLength)
-    {
-        assert(0);
-    }
-
-/**
-Inserts $(D stuff) in an unspecified position in the
-container. Implementations should choose whichever insertion means is
-the most advantageous for the container, but document the exact
-behavior. $(D stuff) can be a value convertible to the element type of
-the container, or a range of values convertible to it.
-
-The $(D stable) version guarantees that ranges iterating over the
-container are never invalidated. Client code that counts on
-non-invalidating insertion should use $(D stableInsert). Such code would
-not compile against containers that don't support it.
-
-Returns: The number of elements added.
-
-Complexity: $(BIGOH m * log(n)), where $(D m) is the number of
-elements in $(D stuff)
- */
-    size_t insert(Stuff)(Stuff stuff)
-    {
-        assert(0);
-    }
+    /**
+     * Inserts $(D stuff) in an unspecified position in the
+     * container. Implementations should choose whichever insertion means is
+     * the most advantageous for the container, but document the exact
+     * behavior. $(D stuff) can be a value convertible to the element type of
+     * the container, or a range of values convertible to it.
+     *
+     * The $(D stable) version guarantees that ranges iterating over the
+     * container are never invalidated. Client code that counts on
+     * non-invalidating insertion should use $(D stableInsert). Such code would
+     * not compile against containers that don't support it.
+     *
+     * Returns: The number of elements added.
+     *
+     * Complexity: $(BIGOH m * log(n)), where $(D m) is the number of
+     * elements in $(D stuff)
+     */
+    size_t insert(Stuff)(Stuff stuff) { assert(0); }
     ///ditto
-    size_t stableInsert(Stuff)(Stuff stuff)
-    {
-        assert(0);
-    }
+    size_t stableInsert(Stuff)(Stuff stuff) { assert(0); }
 
-/**
-Same as $(D insert(stuff)) and $(D stableInsert(stuff)) respectively,
-but relax the complexity constraint to linear.
- */
-    size_t linearInsert(Stuff)(Stuff stuff)
-    {
-        assert(0);
-    }
+    /**
+     * Same as $(D insert(stuff)) and $(D stableInsert(stuff)) respectively,
+     * but relax the complexity constraint to linear.
+     */
+    size_t linearInsert(Stuff)(Stuff stuff) { assert(0); }
     ///ditto
-    size_t stableLinearInsert(Stuff)(Stuff stuff)
-    {
-        assert(0);
-    }
+    size_t stableLinearInsert(Stuff)(Stuff stuff) { assert(0); }
 
-/**
-Picks one value in an unspecified position in the container, removes
-it from the container, and returns it. Implementations should pick the
-value that's the most advantageous for the container, but document the
-exact behavior. The stable version behaves the same, but guarantees that
-ranges iterating over the container are never invalidated.
-
-Precondition: $(D !empty)
-
-Returns: The element removed.
-
-Complexity: $(BIGOH log(n)).
- */
-    T removeAny()
-    {
-        assert(0);
-    }
+    /**
+     * Picks one value in an unspecified position in the container, removes
+     * it from the container, and returns it. Implementations should pick the
+     * value that's the most advantageous for the container, but document the
+     * exact behavior. The stable version behaves the same, but guarantees that
+     * ranges iterating over the container are never invalidated.
+     *
+     * Precondition: $(D !empty)
+     *
+     * Returns: The element removed.
+     *
+     * Complexity: $(BIGOH log(n)).
+     */
+    T removeAny() { assert(0); }
     /// ditto
-    T stableRemoveAny()
-    {
-        assert(0);
-    }
+    T stableRemoveAny() { assert(0); }
 
-/**
-Inserts $(D value) to the front or back of the container. $(D stuff)
-can be a value convertible to the container's element type or a range
-of values convertible to it. The stable version behaves the same, but
-guarantees that ranges iterating over the container are never
-invalidated.
-
-Returns: The number of elements inserted
-
-Complexity: $(BIGOH log(n)).
- */
-    size_t insertFront(Stuff)(Stuff stuff)
-    {
-        assert(0);
-    }
+    /**
+     * Inserts $(D value) to the front or back of the container. $(D stuff)
+     * can be a value convertible to the container's element type or a range
+     * of values convertible to it. The stable version behaves the same, but
+     * guarantees that ranges iterating over the container are never
+     * invalidated.
+     *
+     * Returns: The number of elements inserted
+     *
+     * Complexity: $(BIGOH log(n)).
+     */
+    size_t insertFront(Stuff)(Stuff stuff) { assert(0); }
     /// ditto
-    size_t stableInsertFront(Stuff)(Stuff stuff)
-    {
-        assert(0);
-    }
+    size_t stableInsertFront(Stuff)(Stuff stuff) { assert(0); }
     /// ditto
-    size_t insertBack(Stuff)(Stuff stuff)
-    {
-        assert(0);
-    }
+    size_t insertBack(Stuff)(Stuff stuff) { assert(0); }
     /// ditto
-    size_t stableInsertBack(T value)
-    {
-        assert(0);
-    }
+    size_t stableInsertBack(T value) { assert(0); }
 
-/**
-Removes the value at the front or back of the container. The stable
-version behaves the same, but guarantees that ranges iterating over
-the container are never invalidated. The optional parameter $(D
-howMany) instructs removal of that many elements. If $(D howMany > n),
-all elements are removed and no exception is thrown.
-
-Precondition: $(D !empty)
-
-Complexity: $(BIGOH log(n)).
- */
-    void removeFront()
-    {
-        assert(0);
-    }
+    /**
+     * Removes the value at the front or back of the container. The stable
+     * version behaves the same, but guarantees that ranges iterating over
+     * the container are never invalidated. The optional parameter $(D
+     * howMany) instructs removal of that many elements. If $(D howMany > n),
+     * all elements are removed and no exception is thrown.
+     *
+     * Precondition: $(D !empty)
+     *
+     * Complexity: $(BIGOH log(n)).
+     */
+    void removeFront() { assert(0); }
     /// ditto
-    void stableRemoveFront()
-    {
-        assert(0);
-    }
+    void stableRemoveFront() { assert(0); }
     /// ditto
-    void removeBack()
-    {
-        assert(0);
-    }
+    void removeBack() { assert(0); }
     /// ditto
-    void stableRemoveBack()
-    {
-        assert(0);
-    }
+    void stableRemoveBack() { assert(0); }
 
-/**
-Removes $(D howMany) values at the front or back of the
-container. Unlike the unparameterized versions above, these functions
-do not throw if they could not remove $(D howMany) elements. Instead,
-if $(D howMany > n), all elements are removed. The returned value is
-the effective number of elements removed. The stable version behaves
-the same, but guarantees that ranges iterating over the container are
-never invalidated.
-
-Returns: The number of elements removed
-
-Complexity: $(BIGOH howMany * log(n)).
- */
-    size_t removeFront(size_t howMany)
-    {
-        assert(0);
-    }
+    /**
+     * Removes $(D howMany) values at the front or back of the
+     * container. Unlike the unparameterized versions above, these functions
+     * do not throw if they could not remove $(D howMany) elements. Instead,
+     * if $(D howMany > n), all elements are removed. The returned value is
+     * the effective number of elements removed. The stable version behaves
+     * the same, but guarantees that ranges iterating over the container are
+     * never invalidated.
+     *
+     * Returns: The number of elements removed
+     *
+     * Complexity: $(BIGOH howMany * log(n)).
+     */
+    size_t removeFront(size_t howMany) { assert(0); }
     /// ditto
-    size_t stableRemoveFront(size_t howMany)
-    {
-        assert(0);
-    }
+    size_t stableRemoveFront(size_t howMany) { assert(0); }
     /// ditto
-    size_t removeBack(size_t howMany)
-    {
-        assert(0);
-    }
+    size_t removeBack(size_t howMany) { assert(0); }
     /// ditto
-    size_t stableRemoveBack(size_t howMany)
-    {
-        assert(0);
-    }
+    size_t stableRemoveBack(size_t howMany) { assert(0); }
 
-/**
-Removes all values corresponding to key $(D k).
+    /**
+     * Removes all values corresponding to key $(D k).
+     *
+     * Complexity: $(BIGOH m * log(n)), where $(D m) is the number of
+     * elements with the same key.
+     *
+     * Returns: The number of elements removed.
+     */
+    size_t removeKey(KeyType k) { assert(0); }
 
-Complexity: $(BIGOH m * log(n)), where $(D m) is the number of
-elements with the same key.
-
-Returns: The number of elements removed.
- */
-    size_t removeKey(KeyType k)
-    {
-        assert(0);
-    }
-
-/**
-Inserts $(D stuff) before, after, or instead range $(D r), which must
-be a valid range previously extracted from this container. $(D stuff)
-can be a value convertible to the container's element type or a range
-of objects convertible to it. The stable version behaves the same, but
-guarantees that ranges iterating over the container are never
-invalidated.
-
-Returns: The number of values inserted.
-
-Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
- */
-    size_t insertBefore(Stuff)(Range r, Stuff stuff)
-    {
-        assert(0);
-    }
+    /**
+     * Inserts $(D stuff) before, after, or instead range $(D r), which must
+     * be a valid range previously extracted from this container. $(D stuff)
+     * can be a value convertible to the container's element type or a range
+     * of objects convertible to it. The stable version behaves the same, but
+     * guarantees that ranges iterating over the container are never
+     * invalidated.
+     *
+     * Returns: The number of values inserted.
+     *
+     * Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
+     */
+    size_t insertBefore(Stuff)(Range r, Stuff stuff) { assert(0); }
     /// ditto
-    size_t stableInsertBefore(Stuff)(Range r, Stuff stuff)
-    {
-        assert(0);
-    }
+    size_t stableInsertBefore(Stuff)(Range r, Stuff stuff) { assert(0); }
     /// ditto
-    size_t insertAfter(Stuff)(Range r, Stuff stuff)
-    {
-        assert(0);
-    }
+    size_t insertAfter(Stuff)(Range r, Stuff stuff) { assert(0); }
     /// ditto
-    size_t stableInsertAfter(Stuff)(Range r, Stuff stuff)
-    {
-        assert(0);
-    }
+    size_t stableInsertAfter(Stuff)(Range r, Stuff stuff) { assert(0); }
     /// ditto
-    size_t replace(Stuff)(Range r, Stuff stuff)
-    {
-        assert(0);
-    }
+    size_t replace(Stuff)(Range r, Stuff stuff) { assert(0); }
     /// ditto
-    size_t stableReplace(Stuff)(Range r, Stuff stuff)
-    {
-        assert(0);
-    }
+    size_t stableReplace(Stuff)(Range r, Stuff stuff) { assert(0); }
 
-/**
-Removes all elements belonging to $(D r), which must be a range
-obtained originally from this container. The stable version behaves the
-same, but guarantees that ranges iterating over the container are
-never invalidated.
-
-Returns: A range spanning the remaining elements in the container that
-initially were right after $(D r).
-
-Complexity: $(BIGOH m * log(n)), where $(D m) is the number of
-elements in $(D r)
- */
-    Range remove(Range r)
-    {
-        assert(0);
-    }
+    /**
+     * Removes all elements belonging to $(D r), which must be a range
+     * obtained originally from this container. The stable version behaves the
+     * same, but guarantees that ranges iterating over the container are
+     * never invalidated.
+     *
+     * Returns: A range spanning the remaining elements in the container that
+     * initially were right after $(D r).
+     *
+     * Complexity: $(BIGOH m * log(n)), where $(D m) is the number of
+     * elements in $(D r)
+     */
+    Range remove(Range r) { assert(0); }
     /// ditto
-    Range stableRemove(Range r)
-    {
-        assert(0);
-    }
+    Range stableRemove(Range r) { assert(0); }
 
-/**
-Same as $(D remove) above, but has complexity relaxed to linear.
-
-Returns: A range spanning the remaining elements in the container that
-initially were right after $(D r).
-
-Complexity: $(BIGOH n)
- */
-    Range linearRemove(Range r)
-    {
-        assert(0);
-    }
+    /**
+     * Same as $(D remove) above, but has complexity relaxed to linear.
+     *
+     * Returns: A range spanning the remaining elements in the container that
+     * initially were right after $(D r).
+     *
+     * Complexity: $(BIGOH n)
+     */
+    Range linearRemove(Range r) { assert(0); }
     /// ditto
-    Range stableLinearRemove(Range r)
-    {
-        assert(0);
-    }
+    Range stableLinearRemove(Range r) { assert(0); }
 }
 
-unittest {
+unittest
+{
     TotalContainer!int test;
 }
 
 /**
-Returns an initialized object. This function is mainly for eliminating
-construction differences between structs and classes. It allows code to not
-worry about whether the type it's constructing is a struct or a class.
-
-Examples:
---------------------
-auto arr = make!(Array!int)([4, 2, 3, 1]);
-assert(equal(arr[], [4, 2, 3, 1]));
-
-auto rbt = make!(RedBlackTree!(int, "a > b"))([4, 2, 3, 1]);
-assert(equal(rbt[], [4, 3, 2, 1]));
-
-alias make!(DList!int) makeList;
-auto list = makeList([1, 7, 42]);
-assert(equal(list[], [1, 7, 42]));
---------------------
+ * Returns an initialized object. This function is mainly for eliminating
+ * construction differences between structs and classes. It allows code to not
+ * worry about whether the type it's constructing is a struct or a class.
  */
 template make(T)
 if (is(T == struct) || is(T == class))
@@ -860,8 +651,7 @@ if (is(T == struct) || is(T == class))
         return new T(arguments);
     }
 }
-
-//Verify Examples.
+///
 unittest
 {
     auto arr = make!(Array!int)([4, 2, 3, 1]);
@@ -889,7 +679,7 @@ unittest
 }
 
 /**
-   Implements a simple and fast singly-linked list.
+ * Implements a simple and fast singly-linked list.
  */
 struct SList(T)
 {
@@ -901,7 +691,7 @@ struct SList(T)
     }
     private Node * _root;
 
-    private static Node * findLastNode(Node * n)
+    private static Node* findLastNode(Node* n)
     {
         assert(n);
         auto ahead = n._next;
@@ -913,7 +703,7 @@ struct SList(T)
         return n;
     }
 
-    private static Node * findLastNode(Node * n, size_t limit)
+    private static Node* findLastNode(Node* n, size_t limit)
     {
         assert(n && limit);
         auto ahead = n._next;
@@ -926,7 +716,7 @@ struct SList(T)
         return n;
     }
 
-    private static Node * findNode(Node * n, Node * findMe)
+    private static Node* findNode(Node* n, Node* findMe)
     {
         assert(n);
         auto ahead = n._next;
@@ -939,16 +729,16 @@ struct SList(T)
         return n;
     }
 
-/**
-Constructor taking a number of nodes
+    /**
+     * Constructor taking a number of nodes
      */
     this(U)(U[] values...) if (isImplicitlyConvertible!(U, T))
     {
         insertFront(values);
     }
 
-/**
-Constructor taking an input range
+    /**
+     * Constructor taking an input range
      */
     this(Stuff)(Stuff stuff)
     if (isInputRange!Stuff
@@ -958,21 +748,20 @@ Constructor taking an input range
         insertFront(stuff);
     }
 
-/**
-Comparison for equality.
-
-Complexity: $(BIGOH min(n, n1)) where $(D n1) is the number of
-elements in $(D rhs).
+    /**
+     * Comparison for equality.
+     *
+     * Complexity: $(BIGOH min(n, n1)) where $(D n1) is the number of
+     * elements in $(D rhs).
      */
     bool opEquals(const SList rhs) const
     {
         return opEquals(rhs);
     }
-
     /// ditto
     bool opEquals(ref const SList rhs) const
     {
-        const(Node) * n1 = _root, n2 = rhs._root;
+        const(Node)* n1 = _root, n2 = rhs._root;
 
         for (;; n1 = n1._next, n2 = n2._next)
         {
@@ -981,32 +770,39 @@ elements in $(D rhs).
         }
     }
 
-/**
-Defines the container's primary range, which embodies a forward range.
+    /**
+     * Defines the container's primary range, which embodies a forward range.
      */
-    struct Range
+    alias Range = SListRange!Node;
+    alias ConstRange = SListRange!(const Node);
+    static struct SListRange(N = Node)
     {
-        private Node * _head;
-        private this(Node * p) { _head = p; }
+        private N* _head;
+        private alias E = typeof(_head._payload);
 
-        /// Input range primitives.
-        @property bool empty() const { return !_head; }
+        private this(N* p) { _head = p; }
+
+        /**
+         * Input range primitives.
+         */
+        @property bool empty() const
+        {
+            return !_head;
+        }
 
         /// ditto
-        @property T front()
+        @property inout(E) front() inout
         {
             assert(!empty, "SList.Range.front: Range is empty");
             return _head._payload;
         }
 
         /// ditto
-        static if (isAssignable!(T, T))
+        static if (isAssignable!(E, E))
+        @property void front(E value)
         {
-            @property void front(T value)
-            {
-                assert(!empty, "SList.Range.front: Range is empty");
-                move(value, _head._payload);
-            }
+            assert(!empty, "SList.Range.front: Range is empty");
+            move(value, _head._payload);
         }
 
         /// ditto
@@ -1016,16 +812,22 @@ Defines the container's primary range, which embodies a forward range.
             _head = _head._next;
         }
 
-        /// Forward range primitive.
-        @property Range save() { return this; }
+        /**
+         * Forward range primitive.
+         */
+        @property inout(typeof(this)) save() inout
+        {
+            return this;
+        }
 
-        T moveFront()
+        static if (isMutable!N)
+        E moveFront()
         {
             assert(!empty, "SList.Range.moveFront: Range is empty");
             return move(_head._payload);
         }
 
-        bool sameHead(Range rhs)
+        bool sameHead(typeof(this) rhs)    // Q. is this necessary?
         {
             return _head && _head == rhs._head;
         }
@@ -1036,62 +838,64 @@ Defines the container's primary range, which embodies a forward range.
         static assert(isForwardRange!Range);
     }
 
-/**
-Property returning $(D true) if and only if the container has no
-elements.
-
-Complexity: $(BIGOH 1)
+    /**
+     * Property returning $(D true) if and only if the container has no
+     * elements.
+     *
+     * Complexity: $(BIGOH 1)
      */
     @property bool empty() const
     {
         return _root is null;
     }
 
-/**
-Duplicates the container. The elements themselves are not transitively
-duplicated.
-
-Complexity: $(BIGOH n).
+    /**
+     * Duplicates the container. The elements themselves are not transitively
+     * duplicated.
+     *
+     * Complexity: $(BIGOH n).
      */
     @property SList dup()
     {
         return SList(this[]);
     }
 
-/**
-Returns a range that iterates over all elements of the container, in
-forward order.
-
-Complexity: $(BIGOH 1)
+    /**
+     * Returns a range that iterates over all elements of the container, in
+     * forward order.
+     *
+     * Complexity: $(BIGOH 1)
      */
     Range opSlice()
     {
         return Range(_root);
     }
+    ConstRange opSlice() inout
+    {
+        return ConstRange(_root);
+    }
 
-/**
-Forward to $(D opSlice().front).
-
-Complexity: $(BIGOH 1)
+    /**
+     * Forward to $(D opSlice().front).
+     *
+     * Complexity: $(BIGOH 1)
      */
-    @property T front()
+    @property inout(T) front() inout
     {
         assert(!empty, "SList.front: List is empty");
         return _root._payload;
     }
 
-/**
-Forward to $(D opSlice().front(value)).
-
-Complexity: $(BIGOH 1)
+    /**
+     * Forward to $(D opSlice().front(value)).
+     *
+     * Complexity: $(BIGOH 1)
      */
     static if (isAssignable!(T, T))
+    @property void front(T value)
     {
-        @property void front(T value)
-        {
-            assert(!empty, "SList.front: List is empty");
-            move(value, _root._payload);
-        }
+        assert(!empty, "SList.front: List is empty");
+        move(value, _root._payload);
     }
 
     unittest
@@ -1101,10 +905,10 @@ Complexity: $(BIGOH 1)
         assert(s == SList!int(42, 2, 3));
     }
 
-/**
-Returns a new $(D SList) that's the concatenation of $(D this) and its
-argument. $(D opBinaryRight) is only defined if $(D Stuff) does not
-define $(D opBinary).
+    /**
+     * Returns a new $(D SList) that's the concatenation of $(D this) and its
+     * argument. $(D opBinaryRight) is only defined if $(D Stuff) does not
+     * define $(D opBinary).
      */
     SList opBinary(string op, Stuff)(Stuff rhs)
     if (op == "~" && is(typeof(SList(rhs))))
@@ -1122,27 +926,24 @@ define $(D opBinary).
         return result;
     }
 
-/**
-Removes all contents from the $(D SList).
-
-Postcondition: $(D empty)
-
-Complexity: $(BIGOH 1)
+    /**
+     * Removes all contents from the $(D SList).
+     * Postcondition: $(D empty)
+     * Complexity: $(BIGOH 1)
      */
     void clear()
     {
         _root = null;
     }
 
-/**
-Inserts $(D stuff) to the front of the container. $(D stuff) can be a
-value convertible to $(D T) or a range of objects convertible to $(D
-T). The stable version behaves the same, but guarantees that ranges
-iterating over the container are never invalidated.
-
-Returns: The number of elements inserted
-
-Complexity: $(BIGOH m), where $(D m) is the length of $(D stuff)
+    /**
+     * Inserts $(D stuff) to the front of the container. $(D stuff) can be a
+     * value convertible to $(D T) or a range of objects convertible to $(D
+     * T). The stable version behaves the same, but guarantees that ranges
+     * iterating over the container are never invalidated.
+     *
+     * Returns: The number of elements inserted
+     * Complexity: $(BIGOH m), where $(D m) is the length of $(D stuff)
      */
     size_t insertFront(Stuff)(Stuff stuff)
     if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
@@ -1171,25 +972,20 @@ Complexity: $(BIGOH m), where $(D m) is the length of $(D stuff)
         _root = newRoot;
         return 1;
     }
-
-/// ditto
+    /// ditto
     alias insertFront insert;
-
-/// ditto
+    /// ditto
     alias insert stableInsert;
-
     /// ditto
     alias insertFront stableInsertFront;
 
-/**
-Picks one value from the front of the container, removes it from the
-container, and returns it.
-
-Precondition: $(D !empty)
-
-Returns: The element removed.
-
-Complexity: $(BIGOH 1).
+    /**
+     * Picks one value from the front of the container, removes it from the
+     * container, and returns it.
+     *
+     * Precondition: $(D !empty)
+     * Returns: The element removed.
+     * Complexity: $(BIGOH 1).
      */
     T removeAny()
     {
@@ -1201,36 +997,33 @@ Complexity: $(BIGOH 1).
     /// ditto
     alias removeAny stableRemoveAny;
 
-/**
-Removes the value at the front of the container. The stable version
-behaves the same, but guarantees that ranges iterating over the
-container are never invalidated.
-
-Precondition: $(D !empty)
-
-Complexity: $(BIGOH 1).
+    /**
+     * Removes the value at the front of the container. The stable version
+     * behaves the same, but guarantees that ranges iterating over the
+     * container are never invalidated.
+     *
+     * Precondition: $(D !empty)
+     * Complexity: $(BIGOH 1).
      */
     void removeFront()
     {
         assert(!empty, "SList.removeFront: List is empty");
         _root = _root._next;
     }
-
     /// ditto
     alias removeFront stableRemoveFront;
 
-/**
-Removes $(D howMany) values at the front or back of the
-container. Unlike the unparameterized versions above, these functions
-do not throw if they could not remove $(D howMany) elements. Instead,
-if $(D howMany > n), all elements are removed. The returned value is
-the effective number of elements removed. The stable version behaves
-the same, but guarantees that ranges iterating over the container are
-never invalidated.
-
-Returns: The number of elements removed
-
-Complexity: $(BIGOH howMany * log(n)).
+    /**
+     * Removes $(D howMany) values at the front or back of the
+     * container. Unlike the unparameterized versions above, these functions
+     * do not throw if they could not remove $(D howMany) elements. Instead,
+     * if $(D howMany > n), all elements are removed. The returned value is
+     * the effective number of elements removed. The stable version behaves
+     * the same, but guarantees that ranges iterating over the container are
+     * never invalidated.
+     *
+     * Returns: The number of elements removed
+     * Complexity: $(BIGOH howMany * log(n)).
      */
     size_t removeFront(size_t howMany)
     {
@@ -1242,38 +1035,26 @@ Complexity: $(BIGOH howMany * log(n)).
         }
         return result;
     }
-
     /// ditto
     alias removeFront stableRemoveFront;
 
-/**
-Inserts $(D stuff) after range $(D r), which must be a range
-previously extracted from this container. Given that all ranges for a
-list end at the end of the list, this function essentially appends to
-the list and uses $(D r) as a potentially fast way to reach the last
-node in the list. Ideally $(D r) is positioned near or at the last
-element of the list.
-
-$(D stuff) can be a value convertible to $(D T) or a range of objects
-convertible to $(D T). The stable version behaves the same, but
-guarantees that ranges iterating over the container are never
-invalidated.
-
-Returns: The number of values inserted.
-
-Complexity: $(BIGOH k + m), where $(D k) is the number of elements in
-$(D r) and $(D m) is the length of $(D stuff).
-
-Examples:
---------------------
-auto sl = SList!string(["a", "b", "d"]);
-sl.insertAfter(sl[], "e"); // insert at the end (slowest)
-assert(std.algorithm.equal(sl[], ["a", "b", "d", "e"]));
-sl.insertAfter(std.range.take(sl[], 2), "c"); // insert after "b"
-assert(std.algorithm.equal(sl[], ["a", "b", "c", "d", "e"]));
---------------------
+    /**
+     * Inserts $(D stuff) after range $(D r), which must be a range
+     * previously extracted from this container. Given that all ranges for a
+     * list end at the end of the list, this function essentially appends to
+     * the list and uses $(D r) as a potentially fast way to reach the last
+     * node in the list. Ideally $(D r) is positioned near or at the last
+     * element of the list.
+     *
+     * $(D stuff) can be a value convertible to $(D T) or a range of objects
+     * convertible to $(D T). The stable version behaves the same, but
+     * guarantees that ranges iterating over the container are never
+     * invalidated.
+     *
+     * Returns: The number of values inserted.
+     * Complexity: $(BIGOH k + m), where $(D k) is the number of elements in
+     * $(D r) and $(D m) is the length of $(D stuff).
      */
-
     size_t insertAfter(Stuff)(Range r, Stuff stuff)
     {
         if (!_root)
@@ -1288,20 +1069,27 @@ assert(std.algorithm.equal(sl[], ["a", "b", "c", "d", "e"]));
         n._next = tmp._root;
         return result;
     }
+    ///
+    unittest
+    {
+        auto sl = SList!string(["a", "b", "d"]);
+        sl.insertAfter(sl[], "e"); // insert at the end (slowest)
+        assert(std.algorithm.equal(sl[], ["a", "b", "d", "e"]));
+        sl.insertAfter(std.range.take(sl[], 2), "c"); // insert after "b"
+        assert(std.algorithm.equal(sl[], ["a", "b", "c", "d", "e"]));
+    }
 
-/**
-Similar to $(D insertAfter) above, but accepts a range bounded in
-count. This is important for ensuring fast insertions in the middle of
-the list.  For fast insertions after a specified position $(D r), use
-$(D insertAfter(take(r, 1), stuff)). The complexity of that operation
-only depends on the number of elements in $(D stuff).
-
-Precondition: $(D r.original.empty || r.maxLength > 0)
-
-Returns: The number of values inserted.
-
-Complexity: $(BIGOH k + m), where $(D k) is the number of elements in
-$(D r) and $(D m) is the length of $(D stuff).
+    /**
+     * Similar to $(D insertAfter) above, but accepts a range bounded in
+     * count. This is important for ensuring fast insertions in the middle of
+     * the list.  For fast insertions after a specified position $(D r), use
+     * $(D insertAfter(take(r, 1), stuff)). The complexity of that operation
+     * only depends on the number of elements in $(D stuff).
+     *
+     * Precondition: $(D r.original.empty || r.maxLength > 0)
+     * Returns: The number of values inserted.
+     * Complexity: $(BIGOH k + m), where $(D k) is the number of elements in
+     * $(D r) and $(D m) is the length of $(D stuff).
      */
     size_t insertAfter(Stuff)(Take!Range r, Stuff stuff)
     {
@@ -1326,16 +1114,14 @@ $(D r) and $(D m) is the length of $(D stuff).
         orig._head._next = tmp._root;
         return result;
     }
-
-/// ditto
+    /// ditto
     alias insertAfter stableInsertAfter;
 
-/**
-Removes a range from the list in linear time.
-
-Returns: An empty range.
-
-Complexity: $(BIGOH n)
+    /**
+     * Removes a range from the list in linear time.
+     *
+     * Returns: An empty range.
+     * Complexity: $(BIGOH n)
      */
     Range linearRemove(Range r)
     {
@@ -1349,12 +1135,11 @@ Complexity: $(BIGOH n)
         return Range(null);
     }
 
-/**
-Removes a $(D Take!Range) from the list in linear time.
-
-Returns: A range comprehending the elements after the removed range.
-
-Complexity: $(BIGOH n)
+    /**
+     * Removes a $(D Take!Range) from the list in linear time.
+     *
+     * Returns: A range comprehending the elements after the removed range.
+     * Complexity: $(BIGOH n)
      */
     Range linearRemove(Take!Range r)
     {
@@ -1381,8 +1166,7 @@ Complexity: $(BIGOH n)
         n1._next = n2._next;
         return Range(n1._next);
     }
-
-/// ditto
+    /// ditto
     alias linearRemove stableLinearRemove;
 }
 
@@ -1543,51 +1327,20 @@ unittest
 }
 
 /**
-Implements a doubly-linked list.
-
-$(D DList) uses neither reference nor value semantics. They can be seen as
-several different handles into an external chain of nodes. Several different
-$(D DList)s can all reference different points in a same chain.
-
-$(D DList.Range) is, for all intents and purposes, a DList with range
-semantics. The $(D DList.Range) has a view directly into the chain itself.
-It is not tied to its parent $(D DList), and may be used to operate on
-other lists (that point to the same chain).
-
-The ONLY operation that can invalidate a $(D DList) or $(D DList.Range), but
-which will invalidate BOTH, is the $(D remove) operation, if the cut Range
-overlaps with the boundaries of another DList or DList.Range.
-
-Example:
-----
-auto a = DList!int([3, 4]); //Create a new chain
-auto b = a; //Point to the same chain
-// (3 - 4)
-assert(a[].equal([3, 4]));
-assert(b[].equal([3, 4]));
-
-b.stableInsertFront(1); //insert before of b
-b.stableInsertBack(5); //insert after of b
-// (2 - (3 - 4) - 5)
-assert(a[].equal([3, 4])); //a is not changed
-assert(b[].equal([1, 3, 4, 5])); // but b is changed
-
-a.stableInsertFront(2); //insert in front of a, this will insert "inside" the chain
-// (1 - (2 - 3 - 4) - 5)
-assert(a[].equal([2, 3, 4])); //a is modified
-assert(b[].equal([1, 2, 3, 4, 5])); //and so is b;
-
-a.remove(a[]); //remove all the elements of a: This will cut them from the chain;
-// (1 - 5)
-assert(a[].empty); //a is empty
-assert(b[].equal([1, 5])); //b has lost some of its elements;
-
-a.insert(2); //insert in a. This will create a new chain
-// (2)
-// (1 - 5)
-assert(a[].equal([2])); //a is a new chain
-assert(b[].equal([1, 5])); //b is unchanged;
-----
+ * Implements a doubly-linked list.
+ *
+ * $(D DList) uses neither reference nor value semantics. They can be seen as
+ * several different handles into an external chain of nodes. Several different
+ * $(D DList)s can all reference different points in a same chain.
+ *
+ * $(D DList.Range) is, for all intents and purposes, a DList with range
+ * semantics. The $(D DList.Range) has a view directly into the chain itself.
+ * It is not tied to its parent $(D DList), and may be used to operate on
+ * other lists (that point to the same chain).
+ *
+ * The ONLY operation that can invalidate a $(D DList) or $(D DList.Range), but
+ * which will invalidate BOTH, is the $(D remove) operation, if the cut Range
+ * overlaps with the boundaries of another DList or DList.Range.
  */
 struct DList(T)
 {
@@ -1607,16 +1360,16 @@ struct DList(T)
     private Node * _first;
     private Node * _last;
 
-/**
-Constructor taking a number of nodes
+    /**
+     * Constructor taking a number of nodes
      */
     this(U)(U[] values...) if (isImplicitlyConvertible!(U, T))
     {
         insertBack(values);
     }
 
-/**
-Constructor taking an input range
+    /**
+     * Constructor taking an input range
      */
     this(Stuff)(Stuff stuff)
     if (isInputRange!Stuff
@@ -1626,11 +1379,11 @@ Constructor taking an input range
         insertBack(stuff);
     }
 
-/**
-Comparison for equality.
-
-Complexity: $(BIGOH min(n, n1)) where $(D n1) is the number of
-elements in $(D rhs).
+    /**
+     * Comparison for equality.
+     *
+     * Complexity: $(BIGOH min(n, n1)) where $(D n1) is the number of
+     * elements in $(D rhs).
      */
     bool opEquals(ref const DList rhs) const
     {
@@ -1648,7 +1401,7 @@ elements in $(D rhs).
     }
 
     /**
-    Defines the container's primary range, which embodies a bidirectional range.
+     * Defines the container's primary range, which embodies a bidirectional range.
      */
     struct Range
     {
@@ -1740,11 +1493,11 @@ elements in $(D rhs).
         static assert(isBidirectionalRange!Range);
     }
 
-/**
-Property returning $(D true) if and only if the container has no
-elements.
-
-Complexity: $(BIGOH 1)
+    /**
+     * Property returning $(D true) if and only if the container has no
+     * elements.
+     *
+     * Complexity: $(BIGOH 1)
      */
     @property const nothrow
     bool empty()
@@ -1753,32 +1506,32 @@ Complexity: $(BIGOH 1)
         return _first is null;
     }
 
-/**
-Duplicates the container. The elements themselves are not transitively
-duplicated.
-
-Complexity: $(BIGOH n).
+    /**
+     * Duplicates the container. The elements themselves are not transitively
+     * duplicated.
+     *
+     * Complexity: $(BIGOH n).
      */
     @property DList dup()
     {
         return DList(this[]);
     }
 
-/**
-Returns a range that iterates over all elements of the container, in
-forward order.
-
-Complexity: $(BIGOH 1)
+    /**
+     * Returns a range that iterates over all elements of the container, in
+     * forward order.
+     *
+     * Complexity: $(BIGOH 1)
      */
     Range opSlice()
     {
         return Range(_first, _last);
     }
 
-/**
-Forward to $(D opSlice().front).
-
-Complexity: $(BIGOH 1)
+    /**
+     * Forward to $(D opSlice().front).
+     *
+     * Complexity: $(BIGOH 1)
      */
     @property T front()
     {
@@ -1786,10 +1539,10 @@ Complexity: $(BIGOH 1)
         return _first._payload;
     }
 
-/**
-Forward to $(D opSlice().front(value)).
-
-Complexity: $(BIGOH 1)
+    /**
+     * Forward to $(D opSlice().front(value)).
+     *
+     * Complexity: $(BIGOH 1)
      */
     static if(isAssignable!(T,T))
     {
@@ -1800,10 +1553,10 @@ Complexity: $(BIGOH 1)
         }
     }
 
-/**
-Forward to $(D opSlice().back).
-
-Complexity: $(BIGOH 1)
+    /**
+     * Forward to $(D opSlice().back).
+     *
+     * Complexity: $(BIGOH 1)
      */
     @property T back()
     {
@@ -1811,10 +1564,10 @@ Complexity: $(BIGOH 1)
         return _last._payload;
     }
 
-/**
-Forward to $(D opSlice().back(value)).
-
-Complexity: $(BIGOH 1)
+    /**
+     * Forward to $(D opSlice().back(value)).
+     *
+     * Complexity: $(BIGOH 1)
      */
     static if(isAssignable!(T,T))
     {
@@ -1825,9 +1578,9 @@ Complexity: $(BIGOH 1)
         }
     }
 
-/**
-Returns a new $(D DList) that's the concatenation of $(D this) and its
-argument.
+    /**
+     * Returns a new $(D DList) that's the concatenation of $(D this) and its
+     * argument.
      */
     DList opBinary(string op, Stuff)(Stuff rhs)
     if (op == "~" && isImplicitlyConvertible!(Stuff, T))
@@ -1845,8 +1598,8 @@ argument.
         return ret;
     }
 
-/**
-Returns a new $(D DList) that's the concatenation of the argument and $(D this)
+    /**
+     * Returns a new $(D DList) that's the concatenation of the argument and $(D this)
      */
     DList opBinaryRight(string op, Stuff)(Stuff rhs)
     if (op == "~" && isImplicitlyConvertible!(Stuff, T))
@@ -1856,7 +1609,7 @@ Returns a new $(D DList) that's the concatenation of the argument and $(D this)
         return ret;
     }
 
-/// ditto
+    /// ditto
     DList opBinaryRight(string op, Stuff)(Stuff rhs)
     if (op == "~" && isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
@@ -1865,8 +1618,8 @@ Returns a new $(D DList) that's the concatenation of the argument and $(D this)
         return ret;
     }
 
-/**
-Appends the contents of stuff into this.
+    /**
+     * Appends the contents of stuff into this.
      */
     DList opOpAssign(string op, Stuff)(Stuff rhs)
     if (op == "~" && isImplicitlyConvertible!(Stuff, T))
@@ -1875,15 +1628,15 @@ Appends the contents of stuff into this.
         if (rhs._first) rhs_.first._prev = _last;
     }
 
-/// ditto
+    /// ditto
     DList opOpAssign(string op, Stuff)(Stuff rhs)
     if (op == "~" && isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
         insertBack(rhs);
         return this;
     }
-    
-// Private implementations helpers for opOpBinaryRight
+
+    // Private implementations helpers for opOpBinaryRight
     DList opOpAssignRightPrivate(string op, Stuff)(Stuff lhs)
     if (op == "~" && isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
     {
@@ -1891,12 +1644,11 @@ Appends the contents of stuff into this.
         return this;
     }
 
-/**
-Removes all contents from the $(D DList).
-
-Postcondition: $(D empty)
-
-Complexity: $(BIGOH 1)
+    /**
+     * Removes all contents from the $(D DList).
+     *
+     * Postcondition: $(D empty)
+     * Complexity: $(BIGOH 1)
      */
     void clear()
     {
@@ -1904,15 +1656,14 @@ Complexity: $(BIGOH 1)
         remove(this[]);
     }
 
-/**
-Inserts $(D stuff) to the front/back of the container. $(D stuff) can be a
-value convertible to $(D T) or a range of objects convertible to $(D
-T). The stable version behaves the same, but guarantees that ranges
-iterating over the container are never invalidated.
-
-Returns: The number of elements inserted
-
-Complexity: $(BIGOH log(n))
+    /**
+     * Inserts $(D stuff) to the front/back of the container. $(D stuff) can be a
+     * value convertible to $(D T) or a range of objects convertible to $(D
+     * T). The stable version behaves the same, but guarantees that ranges
+     * iterating over the container are never invalidated.
+     *
+     * Returns: The number of elements inserted
+     * Complexity: $(BIGOH log(n))
      */
     size_t insertFront(Stuff)(Stuff stuff)
     {
@@ -1937,18 +1688,16 @@ Complexity: $(BIGOH log(n))
     /// ditto
     alias insertBack stableInsertBack;
 
-/**
-Picks one value from the front of the container, removes it from the
-container, and returns it.
-
-Elements are not actually removed from the chain, but the $(D DList)'s,
-first/last pointer is advanced.
-
-Precondition: $(D !empty)
-
-Returns: The element removed.
-
-Complexity: $(BIGOH 1).
+    /**
+     * Picks one value from the front of the container, removes it from the
+     * container, and returns it.
+     *
+     * Elements are not actually removed from the chain, but the $(D DList)'s,
+     * first/last pointer is advanced.
+     *
+     * Precondition: $(D !empty)
+     * Returns: The element removed.
+     * Complexity: $(BIGOH 1).
      */
     T removeAny()
     {
@@ -1964,17 +1713,16 @@ Complexity: $(BIGOH 1).
     /// ditto
     alias removeAny stableRemoveAny;
 
-/**
-Removes the value at the front/back of the container. The stable version
-behaves the same, but guarantees that ranges iterating over the
-container are never invalidated.
-
-Elements are not actually removed from the chain, but the $(D DList)'s,
-first/last pointer is advanced.
-
-Precondition: $(D !empty)
-
-Complexity: $(BIGOH 1).
+    /**
+     * Removes the value at the front/back of the container. The stable version
+     * behaves the same, but guarantees that ranges iterating over the
+     * container are never invalidated.
+     *
+     * Elements are not actually removed from the chain, but the $(D DList)'s,
+     * first/last pointer is advanced.
+     *
+     * Precondition: $(D !empty)
+     * Complexity: $(BIGOH 1).
      */
     void removeFront()
     {
@@ -2003,21 +1751,20 @@ Complexity: $(BIGOH 1).
     /// ditto
     alias removeBack stableRemoveBack;
 
-/**
-Removes $(D howMany) values at the front or back of the
-container. Unlike the unparameterized versions above, these functions
-do not throw if they could not remove $(D howMany) elements. Instead,
-if $(D howMany > n), all elements are removed. The returned value is
-the effective number of elements removed. The stable version behaves
-the same, but guarantees that ranges iterating over the container are
-never invalidated.
-
-Elements are not actually removed from the chain, but the $(D DList)'s,
-first/last pointer is advanced.
-
-Returns: The number of elements removed
-
-Complexity: $(BIGOH howMany * log(n)).
+    /**
+     * Removes $(D howMany) values at the front or back of the
+     * container. Unlike the unparameterized versions above, these functions
+     * do not throw if they could not remove $(D howMany) elements. Instead,
+     * if $(D howMany > n), all elements are removed. The returned value is
+     * the effective number of elements removed. The stable version behaves
+     * the same, but guarantees that ranges iterating over the container are
+     * never invalidated.
+     *
+     * Elements are not actually removed from the chain, but the $(D DList)'s,
+     * first/last pointer is advanced.
+     *
+     * Returns: The number of elements removed
+     * Complexity: $(BIGOH howMany * log(n)).
      */
     size_t removeFront(size_t howMany)
     {
@@ -2056,22 +1803,21 @@ Complexity: $(BIGOH howMany * log(n)).
     /// ditto
     alias removeBack stableRemoveBack;
 
-/**
-Inserts $(D stuff) after range $(D r), which must be a non-empty range
-previously extracted from this container.
-
-$(D stuff) can be a value convertible to $(D T) or a range of objects
-convertible to $(D T). The stable version behaves the same, but
-guarantees that ranges iterating over the container are never
-invalidated.
-
-Elements are not actually removed from the chain, but the $(D DList)'s,
-first/last pointer is advanced.
-
-Returns: The number of values inserted.
-
-Complexity: $(BIGOH k + m), where $(D k) is the number of elements in
-$(D r) and $(D m) is the length of $(D stuff).
+    /**
+     * Inserts $(D stuff) after range $(D r), which must be a non-empty range
+     * previously extracted from this container.
+     *
+     * $(D stuff) can be a value convertible to $(D T) or a range of objects
+     * convertible to $(D T). The stable version behaves the same, but
+     * guarantees that ranges iterating over the container are never
+     * invalidated.
+     *
+     * Elements are not actually removed from the chain, but the $(D DList)'s,
+     * first/last pointer is advanced.
+     *
+     * Returns: The number of values inserted.
+     * Complexity: $(BIGOH k + m), where $(D k) is the number of elements in
+     *             $(D r) and $(D m) is the length of $(D stuff).
      */
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
     {
@@ -2112,7 +1858,7 @@ $(D r) and $(D m) is the length of $(D stuff).
             last = new Node(item, last, null);
             ++result;
         }
-        
+
         //We have created a first-last chain. Now we insert it.
         if(!_first)
         {
@@ -2159,21 +1905,20 @@ $(D r) and $(D m) is the length of $(D stuff).
         return insertBeforeNode(n, stuffs);
     }
 
-/**
-Removes all elements belonging to $(D r), which must be a range
-obtained originally from this container.
-
-This function actually removes the elements from the chain. This is the
-only function that may invalidate a range, as it cuts the chain of elements:
-*Ranges (and other DList) that contain $(D r) or that are inside $(D r),
-as well a $(D r) itself, are never invalidated.
-*Ranges (and other DList) which partially overlap with $(D r) will be cut,
-and invalidated.
-
-Returns: A range spanning the remaining elements in the container that
-initially were right after $(D r).
-
-Complexity: $(BIGOH 1)
+    /**
+     * Removes all elements belonging to $(D r), which must be a range
+     * obtained originally from this container.
+     *
+     * This function actually removes the elements from the chain. This is the
+     * only function that may invalidate a range, as it cuts the chain of elements:
+     * *Ranges (and other DList) that contain $(D r) or that are inside $(D r),
+     * as well a $(D r) itself, are never invalidated.
+     * *Ranges (and other DList) which partially overlap with $(D r) will be cut,
+     * and invalidated.
+     *
+     * Returns: A range spanning the remaining elements in the container that
+     *          initially were right after $(D r).
+     * Complexity: $(BIGOH 1)
      */
     Range remove(Range r)
     {
@@ -2243,12 +1988,12 @@ Complexity: $(BIGOH 1)
          return remove(r);
     }
 
-/**
-$(D linearRemove) functions as $(D remove), but also accepts ranges that are
-result the of a $(D take) operation. This is a convenient way to remove a
-fixed amount of elements from the range.
-
-Complexity: $(BIGOH r.walkLength)
+    /**
+     * $(D linearRemove) functions as $(D remove), but also accepts ranges that are
+     * result the of a $(D take) operation. This is a convenient way to remove a
+     * fixed amount of elements from the range.
+     *
+     * Complexity: $(BIGOH r.walkLength)
      */
     Range linearRemove(R)(R r)
         if (is(R == Take!Range))
@@ -2275,7 +2020,7 @@ Complexity: $(BIGOH r.walkLength)
     /// ditto
     alias linearRemove stableLinearRemove;
 }
-
+///
 unittest
 {
     auto a = DList!int([3, 4]); //Create a new chain
@@ -2446,7 +2191,7 @@ unittest
     auto d = DList!int([4, 5, 6]);
 
     assert((a ~ b[])[].empty);
-    
+
     assert((c ~ d[])[].equal([1, 2, 3, 4, 5, 6]));
     assert(c[].equal([1, 2, 3]));
     assert(d[].equal([4, 5, 6]));
@@ -2492,7 +2237,7 @@ for the array is reclaimed as soon as possible; there is no reliance
 on the garbage collector. $(D Array) uses $(D malloc) and $(D free)
 for managing its own memory.
  */
-struct Array(T) if (!is(T : const(bool)))
+struct Array(T) if (!is(T : const bool))
 {
     // This structure is not copyable.
     private struct Payload
@@ -2660,8 +2405,8 @@ struct Array(T) if (!is(T : const(bool)))
         _data = Data(p[0 .. values.length]);
     }
 
-/**
-Comparison for equality.
+    /**
+     * Comparison for equality.
      */
     bool opEquals(const Array rhs) const
     {
@@ -2676,8 +2421,8 @@ Comparison for equality.
         return _data._payload == rhs._data._payload;
     }
 
-/**
-Defines the container's primary range, which is a random-access range.
+    /**
+     * Defines the container's primary range, which is a random-access range.
      */
     struct Range
     {
@@ -2691,77 +2436,87 @@ Defines the container's primary range, which is a random-access range.
             _b = b;
         }
 
-        @property Range save()
-        {
-            assert(_b <= _outer.length);
-            return this;
-        }
-
+        /*
+         * Input Range primitives.
+         */
         @property bool empty() const
         {
             assert(_b <= _outer.length);
             return _a >= _b;
         }
-
-        @property size_t length() const
-        {
-            assert(_b <= _outer.length);
-            return _b - _a;
-        }
-
-        size_t opDollar() const
-        {
-            return length;
-        }
-
         @property T front()
         {
             enforce(!empty);
             return _outer[_a];
         }
-
-        @property T back()
-        {
-            enforce(!empty);
-            return _outer[_b - 1];
-        }
-
         @property void front(T value)
         {
             enforce(!empty);
             _outer[_a] = move(value);
         }
-
-        @property void back(T value)
-        {
-            enforce(!empty);
-            _outer[_b - 1] = move(value);
-        }
-
         void popFront()
         {
             enforce(!empty);
             ++_a;
         }
 
+        /*
+         * Forward Range primitives.
+         */
+        @property Range save()
+        {
+            assert(_b <= _outer.length);
+            return this;
+        }
+
+        /*
+         * Bidirectional Range primitives.
+         */
+        @property T back()
+        {
+            enforce(!empty);
+            return _outer[_b - 1];
+        }
+        @property void back(T value)
+        {
+            enforce(!empty);
+            _outer[_b - 1] = move(value);
+        }
         void popBack()
         {
             enforce(!empty);
             --_b;
         }
 
+        /*
+         * Random Access Range primitives.
+         */
+        T opIndex(size_t i)
+        {
+            i += _a;
+            enforce(i < _b && _b <= _outer.length);
+            return _outer._data._payload[i];
+        }
+        @property size_t length() const
+        {
+            assert(_b <= _outer.length);
+            return _b - _a;
+        }
+        alias length opDollar;
+
+        /*
+         * move? primitives.
+         */
         T moveFront()
         {
             enforce(!empty);
             return move(_outer._data._payload[_a]);
         }
-
         T moveBack()
         {
             enforce(!empty);
             return move(_outer._data._payload[_b - 1]);
         }
-
         T moveAt(size_t i)
         {
             i += _a;
@@ -2769,13 +2524,9 @@ Defines the container's primary range, which is a random-access range.
             return move(_outer._data._payload[i]);
         }
 
-        T opIndex(size_t i)
-        {
-            i += _a;
-            enforce(i < _b && _b <= _outer.length);
-            return _outer._data._payload[i];
-        }
-
+        /*
+         * Indexing operations
+         */
         void opIndexUnary(string op)(size_t i)
             if(op == "++" || op == "--")
         {
@@ -2783,7 +2534,6 @@ Defines the container's primary range, which is a random-access range.
             enforce(i < _b && _b <= _outer.length);
             mixin(op~"_outer._data._payload[i];");
         }
-
         T opIndexUnary(string op)(size_t i)
             if(op != "++" && op != "--")
         {
@@ -2791,14 +2541,12 @@ Defines the container's primary range, which is a random-access range.
             enforce(i < _b && _b <= _outer.length);
             mixin("return "~op~"_outer._data._payload[i];");
         }
-
         void opIndexAssign(T value, size_t i)
         {
             i += _a;
             enforce(i < _b && _b <= _outer.length);
             _outer[i] = value;
         }
-
         void opIndexOpAssign(string op)(T value, size_t i)
         {
             i += _a;
@@ -2806,12 +2554,14 @@ Defines the container's primary range, which is a random-access range.
             mixin("_outer._data._payload[i] "~op~"= value;");
         }
 
+        /*
+         * Slice operations.
+         */
         typeof(this) opSlice()
         {
             assert(_b <= _outer.length);
             return this;
         }
-
         typeof(this) opSlice(size_t a, size_t b)
         {
             assert(_b <= _outer.length);
@@ -2820,13 +2570,11 @@ Defines the container's primary range, which is a random-access range.
             enforce(a <= b && b <= _b);
             return typeof(this)(_outer, a, b);
         }
-
         void opSliceAssign(T value)
         {
             assert(_b <= _outer.length);
             _outer._data._payload[_a .. _b] = value;
         }
-
         void opSliceAssign(T value, size_t i, size_t j)
         {
             assert(_b <= _outer.length);
@@ -2836,14 +2584,12 @@ Defines the container's primary range, which is a random-access range.
             enforce(i <= j && j <= _b);
             _outer._data._payload[i .. j] = value;
         }
-
         void opSliceUnary(string op)()
             if(op == "++" || op == "--")
         {
             assert(_b <= _outer.length);
             mixin(op~"_outer._data._payload[_a .. _b];");
         }
-
         void opSliceUnary(string op)(size_t i, size_t j)
             if(op == "++" || op == "--")
         {
@@ -2854,13 +2600,11 @@ Defines the container's primary range, which is a random-access range.
             enforce(i <= j && j <= _b);
             mixin(op~"_outer._data._payload[i .. j];");
         }
-
         void opSliceOpAssign(string op)(T value)
         {
             assert(_b <= _outer.length);
             mixin("_outer._data._payload[_a .. _b] "~op~"= value;");
         }
-
         void opSliceOpAssign(string op)(T value, size_t i, size_t j)
         {
             assert(_b <= _outer.length);
@@ -2872,11 +2616,11 @@ Defines the container's primary range, which is a random-access range.
         }
     }
 
-/**
-Duplicates the container. The elements themselves are not transitively
-duplicated.
-
-Complexity: $(BIGOH n).
+    /**
+     * Duplicates the container. The elements themselves are not transitively
+     * duplicated.
+     *
+     * Complexity: $(BIGOH n).
      */
     @property Array dup()
     {
@@ -2884,21 +2628,21 @@ Complexity: $(BIGOH n).
         return Array(_data._payload);
     }
 
-/**
-Property returning $(D true) if and only if the container has no
-elements.
-
-Complexity: $(BIGOH 1)
+    /**
+     * Property returning $(D true) if and only if the container has no
+     * elements.
+     *
+     * Complexity: $(BIGOH 1)
      */
     @property bool empty() const
     {
         return !_data.refCountedStore.isInitialized || _data._payload.empty;
     }
 
-/**
-Returns the number of elements in the container.
-
-Complexity: $(BIGOH 1).
+    /**
+     * Returns the number of elements in the container.
+     *
+     * Complexity: $(BIGOH 1).
      */
     @property size_t length() const
     {
@@ -2912,23 +2656,22 @@ Complexity: $(BIGOH 1).
         return length;
     }
 
-/**
-Returns the maximum number of elements the container can store without
-   (a) allocating memory, (b) invalidating iterators upon insertion.
-
-Complexity: $(BIGOH 1)
+    /**
+     * Returns the maximum number of elements the container can store without
+     * (a) allocating memory, (b) invalidating iterators upon insertion.
+     *
+     * Complexity: $(BIGOH 1)
      */
     @property size_t capacity()
     {
         return _data.refCountedStore.isInitialized ? _data._capacity : 0;
     }
 
-/**
-Ensures sufficient capacity to accommodate $(D e) elements.
-
-Postcondition: $(D capacity >= e)
-
-Complexity: $(BIGOH 1)
+    /**
+     * Ensures sufficient capacity to accommodate $(D e) elements.
+     *
+     * Postcondition: $(D capacity >= e)
+     * Complexity: $(BIGOH 1)
      */
     void reserve(size_t elements)
     {
@@ -2950,11 +2693,11 @@ Complexity: $(BIGOH 1)
         }
     }
 
-/**
-Returns a range that iterates over elements of the container, in
-forward order.
-
-Complexity: $(BIGOH 1)
+    /**
+     * Returns a range that iterates over elements of the container, in
+     * forward order.
+     *
+     * Complexity: $(BIGOH 1)
      */
     Range opSlice()
     {
@@ -2964,13 +2707,12 @@ Complexity: $(BIGOH 1)
         return Range(copy, 0, length);
     }
 
-/**
-Returns a range that iterates over elements of the container from
-index $(D a) up to (excluding) index $(D b).
-
-Precondition: $(D a <= b && b <= length)
-
-Complexity: $(BIGOH 1)
+    /**
+     * Returns a range that iterates over elements of the container from
+     * index $(D a) up to (excluding) index $(D b).
+     *
+     * Precondition: $(D a <= b && b <= length)
+     * Complexity: $(BIGOH 1)
      */
     Range opSlice(size_t a, size_t b)
     {
@@ -2981,19 +2723,17 @@ Complexity: $(BIGOH 1)
         return Range(copy, a, b);
     }
 
-/**
-Forward to $(D opSlice().front) and $(D opSlice().back), respectively.
-
-Precondition: $(D !empty)
-
-Complexity: $(BIGOH 1)
+    /**
+     * Forward to $(D opSlice().front) and $(D opSlice().back), respectively.
+     *
+     * Precondition: $(D !empty)
+     * Complexity: $(BIGOH 1)
      */
     @property T front()
     {
         enforce(!empty);
         return *_data._payload.ptr;
     }
-
     /// ditto
     @property void front(T value)
     {
@@ -3007,7 +2747,6 @@ Complexity: $(BIGOH 1)
         enforce(!empty);
         return _data._payload[$ - 1];
     }
-
     /// ditto
     @property void back(T value)
     {
@@ -3015,42 +2754,37 @@ Complexity: $(BIGOH 1)
         _data._payload[$ - 1] = value;
     }
 
-/**
-Indexing operators yield or modify the value at a specified index.
-
-Precondition: $(D i < length)
-
-Complexity: $(BIGOH 1)
+    /**
+     * Indexing operators yield or modify the value at a specified index.
+     *
+     * Precondition: $(D i < length)
+     * Complexity: $(BIGOH 1)
      */
     T opIndex(size_t i)
     {
         enforce(_data.refCountedStore.isInitialized);
         return _data._payload[i];
     }
-
     /// ditto
     void opIndexUnary(string op)(size_t i)
-        if(op == "++" || op == "--")
+    if (op == "++" || op == "--")
     {
         enforce(_data.refCountedStore.isInitialized);
         mixin(op~"_data._payload[i];");
     }
-
     /// ditto
     T opIndexUnary(string op)(size_t i)
-        if(op != "++" && op != "--")
+    if (op != "++" && op != "--")
     {
         enforce(_data.refCountedStore.isInitialized);
         mixin("return "~op~"_data._payload[i];");
     }
-
     /// ditto
     void opIndexAssign(T value, size_t i)
     {
         enforce(_data.refCountedStore.isInitialized);
         _data._payload[i] = value;
     }
-
     /// ditto
     void opIndexOpAssign(string op)(T value, size_t i)
     {
@@ -3058,41 +2792,37 @@ Complexity: $(BIGOH 1)
         mixin("_data._payload[i] "~op~"= value;");
     }
 
-/**
-Slicing operations execute an operation on an entire slice.
-
-Precondition: $(D i < j && j < length)
-
-Complexity: $(BIGOH slice.length)
+    /**
+     * Slicing operations execute an operation on an entire slice.
+     *
+     * Precondition: $(D i < j && j < length)
+     * Complexity: $(BIGOH slice.length)
      */
-
     void opSliceAssign(T value)
     {
         if(!_data.refCountedStore.isInitialized) return;
         _data._payload[] = value;
     }
-
+    /// ditto
     void opSliceAssign(T value, size_t i, size_t j)
     {
         enforce(_data.refCountedStore.isInitialized || (i == 0 && j == 0));
         _data._payload[i .. j] = value;
     }
-
+    /// ditto
     void opSliceUnary(string op)()
-        if(op == "++" || op == "--")
+    if (op == "++" || op == "--")
     {
         if(!_data.refCountedStore.isInitialized) return;
         mixin(op~"_data._payload[];");
     }
-
     /// ditto
     void opSliceUnary(string op)(size_t i, size_t j)
-        if(op == "++" || op == "--")
+    if (op == "++" || op == "--")
     {
         enforce(_data.refCountedStore.isInitialized || (i == 0 && j == 0));
         mixin(op~"_data._payload[i .. j];");
     }
-
     /// ditto
     void opSliceOpAssign(string op)(T value)
     {
@@ -3107,16 +2837,16 @@ Complexity: $(BIGOH slice.length)
         mixin("_data._payload[i .. j] "~op~"= value;");
     }
 
-/**
-Returns a new container that's the concatenation of $(D this) and its
-argument. $(D opBinaryRight) is only defined if $(D Stuff) does not
-define $(D opBinary).
-
-Complexity: $(BIGOH n + m), where m is the number of elements in $(D
-stuff)
+    /**
+     * Returns a new container that's the concatenation of $(D this) and its
+     * argument. $(D opBinaryRight) is only defined if $(D Stuff) does not
+     * define $(D opBinary).
+     *
+     * Complexity: $(BIGOH n + m), where m is the number of elements in $(D
+     * stuff)
      */
     Array opBinary(string op, Stuff)(Stuff stuff)
-        if (op == "~")
+    if (op == "~")
     {
         // TODO: optimize
         Array result;
@@ -3128,11 +2858,11 @@ stuff)
         return result;
     }
 
-/**
-Forwards to $(D insertBack(stuff)).
+    /**
+     * Forwards to $(D insertBack(stuff)).
      */
     void opOpAssign(string op, Stuff)(Stuff stuff)
-        if (op == "~")
+    if (op == "~")
     {
         static if (is(typeof(stuff[])))
         {
@@ -3144,28 +2874,26 @@ Forwards to $(D insertBack(stuff)).
         }
     }
 
-/**
-Removes all contents from the container. The container decides how $(D
-capacity) is affected.
-
-Postcondition: $(D empty)
-
-Complexity: $(BIGOH n)
+    /**
+     * Removes all contents from the container. The container decides how $(D
+     * capacity) is affected.
+     *
+     * Postcondition: $(D empty)
+     * Complexity: $(BIGOH n)
      */
     void clear()
     {
         .destroy(_data);
     }
 
-/**
-Sets the number of elements in the container to $(D newSize). If $(D
-newSize) is greater than $(D length), the added elements are added to
-unspecified positions in the container and initialized with $(D
-T.init).
-
-Complexity: $(BIGOH abs(n - newLength))
-
-Postcondition: $(D length == newLength)
+    /**
+     * Sets the number of elements in the container to $(D newSize). If $(D
+     * newSize) is greater than $(D length), the added elements are added to
+     * unspecified positions in the container and initialized with $(D
+     * T.init).
+     *
+     * Complexity: $(BIGOH abs(n - newLength))
+     * Postcondition: $(D length == newLength)
      */
     @property void length(size_t newLength)
     {
@@ -3173,18 +2901,16 @@ Postcondition: $(D length == newLength)
         _data.length = newLength;
     }
 
-/**
-Picks one value in an unspecified position in the container, removes
-it from the container, and returns it. Implementations should pick the
-value that's the most advantageous for the container, but document the
-exact behavior. The stable version behaves the same, but guarantees
-that ranges iterating over the container are never invalidated.
-
-Precondition: $(D !empty)
-
-Returns: The element removed.
-
-Complexity: $(BIGOH log(n)).
+    /**
+     * Picks one value in an unspecified position in the container, removes
+     * it from the container, and returns it. Implementations should pick the
+     * value that's the most advantageous for the container, but document the
+     * exact behavior. The stable version behaves the same, but guarantees
+     * that ranges iterating over the container are never invalidated.
+     *
+     * Precondition: $(D !empty)
+     * Returns: The element removed.
+     * Complexity: $(BIGOH log(n)).
      */
     T removeAny()
     {
@@ -3195,16 +2921,15 @@ Complexity: $(BIGOH log(n)).
     /// ditto
     alias removeAny stableRemoveAny;
 
-/**
-Inserts $(D value) to the front or back of the container. $(D stuff)
-can be a value convertible to $(D T) or a range of objects convertible
-to $(D T). The stable version behaves the same, but guarantees that
-ranges iterating over the container are never invalidated.
-
-Returns: The number of elements inserted
-
-Complexity: $(BIGOH m * log(n)), where $(D m) is the number of
-elements in $(D stuff)
+    /**
+     * Inserts $(D value) to the front or back of the container. $(D stuff)
+     * can be a value convertible to $(D T) or a range of objects convertible
+     * to $(D T). The stable version behaves the same, but guarantees that
+     * ranges iterating over the container are never invalidated.
+     *
+     * Returns: The number of elements inserted
+     * Complexity: $(BIGOH m * log(n)), where $(D m) is the number of
+     *             elements in $(D stuff)
      */
     size_t insertBack(Stuff)(Stuff stuff)
     if (isImplicitlyConvertible!(Stuff, T) ||
@@ -3216,14 +2941,13 @@ elements in $(D stuff)
     /// ditto
     alias insertBack insert;
 
-/**
-Removes the value at the back of the container. The stable version
-behaves the same, but guarantees that ranges iterating over the
-container are never invalidated.
-
-Precondition: $(D !empty)
-
-Complexity: $(BIGOH log(n)).
+    /**
+     * Removes the value at the back of the container. The stable version
+     * behaves the same, but guarantees that ranges iterating over the
+     * container are never invalidated.
+     *
+     * Precondition: $(D !empty)
+     * Complexity: $(BIGOH log(n)).
      */
     void removeBack()
     {
@@ -3238,18 +2962,17 @@ Complexity: $(BIGOH log(n)).
     /// ditto
     alias removeBack stableRemoveBack;
 
-/**
-Removes $(D howMany) values at the front or back of the
-container. Unlike the unparameterized versions above, these functions
-do not throw if they could not remove $(D howMany) elements. Instead,
-if $(D howMany > n), all elements are removed. The returned value is
-the effective number of elements removed. The stable version behaves
-the same, but guarantees that ranges iterating over the container are
-never invalidated.
-
-Returns: The number of elements removed
-
-Complexity: $(BIGOH howMany).
+    /**
+     * Removes $(D howMany) values at the front or back of the
+     * container. Unlike the unparameterized versions above, these functions
+     * do not throw if they could not remove $(D howMany) elements. Instead,
+     * if $(D howMany > n), all elements are removed. The returned value is
+     * the effective number of elements removed. The stable version behaves
+     * the same, but guarantees that ranges iterating over the container are
+     * never invalidated.
+     *
+     * Returns: The number of elements removed
+     * Complexity: $(BIGOH howMany).
      */
     size_t removeBack(size_t howMany)
     {
@@ -3268,16 +2991,15 @@ Complexity: $(BIGOH howMany).
     /// ditto
     alias removeBack stableRemoveBack;
 
-/**
-Inserts $(D stuff) before, after, or instead range $(D r), which must
-be a valid range previously extracted from this container. $(D stuff)
-can be a value convertible to $(D T) or a range of objects convertible
-to $(D T). The stable version behaves the same, but guarantees that
-ranges iterating over the container are never invalidated.
-
-Returns: The number of values inserted.
-
-Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
+    /**
+     * Inserts $(D stuff) before, after, or instead range $(D r), which must
+     * be a valid range previously extracted from this container. $(D stuff)
+     * can be a value convertible to $(D T) or a range of objects convertible
+     * to $(D T). The stable version behaves the same, but guarantees that
+     * ranges iterating over the container are never invalidated.
+     *
+     * Returns: The number of values inserted.
+     * Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
      */
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
     if (isImplicitlyConvertible!(Stuff, T))
@@ -3385,17 +3107,16 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
         return 1;
     }
 
-/**
-Removes all elements belonging to $(D r), which must be a range
-obtained originally from this container. The stable version behaves
-the same, but guarantees that ranges iterating over the container are
-never invalidated.
-
-Returns: A range spanning the remaining elements in the container that
-initially were right after $(D r).
-
-Complexity: $(BIGOH n - m), where $(D m) is the number of elements in
-$(D r)
+    /**
+     * Removes all elements belonging to $(D r), which must be a range
+     * obtained originally from this container. The stable version behaves
+     * the same, but guarantees that ranges iterating over the container are
+     * never invalidated.
+     *
+     * Returns: A range spanning the remaining elements in the container that
+     *          initially were right after $(D r).
+     * Complexity: $(BIGOH n - m), where $(D m) is the number of elements in
+     *             $(D r)
      */
     Range linearRemove(Range r)
     {
@@ -3406,7 +3127,8 @@ $(D r)
         immutable offset2 = r._b;
         immutable tailLength = length - offset2;
         // Use copy here, not a[] = b[] because the ranges may overlap
-        copy(this[offset2 .. length], this[offset1 .. offset1 + tailLength]);
+        copy(this[offset2 .. length],
+             this[offset1 .. offset1 + tailLength]);
         length = offset1 + tailLength;
         return this[length - tailLength .. length];
     }
@@ -3615,14 +3337,14 @@ unittest
 // make sure that Array instances refuse ranges that don't belong to them
 unittest
 {
-	Array!int a = [1, 2, 3];
-	auto r = a.dup[];
-	assertThrown(a.insertBefore(r, 42));
-	assertThrown(a.insertBefore(r, [42]));
-	assertThrown(a.insertAfter(r, 42));
-	assertThrown(a.replace(r, 42));
-	assertThrown(a.replace(r, [42]));
-	assertThrown(a.linearRemove(r));
+    Array!int a = [1, 2, 3];
+    auto r = a.dup[];
+    assertThrown(a.insertBefore(r, 42));
+    assertThrown(a.insertBefore(r, [42]));
+    assertThrown(a.insertAfter(r, 42));
+    assertThrown(a.replace(r, 42));
+    assertThrown(a.replace(r, [42]));
+    assertThrown(a.linearRemove(r));
 }
 unittest
 {
@@ -3681,70 +3403,57 @@ unittest
 
 // BinaryHeap
 /**
-Implements a $(WEB en.wikipedia.org/wiki/Binary_heap, binary heap)
-container on top of a given random-access range type (usually $(D
-T[])) or a random-access container type (usually $(D Array!T)). The
-documentation of $(D BinaryHeap) will refer to the underlying range or
-container as the $(I store) of the heap.
-
-The binary heap induces structure over the underlying store such that
-accessing the largest element (by using the $(D front) property) is a
-$(BIGOH 1) operation and extracting it (by using the $(D
-removeFront()) method) is done fast in $(BIGOH log n) time.
-
-If $(D less) is the less-than operator, which is the default option,
-then $(D BinaryHeap) defines a so-called max-heap that optimizes
-extraction of the $(I largest) elements. To define a min-heap,
-instantiate BinaryHeap with $(D "a > b") as its predicate.
-
-Simply extracting elements from a $(D BinaryHeap) container is
-tantamount to lazily fetching elements of $(D Store) in descending
-order. Extracting elements from the $(D BinaryHeap) to completion
-leaves the underlying store sorted in ascending order but, again,
-yields elements in descending order.
-
-If $(D Store) is a range, the $(D BinaryHeap) cannot grow beyond the
-size of that range. If $(D Store) is a container that supports $(D
-insertBack), the $(D BinaryHeap) may grow by adding elements to the
-container.
-
-Example:
-----
-// Example from "Introduction to Algorithms" Cormen et al, p 146
-int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
-auto h = heapify(a);
-// largest element
-assert(h.front == 16);
-// a has the heap property
-assert(equal(a, [ 16, 14, 10, 9, 8, 7, 4, 3, 2, 1 ]));
-----
-     */
+ * Implements a $(WEB en.wikipedia.org/wiki/Binary_heap, binary heap)
+ * container on top of a given random-access range type (usually $(D
+ * T[])) or a random-access container type (usually $(D Array!T)). The
+ * documentation of $(D BinaryHeap) will refer to the underlying range or
+ * container as the $(I store) of the heap.
+ *
+ * The binary heap induces structure over the underlying store such that
+ * accessing the largest element (by using the $(D front) property) is a
+ * $(BIGOH 1) operation and extracting it (by using the $(D
+ * removeFront()) method) is done fast in $(BIGOH log n) time.
+ *
+ * If $(D less) is the less-than operator, which is the default option,
+ * then $(D BinaryHeap) defines a so-called max-heap that optimizes
+ * extraction of the $(I largest) elements. To define a min-heap,
+ * instantiate BinaryHeap with $(D "a > b") as its predicate.
+ *
+ * Simply extracting elements from a $(D BinaryHeap) container is
+ * tantamount to lazily fetching elements of $(D Store) in descending
+ * order. Extracting elements from the $(D BinaryHeap) to completion
+ * leaves the underlying store sorted in ascending order but, again,
+ * yields elements in descending order.
+ *
+ * If $(D Store) is a range, the $(D BinaryHeap) cannot grow beyond the
+ * size of that range. If $(D Store) is a container that supports $(D
+ * insertBack), the $(D BinaryHeap) may grow by adding elements to the
+ * container.
+ */
 struct BinaryHeap(Store, alias less = "a < b")
 if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
 {
-// Really weird @@BUG@@: if you comment out the "private:" label below,
-// std.algorithm can't unittest anymore
-//private:
+private:
 
     // The payload includes the support store and the effective length
-    private RefCounted!(Tuple!(Store, "_store", size_t, "_length"),
+    RefCounted!(Tuple!(Store, "_store", size_t, "_length"),
                        RefCountedAutoInitialize.no) _payload;
     // Comparison predicate
-    private alias binaryFun!(less) comp;
+    alias binaryFun!(less) comp;
     // Convenience accessors
-    private @property ref Store _store()
+    @property ref Store _store()
     {
         assert(_payload.refCountedStore.isInitialized);
         return _payload._store;
     }
-    private @property ref size_t _length()
+    @property ref size_t _length()
     {
         assert(_payload.refCountedStore.isInitialized);
         return _payload._length;
     }
 
     // Asserts that the heap property is respected.
-    private void assertValid()
+    void assertValid()
     {
         debug
         {
@@ -3761,7 +3470,7 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
     // Assuming the element at index i perturbs the heap property in
     // store r, percolates it down the heap such that the heap
     // property is restored.
-    private void percolateDown(Store r, size_t i, size_t length)
+    void percolateDown(Store r, size_t i, size_t length)
     {
         for (;;)
         {
@@ -3782,8 +3491,7 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
         }
     }
 
-    // @@@BUG@@@: add private here, std.algorithm doesn't unittest anymore
-    /*private*/ void pop(Store store)
+    void pop(Store store)
     {
         assert(!store.empty);
         if (store.length == 1) return;
@@ -3794,7 +3502,7 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
         percolateDown(store, 0, store.length - 1);
     }
 
-    /*private*/ static void swap(Store _store, size_t i, size_t j)
+    static void swap(Store _store, size_t i, size_t j)
     {
         static if (is(typeof(swap(_store[i], _store[j]))))
         {
@@ -3817,23 +3525,22 @@ if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
     }
 
 public:
-
     /**
-       Converts the store $(D s) into a heap. If $(D initialSize) is
-       specified, only the first $(D initialSize) elements in $(D s)
-       are transformed into a heap, after which the heap can grow up
-       to $(D r.length) (if $(D Store) is a range) or indefinitely (if
-       $(D Store) is a container with $(D insertBack)). Performs
-       $(BIGOH min(r.length, initialSize)) evaluations of $(D less).
+     * Converts the store $(D s) into a heap. If $(D initialSize) is
+     * specified, only the first $(D initialSize) elements in $(D s)
+     * are transformed into a heap, after which the heap can grow up
+     * to $(D r.length) (if $(D Store) is a range) or indefinitely (if
+     * $(D Store) is a container with $(D insertBack)). Performs
+     * $(BIGOH min(r.length, initialSize)) evaluations of $(D less).
      */
     this(Store s, size_t initialSize = size_t.max)
     {
         acquire(s, initialSize);
     }
 
-/**
-Takes ownership of a store. After this, manipulating $(D s) may make
-the heap work incorrectly.
+    /**
+     * Takes ownership of a store. After this, manipulating $(D s) may make
+     * the heap work incorrectly.
      */
     void acquire(Store s, size_t initialSize = size_t.max)
     {
@@ -3849,9 +3556,8 @@ the heap work incorrectly.
         assertValid();
     }
 
-/**
-Takes ownership of a store assuming it already was organized as a
-heap.
+    /**
+     * Takes ownership of a store assuming it already was organized as a heap.
      */
     void assume(Store s, size_t initialSize = size_t.max)
     {
@@ -3861,9 +3567,9 @@ heap.
         assertValid();
     }
 
-/**
-Clears the heap. Returns the portion of the store from $(D 0) up to
-$(D length), which satisfies the $(LUCKY heap property).
+    /**
+     * Clears the heap. Returns the portion of the store from $(D 0) up to
+     * $(D length), which satisfies the $(LUCKY heap property).
      */
     auto release()
     {
@@ -3877,17 +3583,17 @@ $(D length), which satisfies the $(LUCKY heap property).
         return result;
     }
 
-/**
-Returns $(D true) if the heap is _empty, $(D false) otherwise.
+    /**
+     * Returns $(D true) if the heap is _empty, $(D false) otherwise.
      */
     @property bool empty()
     {
         return !length;
     }
 
-/**
-Returns a duplicate of the heap. The underlying store must also
-support a $(D dup) method.
+    /**
+     * Returns a duplicate of the heap. The underlying store must also
+     * support a $(D dup) method.
      */
     @property BinaryHeap dup()
     {
@@ -3897,18 +3603,18 @@ support a $(D dup) method.
         return result;
     }
 
-/**
-Returns the _length of the heap.
+    /**
+     * Returns the _length of the heap.
      */
     @property size_t length()
     {
         return _payload.refCountedStore.isInitialized ? _length : 0;
     }
 
-/**
-Returns the _capacity of the heap, which is the length of the
-underlying store (if the store is a range) or the _capacity of the
-underlying store (if the store is a container).
+    /**
+     * Returns the _capacity of the heap, which is the length of the
+     * underlying store (if the store is a range) or the _capacity of the
+     * underlying store (if the store is a container).
      */
     @property size_t capacity()
     {
@@ -3923,9 +3629,9 @@ underlying store (if the store is a container).
         }
     }
 
-/**
-Returns a copy of the _front of the heap, which is the largest element
-according to $(D less).
+    /**
+     * Returns a copy of the _front of the heap, which is the largest element
+     * according to $(D less).
      */
     @property ElementType!Store front()
     {
@@ -3933,17 +3639,17 @@ according to $(D less).
         return _store.front;
     }
 
-/**
-Clears the heap by detaching it from the underlying store.
+    /**
+     * Clears the heap by detaching it from the underlying store.
      */
     void clear()
     {
         _payload = _payload.init;
     }
 
-/**
-Inserts $(D value) into the store. If the underlying store is a range
-and $(D length == capacity), throws an exception.
+    /**
+     * Inserts $(D value) into the store. If the underlying store is a range
+     * and $(D length == capacity), throws an exception.
      */
     size_t insert(ElementType!Store value)
     {
@@ -3983,8 +3689,8 @@ and $(D length == capacity), throws an exception.
         return 1;
     }
 
-/**
-Removes the largest element from the heap.
+    /**
+     * Removes the largest element from the heap.
      */
     void removeFront()
     {
@@ -4000,11 +3706,11 @@ Removes the largest element from the heap.
         percolateDown(_store, 0, _length);
     }
 
-/**
-Removes the largest element from the heap and returns a copy of
-it. The element still resides in the heap's store. For performance
-reasons you may want to use $(D removeFront) with heaps of objects
-that are expensive to copy.
+    /**
+     * Removes the largest element from the heap and returns a copy of
+     * it. The element still resides in the heap's store. For performance
+     * reasons you may want to use $(D removeFront) with heaps of objects
+     * that are expensive to copy.
      */
     ElementType!Store removeAny()
     {
@@ -4012,8 +3718,8 @@ that are expensive to copy.
         return _store[_length];
     }
 
-/**
-Replaces the largest element in the store with $(D value).
+    /**
+     * Replaces the largest element in the store with $(D value).
      */
     void replaceFront(ElementType!Store value)
     {
@@ -4024,13 +3730,13 @@ Replaces the largest element in the store with $(D value).
         assertValid();
     }
 
-/**
-If the heap has room to grow, inserts $(D value) into the store and
-returns $(D true). Otherwise, if $(D less(value, front)), calls $(D
-replaceFront(value)) and returns again $(D true). Otherwise, leaves
-the heap unaffected and returns $(D false). This method is useful in
-scenarios where the smallest $(D k) elements of a set of candidates
-must be collected.
+    /**
+     * If the heap has room to grow, inserts $(D value) into the store and
+     * returns $(D true). Otherwise, if $(D less(value, front)), calls $(D
+     * replaceFront(value)) and returns again $(D true). Otherwise, leaves
+     * the heap unaffected and returns $(D false). This method is useful in
+     * scenarios where the smallest $(D k) elements of a set of candidates
+     * must be collected.
      */
     bool conditionalInsert(ElementType!Store value)
     {
@@ -4049,10 +3755,21 @@ must be collected.
         return true;
     }
 }
+// /
+version(none) unittest
+{
+    // Example from "Introduction to Algorithms" Cormen et al, p 146
+    int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
+    auto h = heapify!"a < b"(a);
+    // largest element
+    assert(h.front == 16);
+    // a has the heap property
+    assert(equal(a, [ 16, 14, 10, 9, 8, 7, 4, 3, 2, 1 ]));
+}
 
 /**
-Convenience function that returns a $(D BinaryHeap!Store) object
-initialized with $(D s) and $(D initialSize).
+ * Convenience function that returns a $(D BinaryHeap!Store) object
+ * initialized with $(D s) and $(D initialSize).
  */
 BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
         size_t initialSize = size_t.max)
@@ -4100,8 +3817,7 @@ allocating one bit per element.
 struct Array(T) if (is(T == bool))
 {
     static immutable uint bitsPerWord = size_t.sizeof * 8;
-    private alias Tuple!(Array!(size_t).Payload, "_backend", ulong, "_length")
-    Data;
+    private alias Tuple!(Array!size_t.Payload, "_backend", ulong, "_length") Data;
     private RefCounted!(Data, RefCountedAutoInitialize.no) _store;
 
     private @property ref size_t[] data()
@@ -4111,7 +3827,7 @@ struct Array(T) if (is(T == bool))
     }
 
     /**
-       Defines the container's primary range.
+     * Defines the container's primary range.
      */
     struct Range
     {
@@ -4201,10 +3917,10 @@ struct Array(T) if (is(T == bool))
     }
 
     /**
-       Property returning $(D true) if and only if the container has
-       no elements.
-
-       Complexity: $(BIGOH 1)
+     * Property returning $(D true) if and only if the container has
+     * no elements.
+     *
+     * Complexity: $(BIGOH 1)
      */
     @property bool empty()
     {
@@ -4221,10 +3937,10 @@ struct Array(T) if (is(T == bool))
     }
 
     /**
-       Returns a duplicate of the container. The elements themselves
-       are not transitively duplicated.
-
-       Complexity: $(BIGOH n).
+     * Returns a duplicate of the container. The elements themselves
+     * are not transitively duplicated.
+     *
+     * Complexity: $(BIGOH n).
      */
     @property Array!bool dup()
     {
@@ -4244,10 +3960,10 @@ struct Array(T) if (is(T == bool))
     }
 
     /**
-       Returns the number of elements in the container.
-
-       Complexity: $(BIGOH log(n)).
-    */
+     * Returns the number of elements in the container.
+     *
+     * Complexity: $(BIGOH log(n)).
+     */
     @property ulong length()
     {
         return _store.refCountedStore.isInitialized ? _store._length : 0;
@@ -4262,11 +3978,11 @@ struct Array(T) if (is(T == bool))
     }
 
     /**
-       Returns the maximum number of elements the container can store
-       without (a) allocating memory, (b) invalidating iterators upon
-       insertion.
-
-       Complexity: $(BIGOH log(n)).
+     * Returns the maximum number of elements the container can store
+     * without (a) allocating memory, (b) invalidating iterators upon
+     * insertion.
+     *
+     * Complexity: $(BIGOH log(n)).
      */
     @property ulong capacity()
     {
@@ -4287,12 +4003,11 @@ struct Array(T) if (is(T == bool))
     }
 
     /**
-       Ensures sufficient capacity to accommodate $(D n) elements.
-
-       Postcondition: $(D capacity >= n)
-
-       Complexity: $(BIGOH log(e - capacity)) if $(D e > capacity),
-       otherwise $(BIGOH 1).
+     * Ensures sufficient capacity to accommodate $(D n) elements.
+     *
+     * Postcondition: $(D capacity >= n)
+     * Complexity: $(BIGOH log(e - capacity)) if $(D e > capacity),
+     *             otherwise $(BIGOH 1).
      */
     void reserve(ulong e)
     {
@@ -4309,12 +4024,12 @@ struct Array(T) if (is(T == bool))
     }
 
     /**
-       Returns a range that iterates over all elements of the
-       container, in a container-defined order. The container should
-       choose the most convenient and fast method of iteration for $(D
-       opSlice()).
-
-       Complexity: $(BIGOH log(n))
+     * Returns a range that iterates over all elements of the
+     * container, in a container-defined order. The container should
+     * choose the most convenient and fast method of iteration for $(D
+     * opSlice()).
+     *
+     * Complexity: $(BIGOH log(n))
      */
     Range opSlice()
     {
@@ -4329,10 +4044,10 @@ struct Array(T) if (is(T == bool))
     }
 
     /**
-       Returns a range that iterates the container between two
-       specified positions.
-
-       Complexity: $(BIGOH log(n))
+     * Returns a range that iterates the container between two
+     * specified positions.
+     *
+     * Complexity: $(BIGOH log(n))
      */
     Range opSlice(ulong a, ulong b)
     {
@@ -4348,10 +4063,10 @@ struct Array(T) if (is(T == bool))
     }
 
     /**
-       Equivalent to $(D opSlice().front) and $(D opSlice().back),
-       respectively.
-
-       Complexity: $(BIGOH log(n))
+     * Equivalent to $(D opSlice().front) and $(D opSlice().back),
+     * respectively.
+     *
+     * Complexity: $(BIGOH log(n))
      */
     @property bool front()
     {
@@ -4408,7 +4123,7 @@ struct Array(T) if (is(T == bool))
     }
 
     /**
-       Indexing operators yield or modify the value at a specified index.
+     * Indexing operators yield or modify the value at a specified index.
      */
     bool opIndex(ulong i)
     {
@@ -4458,11 +4173,11 @@ struct Array(T) if (is(T == bool))
     }
 
     /**
-       Returns a new container that's the concatenation of $(D this)
-       and its argument.
-
-       Complexity: $(BIGOH n + m), where m is the number of elements
-       in $(D stuff)
+     * Returns a new container that's the concatenation of $(D this)
+     * and its argument.
+     *
+     * Complexity: $(BIGOH n + m), where m is the number of elements
+     * in $(D stuff)
      */
     Array!bool opBinary(string op, Stuff)(Stuff rhs) if (op == "~")
     {
@@ -4487,7 +4202,7 @@ struct Array(T) if (is(T == bool))
     // }
 
     /**
-       Forwards to $(D insertAfter(this[], stuff)).
+     * Forwards to $(D insertAfter(this[], stuff)).
      */
     // @@@BUG@@@
     //ref Array!bool opOpAssign(string op, Stuff)(Stuff stuff) if (op == "~")
@@ -4511,12 +4226,11 @@ struct Array(T) if (is(T == bool))
     }
 
     /**
-       Removes all contents from the container. The container decides
-       how $(D capacity) is affected.
-
-       Postcondition: $(D empty)
-
-       Complexity: $(BIGOH n)
+     * Removes all contents from the container. The container decides
+     * how $(D capacity) is affected.
+     *
+     * Postcondition: $(D empty)
+     * Complexity: $(BIGOH n)
      */
     void clear()
     {
@@ -4532,14 +4246,13 @@ struct Array(T) if (is(T == bool))
     }
 
     /**
-       Sets the number of elements in the container to $(D
-       newSize). If $(D newSize) is greater than $(D length), the
-       added elements are added to the container and initialized with
-       $(D ElementType.init).
-
-       Complexity: $(BIGOH abs(n - newLength))
-
-       Postcondition: $(D _length == newLength)
+     * Sets the number of elements in the container to $(D
+     * newSize). If $(D newSize) is greater than $(D length), the
+     * added elements are added to the container and initialized with
+     * $(D ElementType.init).
+     *
+     * Complexity: $(BIGOH abs(n - newLength))
+     * Postcondition: $(D _length == newLength)
      */
     @property void length(ulong newLength)
     {
@@ -4562,42 +4275,39 @@ struct Array(T) if (is(T == bool))
     }
 
     /**
-       Inserts $(D stuff) in the container. $(D stuff) can be a value
-       convertible to $(D ElementType) or a range of objects
-       convertible to $(D ElementType).
-
-       The $(D stable) version guarantees that ranges iterating over
-       the container are never invalidated. Client code that counts on
-       non-invalidating insertion should use $(D stableInsert).
-
-       Returns: The number of elements added.
-
-       Complexity: $(BIGOH m * log(n)), where $(D m) is the number of
-       elements in $(D stuff)
+     * Inserts $(D stuff) in the container. $(D stuff) can be a value
+     * convertible to $(D ElementType) or a range of objects
+     * convertible to $(D ElementType).
+     *
+     * The $(D stable) version guarantees that ranges iterating over
+     * the container are never invalidated. Client code that counts on
+     * non-invalidating insertion should use $(D stableInsert).
+     *
+     * Returns: The number of elements added.
+     * Complexity: $(BIGOH m * log(n)), where $(D m) is the number of
+     *             elements in $(D stuff)
      */
     alias insertBack insert;
     ///ditto
     alias insertBack stableInsert;
 
     /**
-       Same as $(D insert(stuff)) and $(D stableInsert(stuff))
-       respectively, but relax the complexity constraint to linear.
+     * Same as $(D insert(stuff)) and $(D stableInsert(stuff))
+     * respectively, but relax the complexity constraint to linear.
      */
     alias insertBack linearInsert;
     ///ditto
     alias insertBack stableLinearInsert;
 
     /**
-       Picks one value in the container, removes it from the
-       container, and returns it. The stable version behaves the same,
-       but guarantees that ranges iterating over the container are
-       never invalidated.
-
-       Precondition: $(D !empty)
-
-       Returns: The element removed.
-
-       Complexity: $(BIGOH log(n))
+     * Picks one value in the container, removes it from the
+     * container, and returns it. The stable version behaves the same,
+     * but guarantees that ranges iterating over the container are
+     * never invalidated.
+     *
+     * Precondition: $(D !empty)
+     * Returns: The element removed.
+     * Complexity: $(BIGOH log(n))
      */
     T removeAny()
     {
@@ -4621,15 +4331,14 @@ struct Array(T) if (is(T == bool))
     }
 
     /**
-       Inserts $(D value) to the back of the container. $(D stuff) can
-       be a value convertible to $(D ElementType) or a range of
-       objects convertible to $(D ElementType). The stable version
-       behaves the same, but guarantees that ranges iterating over the
-       container are never invalidated.
-
-       Returns: The number of elements inserted
-
-       Complexity: $(BIGOH log(n))
+     * Inserts $(D value) to the back of the container. $(D stuff) can
+     * be a value convertible to $(D ElementType) or a range of
+     * objects convertible to $(D ElementType). The stable version
+     * behaves the same, but guarantees that ranges iterating over the
+     * container are never invalidated.
+     *
+     * Returns: The number of elements inserted
+     * Complexity: $(BIGOH log(n))
      */
     ulong insertBack(Stuff)(Stuff stuff) if (is(Stuff : bool))
     {
@@ -4672,16 +4381,15 @@ struct Array(T) if (is(T == bool))
     alias insertBack stableInsertBack;
 
     /**
-       Removes the value at the front or back of the container. The
-       stable version behaves the same, but guarantees that ranges
-       iterating over the container are never invalidated. The
-       optional parameter $(D howMany) instructs removal of that many
-       elements. If $(D howMany > n), all elements are removed and no
-       exception is thrown.
-
-       Precondition: $(D !empty)
-
-       Complexity: $(BIGOH log(n)).
+     * Removes the value at the front or back of the container. The
+     * stable version behaves the same, but guarantees that ranges
+     * iterating over the container are never invalidated. The
+     * optional parameter $(D howMany) instructs removal of that many
+     * elements. If $(D howMany > n), all elements are removed and no
+     * exception is thrown.
+     *
+     * Precondition: $(D !empty)
+     * Complexity: $(BIGOH log(n)).
      */
     void removeBack()
     {
@@ -4702,17 +4410,17 @@ struct Array(T) if (is(T == bool))
     alias removeBack stableRemoveBack;
 
     /**
-       Removes $(D howMany) values at the front or back of the
-       container. Unlike the unparameterized versions above, these
-       functions do not throw if they could not remove $(D howMany)
-       elements. Instead, if $(D howMany > n), all elements are
-       removed. The returned value is the effective number of elements
-       removed. The stable version behaves the same, but guarantees
-       that ranges iterating over the container are never invalidated.
-
-       Returns: The number of elements removed
-
-       Complexity: $(BIGOH howMany * log(n)).
+     * Removes $(D howMany) values at the front or back of the
+     * container. Unlike the unparameterized versions above, these
+     * functions do not throw if they could not remove $(D howMany)
+     * elements. Instead, if $(D howMany > n), all elements are
+     * removed. The returned value is the effective number of elements
+     * removed. The stable version behaves the same, but guarantees
+     * that ranges iterating over the container are never invalidated.
+     *
+     * Returns: The number of elements removed
+     *
+     * Complexity: $(BIGOH howMany * log(n)).
      */
     /// ditto
     ulong removeBack(ulong howMany)
@@ -4742,17 +4450,16 @@ struct Array(T) if (is(T == bool))
     }
 
     /**
-       Inserts $(D stuff) before, after, or instead range $(D r),
-       which must be a valid range previously extracted from this
-       container. $(D stuff) can be a value convertible to $(D
-       ElementType) or a range of objects convertible to $(D
-       ElementType). The stable version behaves the same, but
-       guarantees that ranges iterating over the container are never
-       invalidated.
-
-       Returns: The number of values inserted.
-
-       Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
+     * Inserts $(D stuff) before, after, or instead range $(D r),
+     * which must be a valid range previously extracted from this
+     * container. $(D stuff) can be a value convertible to $(D
+     * ElementType) or a range of objects convertible to $(D
+     * ElementType). The stable version behaves the same, but
+     * guarantees that ranges iterating over the container are never
+     * invalidated.
+     *
+     * Returns: The number of values inserted.
+     * Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
      */
     ulong insertBefore(Stuff)(Range r, Stuff stuff)
     {
@@ -4832,15 +4539,14 @@ struct Array(T) if (is(T == bool))
     }
 
     /**
-       Removes all elements belonging to $(D r), which must be a range
-       obtained originally from this container. The stable version
-       behaves the same, but guarantees that ranges iterating over the
-       container are never invalidated.
-
-       Returns: A range spanning the remaining elements in the container that
-       initially were right after $(D r).
-
-       Complexity: $(BIGOH n)
+     * Removes all elements belonging to $(D r), which must be a range
+     * obtained originally from this container. The stable version
+     * behaves the same, but guarantees that ranges iterating over the
+     * container are never invalidated.
+     *
+     * Returns: A range spanning the remaining elements in the container that
+     *          initially were right after $(D r).
+     * Complexity: $(BIGOH n)
      */
     Range linearRemove(Range r)
     {
@@ -5663,7 +5369,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         }
     }
 
-    static if(doUnittest) unittest
+    static if (doUnittest)
+    unittest
     {
         auto ts = new RedBlackTree(1, 2, 3, 4, 5);
         assert(ts.length == 5);
@@ -5734,11 +5441,11 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         return _end.left is null;
     }
 
-    /++
-        Returns the number of elements in the container.
-
-        Complexity: $(BIGOH 1).
-    +/
+    /**
+     * Returns the number of elements in the container.
+     *
+     * Complexity: $(BIGOH 1).
+     */
     @property size_t length()
     {
         return _length;
@@ -5755,7 +5462,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         return new RedBlackTree(_end.dup(), _length);
     }
 
-    static if(doUnittest) unittest
+    static if (doUnittest)
+    unittest
     {
         auto ts = new RedBlackTree(1, 2, 3, 4, 5);
         assert(ts.length == 5);
@@ -5797,18 +5505,19 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         return _end.prev.value;
     }
 
-    /++
-        $(D in) operator. Check to see if the given element exists in the
-        container.
-
-       Complexity: $(BIGOH log(n))
-     +/
+    /**
+     * $(D in) operator. Check to see if the given element exists in the
+     * container.
+     *
+     * Complexity: $(BIGOH log(n))
+     */
     bool opBinaryRight(string op)(Elem e) if (op == "in")
     {
         return _find(e) !is null;
     }
 
-    static if(doUnittest) unittest
+    static if (doUnittest)
+    unittest
     {
         auto ts = new RedBlackTree(1, 2, 3, 4, 5);
         assert(cast(Elem)3 in ts);
@@ -5835,7 +5544,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
                      (thisRange, thatRange);
     }
 
-    static if(doUnittest) unittest
+    static if (doUnittest)
+    unittest
     {
         auto t1 = new RedBlackTree(1,2,3,4);
         auto t2 = new RedBlackTree(1,2,3,4);
@@ -5861,7 +5571,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         _length = 0;
     }
 
-    static if(doUnittest) unittest
+    static if (doUnittest)
+    unittest
     {
         auto ts = new RedBlackTree(1,2,3,4,5);
         assert(ts.length == 5);
@@ -5919,7 +5630,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     /// ditto
     alias stableInsert insert;
 
-    static if(doUnittest) unittest
+    static if (doUnittest)
+    unittest
     {
         auto ts = new RedBlackTree(2,1,3,4,5,2,5);
         static if(allowDuplicates)
@@ -5967,7 +5679,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         return result;
     }
 
-    static if(doUnittest) unittest
+    static if (doUnittest)
+    unittest
     {
         auto ts = new RedBlackTree(1,2,3,4,5);
         assert(ts.length == 5);
@@ -6011,7 +5724,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
             check();
     }
 
-    static if(doUnittest) unittest
+    static if (doUnittest)
+    unittest
     {
         auto ts = new RedBlackTree(1,2,3,4,5);
         assert(ts.length == 5);
@@ -6027,15 +5741,14 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         assert(ts.arrayEqual([2,3,4]) && ts.length == 3);
     }
 
-    /++
-        Removes the given range from the container.
-
-        Returns: A range containing all of the elements that were after the
-                 given range.
-
-        Complexity: $(BIGOH m * log(n)) (where m is the number of elements in
-                    the range)
-     +/
+    /**
+     * Removes the given range from the container.
+     *
+     * Returns: A range containing all of the elements that were after the
+     *          given range.
+     * Complexity: $(BIGOH m * log(n)) (where m is the number of elements in
+     *             the range)
+     */
     Range remove(Range r)
     {
         auto b = r._begin;
@@ -6052,7 +5765,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         return Range(e, _end);
     }
 
-    static if(doUnittest) unittest
+    static if (doUnittest)
+    unittest
     {
         auto ts = new RedBlackTree(1,2,3,4,5);
         assert(ts.length == 5);
@@ -6070,15 +5784,14 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
             assert(std.algorithm.equal(r2, [1]));
     }
 
-    /++
-        Removes the given $(D Take!Range) from the container
-
-        Returns: A range containing all of the elements that were after the
-                 given range.
-
-        Complexity: $(BIGOH m * log(n)) (where m is the number of elements in
-                    the range)
-     +/
+    /**
+     * Removes the given $(D Take!Range) from the container
+     *
+     * Returns: A range containing all of the elements that were after the
+     *          given range.
+     * Complexity: $(BIGOH m * log(n)) (where m is the number of elements in
+     *             the range)
+     */
     Range remove(Take!Range r)
     {
         immutable isBegin = (r.source._begin is _begin);
@@ -6097,7 +5810,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         return Range(b, _end);
     }
 
-    static if(doUnittest) unittest
+    static if (doUnittest)
+    unittest
     {
         auto ts = new RedBlackTree(1,2,3,4,5);
         auto r = ts[];
@@ -6121,25 +5835,24 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         }
     }
 
-    /++
-       Removes elements from the container that are equal to the given values
-       according to the less comparator. One element is removed for each value
-       given which is in the container. If $(D allowDuplicates) is true,
-       duplicates are removed only if duplicate values are given.
-
-       Returns: The number of elements removed.
-
-       Complexity: $(BIGOH m log(n)) (where m is the number of elements to remove)
-
-        Examples:
---------------------
-auto rbt = redBlackTree!true(0, 1, 1, 1, 4, 5, 7);
-rbt.removeKey(1, 4, 7);
-assert(std.algorithm.equal(rbt[], [0, 1, 1, 5]));
-rbt.removeKey(1, 1, 0);
-assert(std.algorithm.equal(rbt[], [5]));
---------------------
-      +/
+    /**
+     * Removes elements from the container that are equal to the given values
+     * according to the less comparator. One element is removed for each value
+     * given which is in the container. If $(D allowDuplicates) is true,
+     * duplicates are removed only if duplicate values are given.
+     *
+     * Returns: The number of elements removed.
+     * Complexity: $(BIGOH m log(n)) (where m is the number of elements to remove)
+     *
+     * Examples:
+     * --------------------
+     * auto rbt = redBlackTree!true(0, 1, 1, 1, 4, 5, 7);
+     * rbt.removeKey(1, 4, 7);
+     * assert(std.algorithm.equal(rbt[], [0, 1, 1, 5]));
+     * rbt.removeKey(1, 1, 0);
+     * assert(std.algorithm.equal(rbt[], [5]));
+     * --------------------
+     */
     size_t removeKey(U...)(U elems)
         if(allSatisfy!(isImplicitlyConvertibleToElem, U))
     {
@@ -6150,8 +5863,7 @@ assert(std.algorithm.equal(rbt[], [5]));
 
         return removeKey(toRemove[]);
     }
-
-    /++ Ditto +/
+    /// ditto
     size_t removeKey(U)(U[] elems)
         if(isImplicitlyConvertible!(U, Elem))
     {
@@ -6172,8 +5884,7 @@ assert(std.algorithm.equal(rbt[], [5]));
 
         return lenBefore - length;
     }
-
-    /++ Ditto +/
+    /// ditto
     size_t removeKey(Stuff)(Stuff stuff)
         if(isInputRange!Stuff &&
            isImplicitlyConvertible!(ElementType!Stuff, Elem) &&
@@ -6190,7 +5901,8 @@ assert(std.algorithm.equal(rbt[], [5]));
         enum isImplicitlyConvertibleToElem = isImplicitlyConvertible!(U, Elem);
     }
 
-    static if(doUnittest) unittest
+    static if (doUnittest)
+    unittest
     {
         auto rbt = new RedBlackTree(5, 4, 3, 7, 2, 1, 7, 6, 2, 19, 45);
 
@@ -6318,14 +6030,15 @@ assert(std.algorithm.equal(rbt[], [5]));
         }
     }
 
-    static if(doUnittest) unittest
+    static if (doUnittest)
+    unittest
     {
         auto ts = new RedBlackTree(1, 2, 3, 4, 5);
         auto rl = ts.lowerBound(3);
         auto ru = ts.upperBound(3);
         auto re = ts.equalRange(3);
 
-        static if(less == "a < b")
+        static if (less == "a < b")
         {
             assert(std.algorithm.equal(rl, [1,2]));
             assert(std.algorithm.equal(ru, [4,5]));
@@ -6339,93 +6052,93 @@ assert(std.algorithm.equal(rbt[], [5]));
         assert(std.algorithm.equal(re, [3]));
     }
 
+    /*
+     * Print the tree.  This prints a sideways view of the tree in ASCII form,
+     * with the number of indentations representing the level of the nodes.
+     * It does not print values, only the tree structure and color of nodes.
+     */
     version(RBDoChecks)
+    void printTree(Node n, int indent = 0)
     {
-        /*
-         * Print the tree.  This prints a sideways view of the tree in ASCII form,
-         * with the number of indentations representing the level of the nodes.
-         * It does not print values, only the tree structure and color of nodes.
-         */
-        void printTree(Node n, int indent = 0)
+        if(n !is null)
         {
-            if(n !is null)
+            printTree(n.right, indent + 2);
+            for(int i = 0; i < indent; i++)
+                write(".");
+            writeln(n.color == n.color.Black ? "B" : "R");
+            printTree(n.left, indent + 2);
+        }
+        else
+        {
+            for(int i = 0; i < indent; i++)
+                write(".");
+            writeln("N");
+        }
+        if(indent is 0)
+            writeln();
+    }
+
+    /*
+     * Check the tree for validity.  This is called after every add or remove.
+     * This should only be enabled to debug the implementation of the RB Tree.
+     */
+    version(RBDoChecks)
+    void check()
+    {
+        //
+        // check implementation of the tree
+        //
+        int recurse(Node n, string path)
+        {
+            if(n is null)
+                return 1;
+            if(n.parent.left !is n && n.parent.right !is n)
+                throw new Exception("Node at path " ~ path ~ " has inconsistent pointers");
+            Node next = n.next;
+            static if(allowDuplicates)
             {
-                printTree(n.right, indent + 2);
-                for(int i = 0; i < indent; i++)
-                    write(".");
-                writeln(n.color == n.color.Black ? "B" : "R");
-                printTree(n.left, indent + 2);
+                if(next !is _end && _less(next.value, n.value))
+                    throw new Exception("ordering invalid at path " ~ path);
             }
             else
             {
-                for(int i = 0; i < indent; i++)
-                    write(".");
-                writeln("N");
+                if(next !is _end && !_less(n.value, next.value))
+                    throw new Exception("ordering invalid at path " ~ path);
             }
-            if(indent is 0)
-                writeln();
+            if(n.color == n.color.Red)
+            {
+                if((n.left !is null && n.left.color == n.color.Red) ||
+                        (n.right !is null && n.right.color == n.color.Red))
+                    throw new Exception("Node at path " ~ path ~ " is red with a red child");
+            }
+
+            int l = recurse(n.left, path ~ "L");
+            int r = recurse(n.right, path ~ "R");
+            if(l != r)
+            {
+                writeln("bad tree at:");
+                printTree(n);
+                throw new Exception("Node at path " ~ path ~ " has different number of black nodes on left and right paths");
+            }
+            return l + (n.color == n.color.Black ? 1 : 0);
         }
 
-        /*
-         * Check the tree for validity.  This is called after every add or remove.
-         * This should only be enabled to debug the implementation of the RB Tree.
-         */
-        void check()
+        try
         {
-            //
-            // check implementation of the tree
-            //
-            int recurse(Node n, string path)
-            {
-                if(n is null)
-                    return 1;
-                if(n.parent.left !is n && n.parent.right !is n)
-                    throw new Exception("Node at path " ~ path ~ " has inconsistent pointers");
-                Node next = n.next;
-                static if(allowDuplicates)
-                {
-                    if(next !is _end && _less(next.value, n.value))
-                        throw new Exception("ordering invalid at path " ~ path);
-                }
-                else
-                {
-                    if(next !is _end && !_less(n.value, next.value))
-                        throw new Exception("ordering invalid at path " ~ path);
-                }
-                if(n.color == n.color.Red)
-                {
-                    if((n.left !is null && n.left.color == n.color.Red) ||
-                            (n.right !is null && n.right.color == n.color.Red))
-                        throw new Exception("Node at path " ~ path ~ " is red with a red child");
-                }
-
-                int l = recurse(n.left, path ~ "L");
-                int r = recurse(n.right, path ~ "R");
-                if(l != r)
-                {
-                    writeln("bad tree at:");
-                    printTree(n);
-                    throw new Exception("Node at path " ~ path ~ " has different number of black nodes on left and right paths");
-                }
-                return l + (n.color == n.color.Black ? 1 : 0);
-            }
-
-            try
-            {
-                recurse(_end.left, "");
-            }
-            catch(Exception e)
-            {
-                printTree(_end.left, 0);
-                throw e;
-            }
+            recurse(_end.left, "");
+        }
+        catch(Exception e)
+        {
+            printTree(_end.left, 0);
+            throw e;
         }
     }
 
-    /+
-        For the moment, using templatized contstructors doesn't seem to work
-        very well (likely due to bug# 436 and/or bug# 1528). The redBlackTree
-        helper function seems to do the job well enough though.
+  version(none)
+  {
+    // For the moment, using templatized contstructors doesn't seem to work
+    // very well (likely due to bug# 436 and/or bug# 1528). The redBlackTree
+    // helper function seems to do the job well enough though.
 
     /**
      * Constructor.  Pass in an array of elements, or individual elements to
@@ -6445,18 +6158,18 @@ assert(std.algorithm.equal(rbt[], [5]));
         _setup();
         stableInsert(stuff);
     }
-    +/
+  }
 
-    /++ +/
+    ///
     this()
     {
         _setup();
     }
 
-    /++
-       Constructor.  Pass in an array of elements, or individual elements to
-       initialize the tree with.
-     +/
+    /**
+     * Constructor.  Pass in an array of elements, or individual elements to
+     * initialize the tree with.
+     */
     this(Elem[] elems...)
     {
         _setup();
@@ -6513,55 +6226,34 @@ unittest
 
 unittest
 {
-    void test(T)()
+    foreach (T; TypeTuple!(long, ulong, int, uint, short, ushort, byte, ubyte))
     {
         auto rt1 = new RedBlackTree!(T, "a < b", false)();
         auto rt2 = new RedBlackTree!(T, "a < b", true)();
         auto rt3 = new RedBlackTree!(T, "a > b", false)();
         auto rt4 = new RedBlackTree!(T, "a > b", true)();
     }
-
-    test!long();
-    test!ulong();
-    test!int();
-    test!uint();
-    test!short();
-    test!ushort();
-    test!byte();
-    test!byte();
 }
 
-/++
-    Convenience function for creating a $(D RedBlackTree!E) from a list of
-    values.
-
-        Examples:
---------------------
-auto rbt1 = redBlackTree(0, 1, 5, 7);
-auto rbt2 = redBlackTree!string("hello", "world");
-auto rbt3 = redBlackTree!true(0, 1, 5, 7, 5);
-auto rbt4 = redBlackTree!"a > b"(0, 1, 5, 7);
-auto rbt5 = redBlackTree!("a > b", true)(0.1, 1.3, 5.9, 7.2, 5.9);
---------------------
-  +/
+/**
+ * Convenience function for creating a $(D RedBlackTree!E) from a list of
+ * values.
+ */
 auto redBlackTree(E)(E[] elems...)
 {
     return new RedBlackTree!E(elems);
 }
-
-/++ Ditto +/
+/// ditto
 auto redBlackTree(bool allowDuplicates, E)(E[] elems...)
 {
     return new RedBlackTree!(E, "a < b", allowDuplicates)(elems);
 }
-
-/++ Ditto +/
+/// ditto
 auto redBlackTree(alias less, E)(E[] elems...)
 {
     return new RedBlackTree!(E, less)(elems);
 }
-
-/++ Ditto +/
+/// ditto
 auto redBlackTree(alias less, bool allowDuplicates, E)(E[] elems...)
     if(is(typeof(binaryFun!less(E.init, E.init))))
 {
@@ -6570,8 +6262,7 @@ auto redBlackTree(alias less, bool allowDuplicates, E)(E[] elems...)
     //takes less but not allowDuplicates works just fine).
     return new RedBlackTree!(E, binaryFun!less, allowDuplicates)(elems);
 }
-
-//Verify Examples.
+///
 unittest
 {
     auto rbt1 = redBlackTree(0, 1, 5, 7);
@@ -6608,11 +6299,11 @@ unittest
     assert(array(rt4[]) == ["hello"]);
 }
 
-version(unittest) struct UnittestMe {
-  int a;
-}
-
 unittest
 {
+    static struct UnittestMe
+    {
+        int a;
+    }
     auto c = Array!UnittestMe();
 }
