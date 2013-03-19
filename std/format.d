@@ -2441,10 +2441,10 @@ unittest
     static class CF1 { }
 
     static interface IF2 { string toString(); }
-    static class CIF2 : IF2 { override string toString() { return ""; } }
+    static class CIF2 : IF2 { override string toString() const { return ""; } }
     static struct SF2 { string toString() { return ""; } }
     static union UF2 { string toString() { return ""; } }
-    static class CF2 { override string toString() { return ""; } }
+    static class CF2 { override string toString() const { return ""; } }
 
     static interface IK1 { void toString(scope void delegate(const(char)[]) sink,
                            FormatSpec!char) const; }

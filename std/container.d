@@ -5820,7 +5820,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
      *
      * Complexity: $(BIGOH n*log(n))
      */
-    override bool opEquals(Object rhs)
+    override bool opEquals(const Object rhs) const
     {
         RedBlackTree that = cast(RedBlackTree)rhs;
         if (that is null) return false;
