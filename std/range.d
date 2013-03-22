@@ -1319,6 +1319,20 @@ template hasSlicing(R)
     }));
 }
 
+//
+struct Infinity {}
+
+//
+auto opDollar(R)(R r) if (isForwardRange!R && isInfinite!R)
+{
+    return Infinity();
+}
+// ditto
+auto opDollar(R)(R r) if (isForwardRange!R && hasLength!R)
+{
+    return r.length;
+}
+
 unittest
 {
     static assert( hasSlicing!(int[]));
@@ -1360,6 +1374,45 @@ unittest
     }
 
     static assert(hasSlicing!InfOnes);
+}
+
+unittest
+{
+    // Automatic opDollar completion
+
+    struct IFR  // infinite forward range
+    {
+        enum empty = false;
+        @property front() { return 1; }
+        auto popFront() {}
+
+        @property save() { return this; }
+
+        auto opSlice(size_t b, size_t e) { return this.take(e - b); }
+        auto opSlice(size_t b, Infinity) { return this; }
+    }
+    static assert(hasSlicing!IFR);
+    IFR()[0 .. $];
+
+    struct RAR  // random access range
+    {
+        @property empty() { return true; }
+        @property front() { return 1; }
+        auto popFront() {}
+
+        @property save() { return this; }
+
+        @property back() { return 1; }
+        auto popBack() {}
+
+        auto opIndex(size_t i) { return 1; }
+        @property size_t length() { return 1; }
+
+        auto opSlice(size_t b, size_t e) { return this; }
+    }
+    static assert(hasSlicing!RAR);
+    RAR()[$ - 1];
+    RAR()[$ .. $];
 }
 
 /**
