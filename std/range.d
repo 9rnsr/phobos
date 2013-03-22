@@ -435,8 +435,6 @@ enum dummyRanges = q{
             {
                 return arr.length;
             }
-
-            alias length opDollar;
         }
     }
 
@@ -926,7 +924,6 @@ unittest
         void popBack();
         ref int opIndex(uint);
         @property size_t length();
-        alias length opDollar;
         //int opSlice(uint, uint);
     }
     static assert(!isRandomAccessRange!(A));
@@ -957,7 +954,6 @@ unittest
 
         int opIndex(size_t n) const { return 0; }
         @property size_t length() const { return 0; }
-        alias length opDollar;
 
         void put(int e){  }
     }
@@ -1604,8 +1600,6 @@ if (isBidirectionalRange!(Unqual!Range))
                 {
                     return source.length;
                 }
-
-                alias length opDollar;
             }
         }
 
@@ -1908,8 +1902,6 @@ if (isInputRange!(Unqual!Range))
                 {
                     return (source.length + _n - 1) / _n;
                 }
-
-                alias length opDollar;
             }
         }
         return Result(r, n);
@@ -1939,8 +1931,7 @@ unittest
     assert(s1[1..5].length == 4);
     assert(s1[0..0].empty);
     assert(s1[3..3].empty);
-    // assert(s1[$ .. $].empty);
-    assert(s1[s1.opDollar() .. s1.opDollar()].empty);
+    assert(s1[$..$].empty);
 
     auto s2 = stride(arr, 2);
     assert(equal(s2[0..2], [1,3]));
@@ -1949,8 +1940,7 @@ unittest
     assert(s2[1..5].length == 4);
     assert(s2[0..0].empty);
     assert(s2[3..3].empty);
-    // assert(s2[$ .. $].empty);
-    assert(s2[s2.opDollar() .. s2.opDollar()].empty);
+    assert(s2[$..$].empty);
 
     // Test fix for Bug 5035
     auto m = [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4]; // 3 rows, 4 columns
@@ -2271,8 +2261,6 @@ if (Ranges.length > 0 &&
                     }
                     return result;
                 }
-
-                alias length opDollar;
             }
 
             static if (allSatisfy!(isRandomAccessRange, R))
@@ -2582,8 +2570,6 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
                 }
                 return result;
             }
-
-            alias length opDollar;
         }
     }
 
@@ -2751,8 +2737,6 @@ if (isInputRange!(Unqual!Range) &&
         {
             return _maxAvailable;
         }
-
-        alias length opDollar;
     }
     else static if (hasLength!R)
     {
@@ -2760,8 +2744,6 @@ if (isInputRange!(Unqual!Range) &&
         {
             return min(_maxAvailable, source.length);
         }
-
-        alias length opDollar;
     }
 
     static if (isRandomAccessRange!R)
@@ -2851,9 +2833,7 @@ if (isInputRange!(Unqual!R) &&
 Take!R take(R)(R input, size_t n)
 if (isInputRange!(Unqual!R) && !isInfinite!(Unqual!R) && hasSlicing!(Unqual!R))
 {
-    // @@@BUG@@@
-    //return input[0 .. min(n, $)];
-    return input[0 .. min(n, input.length)];
+    return input[0 .. min(n, $)];
 }
 
 // take(take(r, n1), n2)
@@ -2990,7 +2970,6 @@ if (isInputRange!R)
             }
             void popFront() { _input.popFront(); --_n; }
             @property size_t length() const { return _n; }
-            alias length opDollar;
 
             static if (isForwardRange!R)
                 @property auto save()
@@ -3108,7 +3087,6 @@ auto takeOne(R)(R source) if (isInputRange!R)
             @property auto save() { return Result(_source.save, empty); }
             @property auto ref back() { assert(!empty); return _source.front; }
             @property size_t length() const { return !empty; }
-            alias length opDollar;
             auto ref opIndex(size_t n) { assert(n < length); return _source.front; }
             auto opSlice(size_t m, size_t n)
             {
@@ -3558,10 +3536,6 @@ size_t popFrontN(Range)(ref Range r, size_t n)
     {
         r = r[n .. $];
     }
-    else static if (hasSlicing!Range && hasLength!Range) //TODO: Remove once hasSlicing forces opDollar.
-    {
-        r = r[n .. r.length];
-    }
     else
     {
         static if (hasLength!Range)
@@ -3590,10 +3564,6 @@ size_t popBackN(Range)(ref Range r, size_t n)
     static if (hasSlicing!Range && is(typeof(r = r[0 .. $ - n])))
     {
         r = r[0 .. $ - n];
-    }
-    else static if (hasSlicing!Range && hasLength!Range) //TODO: Remove once hasSlicing forces opDollar.
-    {
-        r = r[0 .. r.length - n];
     }
     else
     {
@@ -3671,8 +3641,6 @@ void popFrontExactly(Range)(ref Range r, size_t n)
 
     static if (hasSlicing!Range && is(typeof(r = r[n .. $])))
         r = r[n .. $];
-    else static if (hasSlicing!Range && hasLength!Range) //TODO: Remove once hasSlicing forces opDollar.
-        r = r[n .. r.length];
     else
         foreach (i; 0 .. n)
             r.popFront();
@@ -3686,8 +3654,6 @@ void popBackExactly(Range)(ref Range r, size_t n)
 
     static if (hasSlicing!Range && is(typeof(r = r[0 .. $ - n])))
         r = r[0 .. $ - n];
-    else static if (hasSlicing!Range && hasLength!Range) //TODO: Remove once hasSlicing forces opDollar.
-        r = r[0 .. r.length - n];
     else
         foreach (i; 0 .. n)
             r.popBack();
@@ -3745,14 +3711,8 @@ struct Repeat(T)
             if (i > j) throw new RangeError();
         return this.takeExactly(j - i);
     }
-    /// Ditto
-    version (StdDdoc)
-        auto opDollar(){return DollarToken();} //Opaque signature for Ddoc
-    else
-        enum opDollar = DollarToken(); //Implementation defined signature
 
-    private static struct DollarToken{}
-    auto opSlice(size_t, DollarToken){return this;}
+    auto opSlice(size_t, Infinity) { return this; }
 }
 
 /// Ditto
@@ -3876,13 +3836,6 @@ struct Cycle(Range)
             return Cycle(this._original.save, this._index);
         }
 
-        private static struct DollarToken {}
-
-        DollarToken opDollar()
-        {
-            return DollarToken.init;
-        }
-
         auto opSlice(size_t i, size_t j)
         {
             version (assert) if (i > j) throw new RangeError();
@@ -3891,7 +3844,7 @@ struct Cycle(Range)
             return takeExactly(retval, j - i);
         }
 
-        auto opSlice(size_t i, DollarToken)
+        auto opSlice(size_t i, Infinity)
         {
             auto retval = this.save;
             retval._index += i;
@@ -3977,13 +3930,6 @@ struct Cycle(R)
         return this;
     }
 
-    private static struct DollarToken {}
-
-    DollarToken opDollar()
-    {
-        return DollarToken.init;
-    }
-
     auto opSlice(size_t i, size_t j)
     {
         version (assert) if (i > j) throw new RangeError();
@@ -3992,7 +3938,7 @@ struct Cycle(R)
         return takeExactly(retval, j - i);
     }
 
-    auto opSlice(size_t i, DollarToken)
+    auto opSlice(size_t i, Infinity)
     {
         auto retval = this.save;
         retval._index += i;
@@ -4429,8 +4375,6 @@ struct Zip(Ranges...)
             }
             return result;
         }
-
-        alias length opDollar;
     }
 
 /**
@@ -4993,8 +4937,6 @@ private:
     size_t _n;
     ElementType _cache;
 
-    static struct DollarToken{}
-
 public:
     this(State initial, size_t n = 0)
     {
@@ -5018,8 +4960,6 @@ public:
         _cache = compute(_state, ++_n);
     }
 
-    enum opDollar = DollarToken();
-
     auto opSlice(size_t lower, size_t upper)
     in
     {
@@ -5030,7 +4970,7 @@ public:
         return typeof(this)(_state, _n + lower).take(upper - lower);
     }
 
-    auto opSlice(size_t lower, DollarToken)
+    auto opSlice(size_t lower, Infinity)
     {
         return typeof(this)(_state, _n + lower);
     }
@@ -5206,8 +5146,6 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
                 return unsigned((current - pastLast) / -step);
             }
         }
-
-        alias length opDollar;
     }
 
     return Result(begin, end, step);
@@ -5274,8 +5212,6 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         {
             return unsigned(pastLast - current);
         }
-
-        alias length opDollar;
     }
 
     return Result(begin, end);
@@ -5361,8 +5297,6 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
         {
             return count - index;
         }
-
-        alias length opDollar;
     }
 
     return Result(begin, end, step);
@@ -6037,8 +5971,6 @@ struct Transversal(Ror,
             {
                 return _input.length;
             }
-
-            alias length opDollar;
         }
 
 /**
@@ -6329,8 +6261,6 @@ struct Indexed(Source, Indices)
         {
             return _indices.length;
         }
-
-        alias length opDollar;
     }
 
     static if(isRandomAccessRange!Indices)
@@ -6524,8 +6454,6 @@ struct Chunks(Source) if(isInputRange!Source && hasSlicing!Source && hasLength!S
         return (_source.length / _chunkSize) +
             (_source.length % _chunkSize > 0);
     }
-
-    alias length opDollar;
 
     /// Ditto
     @property auto back()
@@ -6918,9 +6846,6 @@ interface RandomAccessFinite(E) : BidirectionalRange!(E) {
     ///
     @property size_t length();
 
-    ///
-    alias length opDollar;
-
     // Can't support slicing until issues with requiring slicing for all
     // finite random access ranges are fully resolved.
     version(none) {
@@ -7115,8 +7040,6 @@ template InputRangeObject(R) if (isInputRange!(Unqual!R)) {
                     @property size_t length() {
                         return _range.length;
                     }
-
-                    alias length opDollar;
 
                     // Can't support slicing until all the issues with
                     // requiring slicing support for finite random access
@@ -7443,8 +7366,6 @@ if (isRandomAccessRange!Range && hasLength!Range)
     {
         return _input.length;
     }
-
-    alias length opDollar;
 
 /**
    Releases the controlled range and returns it.

@@ -2709,11 +2709,6 @@ Defines the container's primary range, which is a random-access range.
             return _b - _a;
         }
 
-        size_t opDollar() const
-        {
-            return length;
-        }
-
         @property T front()
         {
             enforce(!empty);
@@ -2906,11 +2901,7 @@ Complexity: $(BIGOH 1).
     }
 
     /// ditto
-    size_t opDollar() const
-    {
-        // @@@BUG@@@ This doesn't work yet
-        return length;
-    }
+    alias opDollar = length;
 
 /**
 Returns the maximum number of elements the container can store without
