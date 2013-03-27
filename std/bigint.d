@@ -89,7 +89,7 @@ public:
         } else if (s[0] == '+') {
             s = s[1..$];
         }
-        data = 0UL;
+        data.opAssign(0UL);
         auto q = 0X3;
         bool ok;
         assert(isZero());
