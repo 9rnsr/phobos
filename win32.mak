@@ -144,7 +144,7 @@ SRC_STD_REST= std\regex.d \
 	std\json.d \
 	std\parallelism.d \
 	std\mathspecial.d \
-	std\meta.d std\internal\meta\meta.d \
+	std\meta.d \
 	std\process.d
 
 SRC_STD_ALL= $(SRC_STD_1_HEAVY) $(SRC_STD_2_HEAVY) $(SRC_STD_2a_HEAVY) \
@@ -200,8 +200,6 @@ SRC_STD_INTERNAL_MATH= std\internal\math\biguintcore.d \
 	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
 	std\internal\math\gammafunction.d std\internal\math\errorfunction.d
 
-SRC_STD_INTERNAL_META= std\internal\meta\meta.d
-
 SRC_STD_INTERNAL_WINDOWS= std\internal\windows\advapi32.d
 
 SRC_ETC=
@@ -216,7 +214,6 @@ SRC_TO_COMPILE_NOT_STD= crc32.d \
 	$(SRC_STD_INTERNAL) \
 	$(SRC_STD_INTERNAL_DIGEST) \
 	$(SRC_STD_INTERNAL_MATH) \
-	$(SRC_STD_INTERNAL_META) \
 	$(SRC_STD_INTERNAL_WINDOWS) \
 	$(SRC_ETC) \
 	$(SRC_ETC_C)
@@ -613,8 +610,8 @@ $(DOC)\std_mathspecial.html : $(STDDOC) std\mathspecial.d
 $(DOC)\std_md5.html : $(STDDOC) std\md5.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_md5.html $(STDDOC) std\md5.d
 
-$(DOC)\std_meta.html : $(STDDOC) std\internal\meta\meta.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_meta.html $(STDDOC) std\internal\meta\meta.d
+$(DOC)\std_meta.html : $(STDDOC) std\meta.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_meta.html $(STDDOC) std\meta.d
 
 $(DOC)\std_metastrings.html : $(STDDOC) std\metastrings.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_metastrings.html $(STDDOC) std\metastrings.d
@@ -800,7 +797,6 @@ zip : win32.mak win64.mak posix.mak $(STDDOC) $(SRC) \
 	zip32 -u phobos $(SRC_STD_INTERNAL)
 	zip32 -u phobos $(SRC_STD_INTERNAL_DIGEST)
 	zip32 -u phobos $(SRC_STD_INTERNAL_MATH)
-	zip32 -u phobos $(SRC_STD_INTERNAL_META)
 	zip32 -u phobos $(SRC_STD_INTERNAL_WINDOWS)
 	zip32 -u phobos $(SRC_ETC) $(SRC_ETC_C)
 	zip32 -u phobos $(SRC_ZLIB)

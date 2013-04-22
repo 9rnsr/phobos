@@ -9,13 +9,12 @@ Macros:
   WIKI = Phobos/StdMeta
  TITLE = std.meta
 
-Source:      $(PHOBOSSRC std/_meta.d) (which is just a shell around
-             $(PHOBOSSRC std/internal/_meta/_meta.d))
+Source:      $(PHOBOSSRC std/_meta.d)
 Copyright:   Copyright Shin Fujishiro 2010.
 License:     $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
 Authors:     Shin Fujishiro, and Kenji Hara
  */
-module std.internal.meta.meta;
+module std.meta;
 
 //             Copyright Shin Fujishiro 2010.
 // Distributed under the Boost Software License, Version 1.0.
@@ -307,7 +306,7 @@ template mangle(entity...)
     {
         enum
         {
-            prefix = "PS3std8internal4meta4meta",
+            prefix = "PS3std4meta",
             midfix = "__T4pack",
             suffix = "Z3Tag",
         }
@@ -340,9 +339,9 @@ unittest
     static assert(mangle!int == "Ti");
     static assert(mangle!512 == "Vi512");
     static assert(mangle!"abc" == "VAyaa3_616263");
-    static assert(mangle!mangle == "S303std8internal4meta4meta6mangle");
+    static assert(mangle!mangle == "S163std4meta6mangle");
 
-    static assert(mangle!(int, 512, mangle) == "TiVi512S303std8internal4meta4meta6mangle");
+    static assert(mangle!(int, 512, mangle) == "TiVi512S163std4meta6mangle");
 }
 
 
