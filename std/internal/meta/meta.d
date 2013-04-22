@@ -917,7 +917,7 @@ template variadicT(string expr)
 
     template _impl(args...)
     {
-        mixin _parameters!(+args.length);   // @@@BUG4886@@@ workaround '+'
+        mixin _parameters!(args.length);
         mixin _installLambdaExpr!expr;
     }
 
@@ -965,11 +965,11 @@ unittest
     static assert(is(Make2D!(double, 30, 10) == double[30][10]));
 
     // args
-    alias lengthof = variadicT!q{ +args.length };
+    alias lengthof = variadicT!q{ args.length };
     static assert(lengthof!(1,2,3,4,5,6,7,8,9) == 9);
 
     // nested
-    alias argcv = variadicT!q{ apply!(variadicT!q{ pack!args }, +args.length, args) };
+    alias argcv = variadicT!q{ apply!(variadicT!q{ pack!args }, args.length, args) };
     static assert(isSame!(argcv!(1, 2), pack!(2u, 1,2)));
 }
 
