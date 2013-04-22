@@ -825,6 +825,8 @@ unittest
 
 private mixin template _installLambdaExpr(string expr)
 {
+    template _expectEmptySeq() {}
+
     // The result can be an atomic entity or a sequence as expr returns.
     static if (__traits(compiles, _expectEmptySeq!(mixin("("~ expr ~")[0 .. 0]"))))
     {
@@ -835,8 +837,6 @@ private mixin template _installLambdaExpr(string expr)
         mixin("alias  Id!("~ expr ~") _;");
     }
 }
-
-private template _expectEmptySeq() {}
 
 
 
@@ -1941,13 +1941,9 @@ template Example(Arg)
  */
 template apply(alias templat, args...)
 {
-    alias templat!args apply;
-}
+    alias variadicT!templat _templat;
 
-/// ditto
-template apply(string templat, args...)
-{
-    alias apply!(variadicT!templat, args) apply;
+    alias _templat!args apply;
 }
 
 
@@ -2663,17 +2659,13 @@ static assert(zipped[1] == "double x");
 static assert(zipped[2] == "string s");
 ----------
  */
-template zipWith(string fun, seqs...) if (isZippable!seqs)
-{
-    alias zipWith!(variadicT!fun, seqs) zipWith;
-}
-
-/// ditto
 template zipWith(alias fun, seqs...) if (isZippable!seqs)
 {
+    alias variadicT!fun _fun;
+
     template transverser(size_t i)
     {
-        alias fun!(transverse!(i, seqs)) transverser;
+        alias _fun!(transverse!(i, seqs)) transverser;
     }
 
     alias map!(transverser, iota!(_minLength!seqs)) zipWith;
@@ -2740,25 +2732,21 @@ static assert(is(PP[2] ==  void**));
  */
 template map(alias fun, seq...)
 {
+    alias unaryT!fun _fun;
+
     static if (seq.length == 0)
     {
         alias Seq!() map;
     }
     else static if (seq.length == 1)
     {
-        alias Seq!(fun!(seq[0])) map;
+        alias Seq!(_fun!(seq[0])) map;
     }
     else
     {
-        alias Seq!(map!(fun, seq[ 0  .. $/2]),
-                   map!(fun, seq[$/2 ..  $ ])) map;
+        alias Seq!(map!(_fun, seq[ 0  .. $/2]),
+                   map!(_fun, seq[$/2 ..  $ ])) map;
     }
-}
-
-/// ditto
-template map(string fun, seq...)
-{
-    alias map!(unaryT!fun, seq) map;
 }
 
 
@@ -3043,8 +3031,6 @@ template sort(alias comp, seq...)
                       .With!(sort!(seq[$/2 ..  $ ])) sort;
             }
         }
-
-      private:
 
         template Merge()
         {
@@ -3383,33 +3369,33 @@ See_Also:
  */
 template reduce(alias fun, Seed, seq...)
 {
-    alias _reduce!(binaryT!fun).reduce!(Seed, seq) reduce;
+    alias _reduce!(binaryT!fun)._impl!(Seed, seq) reduce;
 }
 
 /// ditto
 template reduce(alias fun, alias Seed, seq...)
 {
-    alias _reduce!(binaryT!fun).reduce!(Seed, seq) reduce;
+    alias _reduce!(binaryT!fun)._impl!(Seed, seq) reduce;
 }
 
 
 private template _reduce(alias fun)
 {
-    template reduce(      Seed) { alias Seed reduce; }
-    template reduce(alias Seed) { alias Seed reduce; }
-    template reduce(      Seed, seq...) { mixin(_reduceBody); }
-    template reduce(alias Seed, seq...) { mixin(_reduceBody); }
+    template _impl(      Seed) { alias Seed _impl; }
+    template _impl(alias Seed) { alias Seed _impl; }
+    template _impl(      Seed, seq...) { mixin(_reduceBody); }
+    template _impl(alias Seed, seq...) { mixin(_reduceBody); }
 
     enum _reduceBody =
     q{
         static if (seq.length == 1)
         {
-            alias fun!(Seed, seq[0]) reduce;
+            alias fun!(Seed, seq[0]) _impl;
         }
         else
         {
             // Halving seq reduces the recursion depth.
-            alias reduce!(reduce!(Seed, seq[0 .. $/2]), seq[$/2 .. $]) reduce;
+            alias _impl!(_impl!(Seed, seq[0 .. $/2]), seq[$/2 .. $]) _impl;
         }
     };
 }
@@ -3949,9 +3935,11 @@ static assert(meta.countIf!(q{ a[0] == '_' },
  */
 template countIf(alias pred, seq...)
 {
+    alias unaryT!pred _pred;
+
     static if (seq.length < 2)
     {
-        static if (seq.length == 0 || !pred!(seq[0]))
+        static if (seq.length == 0 || !_pred!(seq[0]))
         {
             enum size_t countIf = 0;
         }
@@ -3962,14 +3950,9 @@ template countIf(alias pred, seq...)
     }
     else
     {
-        enum countIf = countIf!(pred, seq[ 0  .. $/2]) +
-                       countIf!(pred, seq[$/2 ..  $ ]);
+        enum countIf = countIf!(_pred, seq[ 0  .. $/2]) +
+                       countIf!(_pred, seq[$/2 ..  $ ]);
     }
-}
-
-template countIf(string pred, seq...)
-{
-    enum countIf = countIf!(unaryT!pred, seq);
 }
 
 
@@ -4370,22 +4353,24 @@ static assert(is(Inter == meta.setify!(int, bool, bool)));
  */
 template intersection(seqs...)
 {
-    alias reduce!(compose!(pack, .intersection), seqs).expand intersection;
-}
+    template _impl(seqs...)
+    {
+        alias reduce!(compose!(pack, .intersection), seqs).expand _impl;
+    }
+    template _impl(alias A, alias B)
+    {
+        alias intersectionBy!(metaComp, A, B) _impl;
+    }
+    template _impl(alias A)
+    {
+        alias setify!(A.expand) _impl;
+    }
+    template _impl()
+    {
+        alias Seq!() _impl;
+    }
 
-template intersection(alias A, alias B)
-{
-    alias intersectionBy!(metaComp, A, B) intersection;
-}
-
-template intersection(alias A)
-{
-    alias setify!(A.expand) intersection;
-}
-
-template intersection()
-{
-    alias Seq!() intersection;
+    alias _impl!seqs intersection;
 }
 
 
@@ -4513,16 +4498,6 @@ static assert(is(T == uint));
  */
 template cond(cases...) if (cases.length > 0)
 {
-    static if (segmentWith!(_matchCase, 2, cases).length)
-    {
-        alias frontof!(segmentWith!(_matchCase, 2, cases)) cond;
-    }
-    else static assert(0, "No match");
-}
-
-
-private
-{
     template _matchCase(bool cond, then...)
     {
         static if (cond)
@@ -4542,6 +4517,12 @@ private
     {
         static assert(0, "Malformed cond-then: "~ spec.stringof);
     }
+
+    static if (segmentWith!(_matchCase, 2, cases).length)
+    {
+        alias frontof!(segmentWith!(_matchCase, 2, cases)) cond;
+    }
+    else static assert(0, "No match");
 }
 
 
