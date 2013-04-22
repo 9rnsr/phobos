@@ -1,10 +1,10 @@
-
 module std.c.windows.com;
 
 pragma(lib,"uuid");
 
-private import std.c.windows.windows;
-private import std.string;
+import core.atomic;
+import std.c.windows.windows;
+import std.string;
 
 alias WCHAR OLECHAR;
 alias OLECHAR *LPOLESTR;
@@ -56,6 +56,16 @@ enum
         CLSCTX_ALL = (CLSCTX_INPROC_SERVER| CLSCTX_INPROC_HANDLER| CLSCTX_LOCAL_SERVER),
         CLSCTX_SERVER = (CLSCTX_INPROC_SERVER|CLSCTX_LOCAL_SERVER),
 }
+
+enum
+{ 
+       COINIT_APARTMENTTHREADED   = 0x2,
+       COINIT_MULTITHREADED       = 0x0,
+       COINIT_DISABLE_OLE1DDE     = 0x4,
+       COINIT_SPEED_OVER_MEMORY   = 0x8 
+}
+alias DWORD COINIT;
+enum RPC_E_CHANGED_MODE = 0x80010106;
 
 alias const(GUID) IID;
 alias const(GUID) CLSID;
@@ -177,6 +187,7 @@ int StringFromGUID2(GUID *rguid, LPOLESTR lpsz, int cbMax);
 /* init/uninit */
 
 HRESULT CoInitialize(LPVOID pvReserved);
+HRESULT CoInitializeEx(LPVOID pvReserved, DWORD dwCoInit);
 void    CoUninitialize();
 DWORD   CoGetCurrentProcess();
 
@@ -222,12 +233,12 @@ extern (System):
 
     ULONG AddRef()
     {
-        return InterlockedIncrement(&count);
+        return atomicOp!"+="(*cast(shared)&count, 1);
     }
 
     ULONG Release()
     {
-        LONG lRef = InterlockedDecrement(&count);
+        LONG lRef = atomicOp!"-="(*cast(shared)&count, 1);
         if (lRef == 0)
         {
             // free object

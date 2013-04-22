@@ -13,6 +13,8 @@
  * additional features specific to in-process messaging.
  *
  * Synposis:
+ *$(D_RUN_CODE
+ *$(ARGS
  * ---
  * import std.stdio;
  * import std.concurrency;
@@ -43,10 +45,11 @@
  *     writeln("Successfully printed number.");
  * }
  * ---
+ *), $(ARGS), $(ARGS), $(ARGS))
  *
  * Copyright: Copyright Sean Kelly 2009 - 2010.
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
- * Authors:   Sean Kelly
+ * Authors:   Sean Kelly, Alex Rønne Petersen
  * Source:    $(PHOBOSSRC std/_concurrency.d)
  */
 /*          Copyright Sean Kelly 2009 - 2010.
@@ -69,7 +72,7 @@ private
     import std.algorithm;
     import std.exception;
     import std.range;
-    import std.range;
+    import std.string;
     import std.traits;
     import std.typecons;
     import std.typetuple;
@@ -300,6 +303,19 @@ class MailboxFull : Exception
 }
 
 
+/**
+ * Thrown when a Tid is missing, e.g. when $(D ownerTid) doesn't
+ * find an owner thread.
+ */
+class TidMissingException : Exception
+{
+    this(string msg, string file = __FILE__, size_t line = __LINE__)
+    {
+        super(msg, file, line);
+    }
+}
+
+
 //////////////////////////////////////////////////////////////////////////////
 // Thread ID
 //////////////////////////////////////////////////////////////////////////////
@@ -310,14 +326,6 @@ class MailboxFull : Exception
  */
 struct Tid
 {
-    void send(T...)( T vals )
-    {
-        static assert( !hasLocalAliasing!(T),
-                       "Aliases to mutable thread-local data not allowed." );
-        _send( this, vals );
-    }
-
-
 private:
     this( MessageBox m )
     {
@@ -340,11 +348,60 @@ private:
     return Tid( mbox );
 }
 
+/**
+ * Return the Tid of the thread which
+ * spawned the caller's thread.
+ *
+ * Throws: A $(D TidMissingException) exception if
+ * there is no owner thread.
+ */
+@property Tid ownerTid()
+{
+    enforceEx!TidMissingException(owner.mbox !is null, "Error: Thread has no owner thread.");
+    return owner;
+}
+
+unittest
+{
+    static void fun()
+    {
+        string res = receiveOnly!string();
+        assert(res == "Main calling");
+        ownerTid.send("Child responding");
+    }
+
+    assertThrown!TidMissingException(ownerTid);
+    auto child = spawn(&fun);
+    child.send("Main calling");
+    string res = receiveOnly!string();
+    assert(res == "Child responding");
+}
 
 //////////////////////////////////////////////////////////////////////////////
 // Thread Creation
 //////////////////////////////////////////////////////////////////////////////
 
+private template isSpawnable(F, T...)
+{
+    template isParamsImplicitlyConvertible(F1, F2, int i=0)
+    {
+        alias ParameterTypeTuple!F1 param1;
+        alias ParameterTypeTuple!F2 param2;
+        static if (param1.length != param2.length)
+            enum isParamsImplicitlyConvertible = false;
+        else static if (param1.length == i)
+            enum isParamsImplicitlyConvertible = true;
+        else static if (isImplicitlyConvertible!(param2[i], param1[i]))
+            enum isParamsImplicitlyConvertible = isParamsImplicitlyConvertible!(F1, F2, i+1);
+        else
+            enum isParamsImplicitlyConvertible = false;
+    }
+    enum isSpawnable = isCallable!F
+      && is(ReturnType!F == void)
+      && isParamsImplicitlyConvertible!(F, void function(T))
+      && ( isFunctionPointer!F
+        || !hasUnsharedAliasing!F);
+}
 
 /**
  * Executes the supplied function in a new context represented by $(D Tid).  The
@@ -367,8 +424,10 @@ private:
  *  threads.
  *
  * Example:
+ *$(D_RUN_CODE
+ *$(ARGS
  * ---
- * import std.stdio;
+ * import std.stdio, std.concurrency;
  *
  * void f1(string str)
  * {
@@ -391,8 +450,10 @@ private:
  *     auto tid2 = spawn(&f2, str.dup);
  * }
  * ---
+ *), $(ARGS), $(ARGS), $(ARGS))
  */
-Tid spawn(T...)( void function(T) fn, T args )
+Tid spawn(F, T...)( F fn, T args )
+    if ( isSpawnable!(F, T) )
 {
     static assert( !hasLocalAliasing!(T),
                    "Aliases to mutable thread-local data not allowed." );
@@ -416,7 +477,8 @@ Tid spawn(T...)( void function(T) fn, T args )
  * Returns:
  *  A Tid representing the new context.
  */
-Tid spawnLinked(T...)( void function(T) fn, T args )
+Tid spawnLinked(F, T...)( F fn, T args )
+    if ( isSpawnable!(F, T) )
 {
     static assert( !hasLocalAliasing!(T),
                    "Aliases to mutable thread-local data not allowed." );
@@ -427,7 +489,8 @@ Tid spawnLinked(T...)( void function(T) fn, T args )
 /*
  *
  */
-private Tid _spawn(T...)( bool linked, void function(T) fn, T args )
+private Tid _spawn(F, T...)( bool linked, F fn, T args )
+    if ( isSpawnable!(F, T) )
 {
     // TODO: MessageList and &exec should be shared.
     auto spawnTid = Tid( new MessageBox );
@@ -444,6 +507,52 @@ private Tid _spawn(T...)( bool linked, void function(T) fn, T args )
     auto t = new Thread( &exec ); t.start();
     links[spawnTid] = linked;
     return spawnTid;
+}
+
+unittest
+{
+    void function()                                fn1;
+    void function(int)                             fn2;
+    static assert( __traits(compiles, spawn(fn1)));
+    static assert( __traits(compiles, spawn(fn2, 2)));
+    static assert(!__traits(compiles, spawn(fn1, 1)));
+    static assert(!__traits(compiles, spawn(fn2)));
+
+    void delegate(int) shared                      dg1;
+    shared(void delegate(int))                     dg2;
+    shared(void delegate(long) shared)             dg3;
+    shared(void delegate(real, int , long) shared) dg4;
+    void delegate(int) immutable                   dg5;
+    void delegate(int)                             dg6;
+    static assert( __traits(compiles, spawn(dg1, 1)));
+    static assert( __traits(compiles, spawn(dg2, 2)));
+    static assert( __traits(compiles, spawn(dg3, 3)));
+    static assert( __traits(compiles, spawn(dg4, 4, 4, 4)));
+    static assert( __traits(compiles, spawn(dg5, 5)));
+    static assert(!__traits(compiles, spawn(dg6, 6)));
+
+    auto callable1  = new class{ void opCall(int) shared {} };
+    auto callable2  = cast(shared)new class{ void opCall(int) shared {} };
+    auto callable3  = new class{ void opCall(int) immutable {} };
+    auto callable4  = cast(immutable)new class{ void opCall(int) immutable {} };
+    auto callable5  = new class{ void opCall(int) {} };
+    auto callable6  = cast(shared)new class{ void opCall(int) immutable {} };
+    auto callable7  = cast(immutable)new class{ void opCall(int) shared {} };
+    auto callable8  = cast(shared)new class{ void opCall(int) const shared {} };
+    auto callable9  = cast(const shared)new class{ void opCall(int) shared {} };
+    auto callable10 = cast(const shared)new class{ void opCall(int) const shared {} };
+    auto callable11 = cast(immutable)new class{ void opCall(int) const shared {} };
+    static assert(!__traits(compiles, spawn(callable1,  1)));
+    static assert( __traits(compiles, spawn(callable2,  2)));
+    static assert(!__traits(compiles, spawn(callable3,  3)));
+    static assert( __traits(compiles, spawn(callable4,  4)));
+    static assert(!__traits(compiles, spawn(callable5,  5)));
+    static assert(!__traits(compiles, spawn(callable6,  6)));
+    static assert(!__traits(compiles, spawn(callable7,  7)));
+    static assert( __traits(compiles, spawn(callable8,  8)));
+    static assert(!__traits(compiles, spawn(callable9,  9)));
+    static assert( __traits(compiles, spawn(callable10, 10)));
+    static assert( __traits(compiles, spawn(callable11, 11)));
 }
 
 
@@ -509,9 +618,12 @@ private void _send(T...)( MsgType type, Tid tid, T vals )
  * sent.
  *
  * Example:
+ *$(D_RUN_CODE
+ *$(ARGS
  * ---
  * import std.stdio;
  * import std.variant;
+ * import std.concurrency;
  *
  * void spawnedFunction()
  * {
@@ -521,7 +633,14 @@ private void _send(T...)( MsgType type, Tid tid, T vals )
  *         (Variant v) { writeln("Received some other type."); }
  *     );
  * }
+ *
+ * void main()
+ * {
+ *      auto tid = spawn(&spawnedFunction);
+ *      send(tid, 42);
+ * }
  * ---
+ *), $(ARGS), $(ARGS), $(ARGS))
  */
 void receive(T...)( T ops )
 {
@@ -582,6 +701,8 @@ private template receiveOnlyRet(T...)
  *          the message will be packed into a $(XREF typecons, Tuple).
  *
  * Example:
+ *$(D_RUN_CODE
+ *$(ARGS
  * ---
  * import std.concurrency;
 
@@ -598,6 +719,7 @@ private template receiveOnlyRet(T...)
  *     send(tid, 42, "42");
  * }
  * ---
+ *), $(ARGS), $(ARGS), $(ARGS))
  */
 receiveOnlyRet!(T) receiveOnly(T...)()
 {
@@ -618,7 +740,14 @@ receiveOnlyRet!(T) receiveOnly(T...)()
               },
               ( Variant val )
               {
-                  throw new MessageMismatch;
+                  static if (T.length > 1)
+                      string exp = T.stringof;
+                  else
+                      string exp = T[0].stringof;
+
+                  throw new MessageMismatch(
+                      format("Unexpected message type: expected '%s', got '%s'",
+                          exp, val.type.toString()));
               } );
     static if( T.length == 1 )
         return ret[0];
@@ -626,14 +755,25 @@ receiveOnlyRet!(T) receiveOnly(T...)()
         return ret;
 }
 
-
-/**
- * $(RED Deprecated. It will be removed in August 2012. Please use the version
- *       which takes a $(CXREF time, Duration) instead.)
- */
-deprecated bool receiveTimeout(T...)( long ms, T ops )
+unittest
 {
-    return receiveTimeout( dur!"msecs"( ms ), ops );
+    static void t1(Tid mainTid)
+    {
+        try
+        {
+            receiveOnly!string();
+            mainTid.send("");
+        }
+        catch (Throwable th)
+        {
+            mainTid.send(th.msg);
+        }
+    }
+
+    auto tid = spawn(&t1, thisTid);
+    tid.send(1);
+    string result = receiveOnly!string();
+    assert(result == "Unexpected message type: expected 'string', got 'int'");
 }
 
 /++
@@ -652,18 +792,18 @@ unittest
 {
     assert( __traits( compiles,
                       {
-                          receiveTimeout( 0, (Variant x) {} );
-                          receiveTimeout( 0, (int x) {}, (Variant x) {} );
+                          receiveTimeout( dur!"msecs"(0), (Variant x) {} );
+                          receiveTimeout( dur!"msecs"(0), (int x) {}, (Variant x) {} );
                       } ) );
 
     assert( !__traits( compiles,
                        {
-                           receiveTimeout( 0, (Variant x) {}, (int x) {} );
+                           receiveTimeout( dur!"msecs"(0), (Variant x) {}, (int x) {} );
                        } ) );
 
     assert( !__traits( compiles,
                        {
-                           receiveTimeout( 0, (int x) {}, (int x) {} );
+                           receiveTimeout( dur!"msecs"(0), (int x) {}, (int x) {} );
                        } ) );
 
     assert( __traits( compiles,

@@ -6,23 +6,40 @@
  * Implemented according to $(WEB tools.ietf.org/html/rfc4648,
  * RFC 4648 - The Base16, Base32, and Base64 Data Encodings).
  *
- * Example:
+* Example:
+ * $(D_RUN_CODE
+ * $(ARGS
  * -----
- * ubyte[] data = [0x14, 0xfb, 0x9c, 0x03, 0xd9, 0x7e];
- * Base64.encode(data);        //-> "FPucA9l+"
- * Base64.decode("FPucA9l+");  //-> [0x14, 0xfb, 0x9c, 0x03, 0xd9, 0x7e]
- * -----
+ *ubyte[] data = [0x14, 0xfb, 0x9c, 0x03, 0xd9, 0x7e];
  *
+ *const(char)[] encoded = Base64.encode(data);
+ *assert(encoded == "FPucA9l+");
+ *
+ *ubyte[] decoded = Base64.decode("FPucA9l+");
+ *assert(decoded == [0x14, 0xfb, 0x9c, 0x03, 0xd9, 0x7e]);
+ * -----
+ * ), $(ARGS), $(ARGS), $(ARGS import std.base64;))
  * Support Range interface using Encoder / Decoder.
  *
  * Example:
+ * $(D_RUN_CODE
+ * $(ARGS
  * -----
  * // Create MIME Base64 with CRLF, per line 76.
- * foreach (encoded; Base64.encoder(f.byChunk(57))) {
- *     mime64.put(encoded);
- *     mime64.put("\r\n");
- * }
+ *File f = File("./text.txt", "r");
+ *scope(exit) f.close();
+ *
+ *Appender!string mime64 = appender!string;
+ *
+ *foreach (encoded; Base64.encoder(f.byChunk(57))) 
+ *{
+ *    mime64.put(encoded);
+ *    mime64.put("\r\n");
+ *}
+ *
+ *writeln(mime64.data);
  * -----
+ *), $(ARGS), $(ARGS), $(ARGS import std.base64, std.array, std.stdio: File, writeln;))
  *
  * Copyright: Masahiro Nakagawa 2010-.
  * License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
@@ -469,7 +486,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
          */
         void popFront()
         {
-            enforce(!empty, "Cannot call popFront on Encoder with no data remaining");
+            enforce(!empty, new Base64Exception("Cannot call popFront on Encoder with no data remaining"));
 
             range_.popFront();
 
@@ -580,7 +597,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
          */
         void popFront()
         {
-            enforce(!empty, "Cannot call popFront on Encoder with no data remaining");
+            enforce(!empty, new Base64Exception("Cannot call popFront on Encoder with no data remaining"));
 
             static if (Padding != NoPadding)
                 if (padding) {
@@ -655,22 +672,36 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      * Default $(D Encoder) encodes chunk data.
      *
      * Example:
+     *$(D_RUN_CODE
+     *$(ARGS
      * -----
-     * foreach (encoded; Base64.encoder(f.byLine())) {
-     *     ... use encoded line ...
-     * }
+     *File f = File("text.txt", "r");
+     *scope(exit) f.close();
+     *
+     *uint line = 0;
+     *foreach (encoded; Base64.encoder(f.byLine())) 
+     *{
+     *    writeln(++line, ". ", encoded);
+     *}
      * -----
+     *), $(ARGS), $(ARGS), $(ARGS import std.base64, std.stdio: File, writeln;))
      *
      * In addition, You can use $(D Encoder) that returns encoded single character.
      * This $(D Encoder) performs Range-based and lazy encoding.
      *
      * Example:
+     *$(D_RUN_CODE
+     *$(ARGS
      * -----
+     *ubyte[] data = cast(ubyte[]) "0123456789";
+     *
      * // The ElementType of data is not aggregation type
-     * foreach (encoded; Base64.encoder(data)) {
-     *     ... use encoded character ...
-     * }
+     *foreach (encoded; Base64.encoder(data)) 
+     *{
+     *    writeln(encoded);
+     *}
      * -----
+     *), $(ARGS), $(ARGS), $(ARGS import std.base64, std.stdio: writeln;))
      *
      * Params:
      *  range = an $(D InputRange) to iterate.
@@ -775,6 +806,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         immutable srcLen = source.length;
         if (srcLen == 0)
             return [];
+        static if (Padding != NoPadding)
+            enforce(srcLen % 4 == 0, new Base64Exception("Invalid length of encoded data"));
 
         immutable blocks = srcLen / 4;
         auto      srcptr = source.ptr;
@@ -841,6 +874,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         immutable srcLen = source.length;
         if (srcLen == 0)
             return [];
+        static if (Padding != NoPadding)
+            enforce(srcLen % 4 == 0, new Base64Exception("Invalid length of encoded data"));
 
         immutable blocks = srcLen / 4;
         auto      bufptr = buffer.ptr;
@@ -917,6 +952,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         immutable srcLen = source.length;
         if (srcLen == 0)
             return 0;
+        static if (Padding != NoPadding)
+            enforce(srcLen % 4 == 0, new Base64Exception("Invalid length of encoded data"));
 
         immutable blocks = srcLen / 4;
         auto      srcptr = source.ptr;
@@ -985,6 +1022,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         immutable srcLen = source.length;
         if (srcLen == 0)
             return 0;
+        static if (Padding != NoPadding)
+            enforce(srcLen % 4 == 0, new Base64Exception("Invalid length of encoded data"));
 
         immutable blocks = srcLen / 4;
         size_t    pcount;
@@ -1113,7 +1152,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
          */
         void popFront()
         {
-            enforce(!empty, "Cannot call popFront on Decoder with no data remaining.");
+            enforce(!empty, new Base64Exception("Cannot call popFront on Decoder with no data remaining."));
 
             range_.popFront();
 
@@ -1191,7 +1230,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
                 range_ = range_.save;
 
             static if (Padding != NoPadding && hasLength!Range)
-                enforce(range_.length % 4 == 0);
+                enforce(range_.length % 4 == 0, new Base64Exception("Invalid length of encoded data"));
 
             if (range_.empty)
                 pos = -1;
@@ -1234,7 +1273,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
          */
         void popFront()
         {
-            enforce(!empty, "Cannot call popFront on Decoder with no data remaining");
+            enforce(!empty, new Base64Exception("Cannot call popFront on Decoder with no data remaining"));
 
             static if (Padding == NoPadding) {
                 bool endCondition()
@@ -1244,7 +1283,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
             } else {
                 bool endCondition()
                 {
-                    enforce(!range_.empty, "Missing padding");
+                    enforce(!range_.empty, new Base64Exception("Missing padding"));
                     return range_.front == Padding;
                 }
             }
@@ -1256,12 +1295,12 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
 
             final switch (pos) {
             case 0:
-                enforce(!endCondition(), "Premature end of data found");
+                enforce(!endCondition(), new Base64Exception("Premature end of data found"));
 
                 immutable t = DecodeMap[range_.front] << 2;
                 range_.popFront();
 
-                enforce(!endCondition(), "Premature end of data found");
+                enforce(!endCondition(), new Base64Exception("Premature end of data found"));
                 first = cast(ubyte)(t | (DecodeMap[range_.front] >> 4));
                 break;
             case 1:
@@ -1318,22 +1357,31 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      * Default $(D Decoder) decodes chunk data.
      *
      * Example:
+     *$(D_RUN_CODE
+     *$(ARGS
      * -----
-     * foreach (decoded; Base64.decoder(f.byLine())) {
-     *     ... use decoded line ...
-     * }
+     *foreach (decoded; Base64.decoder(stdin.byLine())) 
+     *{
+     *    writeln(decoded);
+     *}
      * -----
+     *), $(ARGS FPucA9l+), $(ARGS), $(ARGS import std.base64, std.stdio;))
      *
      * In addition, You can use $(D Decoder) that returns decoded single character.
      * This $(D Decoder) performs Range-based and lazy decoding.
      *
      * Example:
+     *$(D_RUN_CODE
+     *$(ARGS
      * -----
-     * auto encoded = Base64.encoder(cast(ubyte[])"0123456789");
-     * foreach (n; map!q{a - '0'}(Base64.decoder(encoded))) {
-     *     ... do something with n ...
-     * }
+     *auto encoded = Base64.encoder(cast(ubyte[])"0123456789");
+     *foreach (n; map!q{a - '0'}(Base64.decoder(encoded))) 
+     *{
+     *    writeln(n);
+     *}
      * -----
+     *), $(ARGS), $(ARGS), $(ARGS import std.base64, std.stdio: writeln;
+     *import std.algorithm: map;))
      *
      * NOTE:
      *  If you use $(D ByChunk), chunk-size should be the multiple of 4.
@@ -1359,7 +1407,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
 
         // enforce can't be a pure function, so I use trivial check.
         if (val == 0 && chr != 'A')
-            throw new Exception("Invalid character: " ~ chr);
+            throw new Base64Exception("Invalid character: " ~ chr);
 
         return val;
     }
@@ -1370,9 +1418,21 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     {
         // See above comment.
         if (chr > 0x7f)
-            throw new Exception("Base64-encoded character must be a single byte");
+            throw new Base64Exception("Base64-encoded character must be a single byte");
 
         return decodeChar(cast(char)chr);
+    }
+}
+
+
+/**
+ * Exception thrown on Base64 errors.
+ */
+class Base64Exception : Exception
+{
+    this(string s, string fn = __FILE__, size_t ln = __LINE__)
+    {
+        super(s, fn, ln);
     }
 }
 
@@ -1427,7 +1487,7 @@ unittest
         assert(Base64.decode(Base64.encode(tv["fooba"]))  == tv["fooba"]);
         assert(Base64.decode(Base64.encode(tv["foobar"])) == tv["foobar"]);
 
-        assertThrown(Base64.decode("ab|c"));
+        assertThrown!Base64Exception(Base64.decode("ab|c"));
 
         // Test decoding incomplete strings. RFC does not specify the correct
         // behavior, but the code should never throw Errors on invalid input.
@@ -1438,9 +1498,10 @@ unittest
         assert(Base64.decodeLength(3) <= 2);
 
         // may throw Exceptions, may not throw Errors
-        collectException(Base64.decode("Zg"));
-        collectException(Base64.decode("Zg="));
-        collectException(Base64.decode("Zm8"));
+        assertThrown!Base64Exception(Base64.decode("Zg"));
+        assertThrown!Base64Exception(Base64.decode("Zg="));
+        assertThrown!Base64Exception(Base64.decode("Zm8"));
+        assertThrown!Base64Exception(Base64.decode("Zg==;"));
     }
 
     { // No padding

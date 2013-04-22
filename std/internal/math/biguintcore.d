@@ -126,14 +126,7 @@ public:
         static if (BigDigit.sizeof == int.sizeof)
         {
             if (data.length == n*2 + 1) return data[n*2];
-            version(LittleEndian)
-            {
-                return data[n*2] + ((cast(ulong)data[n*2 + 1]) << 32 );
-            }
-            else
-            {
-                return data[n*2 + 1] + ((cast(ulong)data[n*2]) << 32 );
-            }
+            return data[n*2] + ((cast(ulong)data[n*2 + 1]) << 32 );
         }
         else static if (BigDigit.sizeof == long.sizeof)
         {
@@ -233,7 +226,7 @@ public:
         return (data[0] == ylo);
     }
 
-    bool isZero() pure const
+    bool isZero() pure const nothrow @safe
     {
         return data.length == 1 && data[0] == 0;
     }
@@ -248,7 +241,7 @@ public:
     {
         auto predictlength = 20+20*(data.length/2); // just over 19
         char [] buff = new char[frontExtraBytes + predictlength];
-        sizediff_t sofar = biguintToDecimal(buff, data.dup);
+        ptrdiff_t sofar = biguintToDecimal(buff, data.dup);
         return buff[sofar-frontExtraBytes..$];
     }
 
@@ -321,7 +314,7 @@ public:
     }
 
     // return false if invalid character found
-    bool fromHexString(string s)
+    bool fromHexString(const(char)[] s)
     {
         //Strip leading zeros
         int firstNonZero = 0;
@@ -369,7 +362,7 @@ public:
     }
 
     // return true if OK; false if erroneous characters found
-    bool fromDecimalString(string s)
+    bool fromDecimalString(const(char)[] s)
     {
         //Strip leading zeros
         int firstNonZero = 0;
@@ -547,8 +540,10 @@ public:
     }
 
     // return x / y
-    static BigUint divInt(T)(BigUint x, T y) if ( is(T==uint) )
+    static BigUint divInt(T)(BigUint x, T y) if ( is(T == uint) )
     {
+        if (y == 1)
+            return x;
         uint [] result = new BigDigit[x.data.length];
         if ((y&(-y))==y)
         {
@@ -851,6 +846,18 @@ unittest
 }
 
 
+unittest
+{
+    BigUint r;
+    r = 5UL;
+    assert(r.peekUlong(0) == 5UL);
+    assert(r.peekUint(0) == 5U);
+    r = 0x1234_5678_9ABC_DEF0UL;
+    assert(r.peekUlong(0) == 0x1234_5678_9ABC_DEF0UL);
+    assert(r.peekUint(0) == 0x9ABC_DEF0U);
+}
+
+
 // Pow tests
 unittest
 {
@@ -999,7 +1006,7 @@ BigDigit [] sub(BigDigit[] x, BigDigit[] y, bool *negative)
     if (x.length == y.length)
     {
         // There's a possibility of cancellation, if x and y are almost equal.
-        sizediff_t last = highestDifferentDigit(x, y);
+        ptrdiff_t last = highestDifferentDigit(x, y);
         BigDigit [] result = new BigDigit[last+1];
         if (x[last] < y[last])
         {   // we know result is negative
@@ -1413,7 +1420,7 @@ size_t biguintToDecimal(char [] buff, BigDigit [] data)
  * Returns:
  *    the highest index of data which was used.
  */
-int biguintFromDecimal(BigDigit [] data, string s)
+int biguintFromDecimal(BigDigit [] data, const(char)[] s)
 in
 {
     assert((data.length >= 2) || (data.length == 1 && s.length == 1));
@@ -1463,9 +1470,9 @@ body
             // Multiply existing number by 10^19, then add y1.
             if (hi>0)
             {
-                data[hi] = multibyteMul(data[0..hi], data[0..hi], 1220703125*2, 0); // 5^13*2 = 0x9184_E72A
+                data[hi] = multibyteMul(data[0..hi], data[0..hi], 1220703125*2u, 0); // 5^13*2 = 0x9184_E72A
                 ++hi;
-                data[hi] = multibyteMul(data[0..hi], data[0..hi], 15625*262144, 0); // 5^6*2^18 = 0xF424_0000
+                data[hi] = multibyteMul(data[0..hi], data[0..hi], 15625*262144u, 0); // 5^6*2^18 = 0xF424_0000
                 ++hi;
             }
             else
@@ -1499,14 +1506,14 @@ body
     {
         if (hi == 0)
         {
+            data[0] = cast(uint)y;
             if (data.length == 1)
             {
-                data[0] = cast(uint)(y & 0xFFFF_FFFF);
                 hi = 1;
             }
             else
             {
-                *cast(ulong *)(&data[hi]) = y;
+                data[1] = cast(uint)(y >>> 32);
                 hi=2;
             }
         }

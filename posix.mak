@@ -22,27 +22,38 @@
 # OS can be linux, win32, win32remote, win32wine, osx, or freebsd. If left
 # blank, the system will be determined by using uname
 
+QUIET:=@
+
+OS:=
+uname_S:=$(shell uname -s)
+ifeq (Darwin,$(uname_S))
+	OS:=osx
+endif
+ifeq (Linux,$(uname_S))
+	OS:=linux
+endif
+ifeq (FreeBSD,$(uname_S))
+	OS:=freebsd
+endif
+ifeq (OpenBSD,$(uname_S))
+	OS:=openbsd
+endif
+ifeq (Solaris,$(uname_S))
+	OS:=solaris
+endif
+ifeq (SunOS,$(uname_S))
+	OS:=solaris
+endif
 ifeq (,$(OS))
-    OS:=$(shell uname)
-    ifeq (Darwin,$(OS))
-        OS:=osx
-    else
-        ifeq (Linux,$(OS))
-            OS:=linux
-        else
-            ifeq (FreeBSD,$(OS))
-                OS:=freebsd
-            else
-                $(error Unrecognized or unsupported OS for uname: $(OS))
-            endif
-        endif
-    endif
+	$(error Unrecognized or unsupported OS for uname: $(uname_S))
 endif
 
 # For now, 32 bit is the default model
 ifeq (,$(MODEL))
 	MODEL:=32
 endif
+
+override PIC:=$(if $(PIC),-fPIC,)
 
 # Configurable stuff that's rarely edited
 DRUNTIME_PATH = ../druntime
@@ -54,14 +65,10 @@ DOCSRC = ../d-programming-language.org
 WEBSITE_DIR = ../web
 DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos-prerelease
 BIGDOC_OUTPUT_DIR = /tmp
-SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(STD_NET_MODULES) $(STD_HASH_MODULES) $(EXTRA_DOCUMENTABLES))
+SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(STD_NET_MODULES) $(STD_DIGEST_MODULES) $(EXTRA_DOCUMENTABLES))
 STDDOC = $(DOCSRC)/std.ddoc
 BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc
 DDOCFLAGS=-m$(MODEL) -d -c -o- -version=StdDdoc -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
-
-# Variable defined in an OS-dependent manner (see below)
-CFLAGS =
-DFLAGS =
 
 # BUILD can be debug or release, but is unset by default; recursive
 # invocation will set it. See the debug and release targets below.
@@ -73,6 +80,7 @@ MAKEFILE:=$(lastword $(MAKEFILE_LIST))
 # Set DRUNTIME name and full path
 ifeq (,$(findstring win,$(OS)))
 	DRUNTIME = $(DRUNTIME_PATH)/lib/libdruntime-$(OS)$(MODEL).a
+	DRUNTIMESO = $(DRUNTIME_PATH)/lib/libdruntime-$(OS)$(MODEL)so.a
 else
 	DRUNTIME = $(DRUNTIME_PATH)/lib/druntime.lib
 endif
@@ -98,8 +106,9 @@ else
 endif
 
 # Set CFLAGS
-ifeq ($(CC),cc)
-	CFLAGS += -m$(MODEL)
+CFLAGS :=
+ifneq (,$(filter cc% gcc% clang% icc% egcc%, $(CC)))
+	CFLAGS += -m$(MODEL) $(PIC)
 	ifeq ($(BUILD),debug)
 		CFLAGS += -g
 	else
@@ -108,7 +117,7 @@ ifeq ($(CC),cc)
 endif
 
 # Set DFLAGS
-DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d -property -m$(MODEL)
+DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d -property -m$(MODEL) $(PIC)
 ifeq ($(BUILD),debug)
 	DFLAGS += -g -debug
 else
@@ -143,6 +152,7 @@ DDOC=$(DMD)
 # Set LIB, the ultimate target
 ifeq (,$(findstring win,$(OS)))
 	LIB = $(ROOT)/libphobos2.a
+	LIBSO = $(ROOT)/libphobos2so.so
 else
 	LIB = $(ROOT)/phobos.lib
 endif
@@ -153,16 +163,16 @@ MAIN = $(ROOT)/emptymain.d
 # Stuff in std/
 STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint		\
         bitmanip compiler complex concurrency container conv		\
-        cpuid cstream ctype csv datetime demangle encoding exception	\
+        cstream csv datetime demangle encoding exception	\
         file format functional getopt json math mathspecial md5	\
-        meta metastrings mmfile numeric outbuffer parallelism path perf	\
-        process random range regex regexp signals socket socketstream	\
+        meta metastrings mmfile numeric outbuffer parallelism path		\
+        process random range regex signals socket socketstream	\
         stdint stdio stdiobase stream string syserror system traits		\
-        typecons typetuple uni uri utf variant xml zip zlib)
+        typecons typetuple uni uri utf uuid variant xml zip zlib)
 
 STD_NET_MODULES = $(addprefix std/net/, isemail curl)
 
-STD_HASH_MODULES = $(addprefix std/hash/, crc32)
+STD_DIGEST_MODULES = $(addprefix std/digest/, digest crc md ripemd sha)
 
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
@@ -181,12 +191,13 @@ EXTRA_DOCUMENTABLES += $(addprefix etc/c/,curl sqlite3 zlib) $(addprefix	\
 std/c/, fenv locale math process stdarg stddef stdio stdlib string	\
 time wcharh)
 EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
+	std/internal/digest/, sha_SSSE3 ) $(addprefix \
 	std/internal/math/, biguintcore biguintnoasm biguintx86	\
 	gammafunction errorfunction) $(addprefix std/internal/, \
 	processinit uni uni_tab) $(addprefix std/internal/meta/, meta)
 
 # Aggregate all D modules relevant to this build
-D_MODULES = $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES) $(STD_HASH_MODULES)
+D_MODULES = crc32 $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES) $(STD_DIGEST_MODULES)
 # Add the .d suffix to the module names
 D_FILES = $(addsuffix .d,$(D_MODULES))
 # Aggregate all D modules over all OSs (this is for the zip file)
@@ -204,6 +215,7 @@ C_FILES = $(addsuffix .c,$(C_MODULES))
 C_EXTRAS = $(addprefix etc/c/zlib/, algorithm.txt ChangeLog crc32.h	\
 deflate.h example.c inffast.h inffixed.h inflate.h inftrees.h		\
 linux.mak minigzip.c osx.mak README trees.h win32.mak zconf.h		\
+win64.mak \
 gzguts.h zlib.3 zlib.h zutil.h)
 # Aggregate all C files over all OSs (this is for the zip file)
 ALL_C_FILES = $(C_FILES) $(C_EXTRAS)
@@ -219,8 +231,14 @@ ifeq ($(BUILD),)
 # targets. BUILD is not defined in user runs, only by recursive
 # self-invocations. So the targets in this branch are accessible to
 # end users.
+ifeq (linux,$(OS))
+release :
+	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release PIC=1 dll
+	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release
+else
 release :
 	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release
+endif
 debug :
 	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=debug
 unittest :
@@ -243,6 +261,11 @@ $(ROOT)/%$(DOTOBJ) : %.c
 $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
 
+dll : $(LIBSO)
+
+$(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
+	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ $(DRUNTIMESO) $(D_FILES) $(OBJS)
+
 ifeq (osx,$(OS))
 # Build fat library that combines the 32 bit and the 64 bit libraries
 libphobos2.a : generated/osx/release/32/libphobos2.a generated/osx/release/64/libphobos2.a
@@ -254,12 +277,12 @@ $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
 
 $(ROOT)/unittest/%$(DOTEXE) : %.d $(LIB) $(ROOT)/emptymain.d
 	@echo Testing $@
-	@$(DMD) $(DFLAGS) -unittest $(LINKOPTS) $(subst /,$(PATHSEP),"-of$@") \
+	$(QUIET)$(DMD) $(DFLAGS) -unittest $(LINKOPTS) $(subst /,$(PATHSEP),"-of$@") \
 	 	$(ROOT)/emptymain.d $<
 # make the file very old so it builds and runs again if it fails
 	@touch -t 197001230123 $@
 # run unittest in its own directory
-	@$(RUN) $@
+	$(QUIET)$(RUN) $@
 # succeeded, render the file new again
 	@touch $@
 
@@ -277,7 +300,7 @@ clean :
 	rm -rf $(ROOT_OF_THEM_ALL) $(ZIPFILE) $(DOC_OUTPUT_DIR)
 
 zip :
-	zip $(ZIPFILE) $(MAKEFILE) $(ALL_D_FILES) $(ALL_C_FILES)
+	zip $(ZIPFILE) $(MAKEFILE) $(ALL_D_FILES) $(ALL_C_FILES) win32.mak win64.mak
 
 install : release
 	sudo cp $(LIB) /usr/lib/
@@ -312,6 +335,9 @@ $(DOC_OUTPUT_DIR)/std_c_windows_%.html : std/c/windows/%.d $(STDDOC)
 	$(DDOC) $(DDOCFLAGS) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_net_%.html : std/net/%.d $(STDDOC)
+	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
+
+$(DOC_OUTPUT_DIR)/std_digest_%.html : std/digest/%.d $(STDDOC)
 	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/etc_c_%.html : etc/c/%.d $(STDDOC)

@@ -14,7 +14,7 @@
 // CRC-32 calculation
 module crc32;
 
-pragma(msg, "The 'crc32' module has been scheduled for deprecation. Please use 'std.hash.crc32' instead.");
+pragma(msg, "The 'crc32' module has been scheduled for deprecation. Please use 'std.digest.crc' instead.");
 
 private immutable uint[256] crc32_table =
 [

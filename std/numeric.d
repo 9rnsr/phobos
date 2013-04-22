@@ -108,6 +108,28 @@ private int bsr64(ulong value) {
     return v.high==0 ? core.bitop.bsr(v.low) : core.bitop.bsr(v.high) + 32;
 }
 
+private template CustomFloatParams(uint bits)
+{
+    enum CustomFloatFlags flags = CustomFloatFlags.ieee
+                ^ ((bits == 80) ? CustomFloatFlags.storeNormalized : CustomFloatFlags.none);
+    static if (bits ==  8) alias CustomFloatParams!( 4,  3, flags) CustomFloatParams;
+    static if (bits == 16) alias CustomFloatParams!(10,  5, flags) CustomFloatParams;
+    static if (bits == 32) alias CustomFloatParams!(23,  8, flags) CustomFloatParams;
+    static if (bits == 64) alias CustomFloatParams!(52, 11, flags) CustomFloatParams;
+    static if (bits == 80) alias CustomFloatParams!(64, 15, flags) CustomFloatParams;
+}
+
+private template CustomFloatParams(uint precision, uint exponentWidth, CustomFloatFlags flags)
+{
+    alias TypeTuple!(
+        precision,
+        exponentWidth,
+        flags,
+        (1 << (exponentWidth - ((flags & flags.probability) == 0)))
+         - ((flags & (flags.nan | flags.infinity)) != 0) - ((flags & flags.probability) != 0)
+    ) CustomFloatParams; // ((flags & CustomFloatFlags.probability) == 0)
+}
+
 /**
  * Allows user code to define custom floating-point formats. These formats are
  * for storage only; all operations on them are performed by first implicitly
@@ -138,24 +160,17 @@ private int bsr64(ulong value) {
  * ----
  */
 template CustomFloat(uint bits)
-if( bits == 8 || bits == 16 || bits == 32 || bits == 64 || bits == 80) {
-    static if(bits ==  8) alias CustomFloat!( 4, 3) CustomFloat;
-    static if(bits == 16) alias CustomFloat!(10, 5) CustomFloat;
-    static if(bits == 32) alias CustomFloat!(23, 8) CustomFloat;
-    static if(bits == 64) alias CustomFloat!(52,11) CustomFloat;
-    static if(bits == 80) alias CustomFloat!(64, 15,
-        CustomFloatFlags.ieee^CustomFloatFlags.storeNormalized) CustomFloat;
-}
-///ditto
-template CustomFloat(uint precision, uint exponentWidth,CustomFloatFlags flags = CustomFloatFlags.ieee)
-if(  ( (flags & flags.signed) + precision + exponentWidth) % 8 == 0 && precision + exponentWidth > 0)
+if (bits == 8 || bits == 16 || bits == 32 || bits == 64 || bits == 80)
 {
-    alias CustomFloat!(precision,exponentWidth,flags,
-                       (1 << (exponentWidth  - ((flags&flags.probability)==0) ))
-                       - ((flags&(flags.nan|flags.infinity))!=0) - ((flags&flags.probability)!=0)
-                       ) CustomFloat; // ((flags&CustomFloatFlags.probability)==0)
+    alias CustomFloat!(CustomFloatParams!(bits)) CustomFloat;
 }
-///ditto
+/// ditto
+template CustomFloat(uint precision, uint exponentWidth, CustomFloatFlags flags = CustomFloatFlags.ieee)
+if (((flags & flags.signed) + precision + exponentWidth) % 8 == 0 && precision + exponentWidth > 0)
+{
+    alias CustomFloat!(CustomFloatParams!(precision, exponentWidth, flags)) CustomFloat;
+}
+/// ditto
 struct CustomFloat(
     uint                precision,  // fraction bits (23 for float)
     uint                exponentWidth,  // exponent bits (8 for float)  Exponent width
@@ -184,12 +199,14 @@ struct CustomFloat(
         alias CustomFloatFlags Flags;
 
         // Facilitate converting numeric types to custom float
-        union ToBinary(F) if(is(CustomFloat!(F.sizeof*8)) || is(F == real)) {
+        union ToBinary(F)
+        if (is(typeof(CustomFloatParams!(F.sizeof*8))) || is(F == real))
+        {
             F set;
 
             // If on Linux or Mac, where 80-bit reals are padded, ignore the
             // padding.
-            CustomFloat!(min(F.sizeof*8, 80)) get;
+            CustomFloat!(CustomFloatParams!(min(F.sizeof*8, 80))) get;
 
             // Convert F to the correct binary type.
             static typeof(get) opCall(F value) {
@@ -1206,8 +1223,8 @@ euclideanDistance(Range1, Range2, F)(Range1 a, Range2 b, F limit)
 
 unittest
 {
-    double[] a = [ 1., 2., ];
-    double[] b = [ 4., 6., ];
+    double[] a = [ 1.0, 2.0, ];
+    double[] b = [ 4.0, 6.0, ];
     assert(euclideanDistance(a, b) == 5);
     assert(euclideanDistance(a, b, 5) == 5);
     assert(euclideanDistance(a, b, 4) == 5);
@@ -1291,8 +1308,8 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
 
 unittest
 {
-    double[] a = [ 1., 2., ];
-    double[] b = [ 4., 6., ];
+    double[] a = [ 1.0, 2.0, ];
+    double[] b = [ 4.0, 6.0, ];
     assert(dotProduct(a, b) == 16);
     assert(dotProduct([1, 3, -5], [4, -2, -1]) == 3);
 
@@ -1335,8 +1352,8 @@ cosineSimilarity(Range1, Range2)(Range1 a, Range2 b)
 
 unittest
 {
-    double[] a = [ 1., 2., ];
-    double[] b = [ 4., 3., ];
+    double[] a = [ 1.0, 2.0, ];
+    double[] b = [ 4.0, 3.0, ];
     // writeln(cosineSimilarity(a, b));
     // writeln(10.0 / sqrt(5.0 * 25));
     assert(approxEqual(
@@ -1396,10 +1413,10 @@ unittest
 {
     double[] a = [];
     assert(!normalize(a));
-    a = [ 1., 3. ];
+    a = [ 1.0, 3.0 ];
     assert(normalize(a));
     assert(a == [ 0.25, 0.75 ]);
-    a = [ 0., 0. ];
+    a = [ 0.0, 0.0 ];
     assert(!normalize(a));
     assert(a == [ 0.5, 0.5 ]);
 }
@@ -1800,7 +1817,7 @@ unittest
     assert(gapWeightedSimilarity(t, t, 1) == 7);
     assert(gapWeightedSimilarity(s, t, 1) == 7);
     assert(approxEqual(gapWeightedSimilarityNormalized(s, t, 1),
-                    7. / sqrt(15. * 7), 0.01));
+                    7.0 / sqrt(15.0 * 7), 0.01));
 }
 
 /**
@@ -2055,14 +2072,14 @@ unittest
             ["nyuk", "I", "have", "no", "chocolate", "giba"],
             ["wyda", "I", "have", "I", "have", "have", "I", "have", "hehe"],
             0.5);
-    double witness[] = [ 7., 4.03125, 0, 0 ];
+    double witness[] = [ 7.0, 4.03125, 0, 0 ];
     foreach (e; sim)
     {
         //writeln(e);
         assert(e == witness.front);
         witness.popFront();
     }
-    witness = [ 3., 1.3125, 0.25 ];
+    witness = [ 3.0, 1.3125, 0.25 ];
     sim = GapWeightedSimilarityIncremental!(string[])(
         ["I", "have", "no", "chocolate"],
         ["I", "have", "some", "chocolate"],

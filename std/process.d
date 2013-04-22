@@ -50,7 +50,7 @@ version (Posix)
 version (unittest)
 {
     import std.file, std.conv, std.array, std.random;
-    import std.path : rel2abs;
+    import std.path : absolutePath;
 }
 
 
@@ -228,10 +228,16 @@ private
 /* ========================================================== */
 
 /**
- * Execute program specified by pathname, passing it the arguments (argv)
- * and the environment (envp), returning the exit status.
- * The 'p' versions of exec search the PATH environment variable
- * setting for the program.
+ * Replace the current process by executing a command, $(D pathname), with
+ * the arguments in $(D argv). Typically, the first element of $(D argv) is
+ * the command being executed, i.e. $(D argv[0] == pathname). The 'p'
+ * versions of $(D exec) search the PATH environment variable for $(D
+ * pathname). The 'e' versions additionally take the new process'
+ * environment variables as an array of strings of the form key=value.
+ *
+ * Does not return on success (the current process will have been
+ * replaced). Returns -1 on failure with no indication of the
+ * underlying error.
  */
 
 int execv(in string pathname, in string[] argv)
@@ -279,7 +285,7 @@ version(Posix)
     else
     {
         // No, so must traverse PATHs, looking for first match
-        string[]    envPaths    =   std.string.split(
+        string[]    envPaths    =   std.array.split(
             to!string(core.stdc.stdlib.getenv("PATH")), ":");
         int         iRet        =   0;
 
@@ -331,7 +337,7 @@ alias core.thread.getpid getpid;
 /**
    Runs $(D_PARAM cmd) in a shell and returns its standard output. If
    the process could not be started or exits with an error code,
-   throws an exception.
+   throws ErrnoException.
 
    Example:
 
@@ -388,6 +394,9 @@ unittest
     auto x = shell("echo wyda");
     // @@@ This fails on wine
     //assert(x == "wyda" ~ newline, text(x.length));
+
+    import std.exception;  // Issue 9444
+    assertThrown!ErrnoException(shell("qwertyuiop09813478"));
 }
 
 /**
@@ -723,6 +732,14 @@ unittest
         //    0, indicating the variable doesn't exist.
         version(Windows)  if (n.length == 0 || v.length == 0) continue;
 
+        // why does this happen?
+        //   n = "temp" || "tmp"
+        //   v = "C:\Users\ADMINI~1\AppData\Local\Temp\2"
+        //   e[n] = "C:\cygwin\tmp"
+        // for n = "TEMP" or "TMP", v and en[v] are both "C:\cygwin\tmp"
+        version(Windows)  if (n == "temp" || n == "tmp") continue;
+
+        //printf("%.*s, %.*s, %.*s\n", n.length, n.ptr, v.length, v.ptr, environment[n].length, environment[n].ptr);
         assert (v == environment[n]);
     }
 }
@@ -770,12 +787,9 @@ else version (OSX)
         }
         else
         {
-            //browser = "/Applications/Safari.app/Contents/MacOS/Safari";
             args[0] = "open".ptr;
-            args[1] = "-a".ptr;
-            args[2] = "/Applications/Safari.app".ptr;
-            args[3] = toStringz(url);
-            args[4] = null;
+            args[1] = toStringz(url);
+            args[2] = null;
         }
 
         auto childpid = fork();
@@ -990,7 +1004,10 @@ private char[] escapePosixArgumentImpl(alias allocator)(in char[] arg)
     buf[p++] = '\'';
     foreach (c; arg)
         if (c == '\'')
+        {
             buf[p..p+4] = `'\''`;
+            p += 4;
+        }
         else
             buf[p++] = c;
     buf[p++] = '\'';
@@ -1062,7 +1079,7 @@ string escapeWindowsShellCommand(in char[] command)
             default:
                 result.put(c);
         }
-    return result.data();
+    return result.data;
 }
 
 private string escapeShellCommandString(string command)
@@ -1103,6 +1120,49 @@ string escapeShellCommand(in char[][] args...)
     return escapeShellCommandString(escapeShellArguments(args));
 }
 
+unittest
+{
+    // This is a simple unit test without any special requirements,
+    // in addition to the unittest_burnin one below which requires
+    // special preparation.
+
+    struct TestVector { string[] args; string windows, posix; }
+    TestVector[] tests =
+    [
+        {
+            args    : ["foo"],
+            windows : `^"foo^"`,
+            posix   : `'foo'`
+        },
+        {
+            args    : ["foo", "hello"],
+            windows : `^"foo^" ^"hello^"`,
+            posix   : `'foo' 'hello'`
+        },
+        {
+            args    : ["foo", "hello world"],
+            windows : `^"foo^" ^"hello world^"`,
+            posix   : `'foo' 'hello world'`
+        },
+        {
+            args    : ["foo", "hello", "world"],
+            windows : `^"foo^" ^"hello^" ^"world^"`,
+            posix   : `'foo' 'hello' 'world'`
+        },
+        {
+            args    : ["foo", `'"^\`],
+            windows : `^"foo^" ^"'\^"^^\\^"`,
+            posix   : `'foo' ''\''"^\'`
+        },
+    ];
+
+    foreach (test; tests)
+        version (Windows)
+            assert(escapeShellCommand(test.args) == test.windows);
+        else
+            assert(escapeShellCommand(test.args) == test.posix  );
+}
+
 /**
     Escape a filename to be used for shell redirection with
     the $(D system) or $(D shell) functions.
@@ -1138,7 +1198,7 @@ unittest
     // Then, test this module with:
     // rdmd --main -unittest -version=unittest_burnin process.d
 
-    auto helper = rel2abs("std_process_unittest_helper");
+    auto helper = absolutePath("std_process_unittest_helper");
     assert(shell(helper ~ " hello").split("\0")[1..$] == ["hello"], "Helper malfunction");
 
     void test(string[] s, string fn)
