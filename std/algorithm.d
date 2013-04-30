@@ -1544,22 +1544,24 @@ void move(T)(ref T source, ref T target)
         // and bitblast source over it
         static if (hasElaborateDestructor!T) typeid(T).destroy(&target);
 
-        memcpy(&target, &source, T.sizeof);
+        enum len = T.sizeof;
+        (cast(ubyte*)&target)[0 .. len] = (cast(ubyte*)&source)[0 .. len];
 
         // If the source defines a destructor or a postblit hook, we must obliterate the
         // object in order to avoid double freeing and undue aliasing
         static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
         {
-            static T empty;
+            T empty = T.init;
             static if (T.tupleof.length > 0 &&
                        T.tupleof[$-1].stringof.endsWith("this"))
             {
                 // If T is nested struct, keep original context pointer
-                memcpy(&source, &empty, T.sizeof - (void*).sizeof);
+                enum len2 = T.sizeof - (void*).sizeof;
+                (cast(ubyte*)&source)[0 .. len2] = (cast(ubyte*)&empty)[0 .. len2];
             }
             else
             {
-                memcpy(&source, &empty, T.sizeof);
+                (cast(ubyte*)&source)[0 .. len] = (cast(ubyte*)&empty)[0 .. len];
             }
         }
     }
@@ -1636,22 +1638,24 @@ T move(T)(ref T source)
     {
         // Can avoid destructing result.
 
-        memcpy(&result, &source, T.sizeof);
+        enum len = T.sizeof;
+        (cast(ubyte*)&result)[0 .. len] = (cast(ubyte*)&source)[0 .. len];
 
         // If the source defines a destructor or a postblit hook, we must obliterate the
         // object in order to avoid double freeing and undue aliasing
         static if (hasElaborateDestructor!T || hasElaborateCopyConstructor!T)
         {
-            static T empty;
+            T empty = T.init;
             static if (T.tupleof.length > 0 &&
                        T.tupleof[$-1].stringof.endsWith("this"))
             {
                 // If T is nested struct, keep original context pointer
-                memcpy(&source, &empty, T.sizeof - (void*).sizeof);
+                enum len2 = T.sizeof - (void*).sizeof;
+                (cast(ubyte*)&source)[0 .. len2] = (cast(ubyte*)&empty)[0 .. len2];
             }
             else
             {
-                memcpy(&source, &empty, T.sizeof);
+                (cast(ubyte*)&source)[0 .. len] = (cast(ubyte*)&empty)[0 .. len];
             }
         }
     }
