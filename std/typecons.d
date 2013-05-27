@@ -356,11 +356,11 @@ template Tuple(Specs...)
         {
             Tup1 tup1 = void;
             Tup2 tup2 = void;
-            static assert(tup1.field.length == tup2.field.length);
+            static assert(tup1[].length == tup2[].length);
             foreach (i, _; Tup1.Types)
             {
-                auto lhs = typeof(tup1.field[i]).init;
-                auto rhs = typeof(tup2.field[i]).init;
+                auto lhs = typeof(tup1[i]).init;
+                auto rhs = typeof(tup2[i]).init;
                 auto result = mixin("lhs "~op~" rhs");
             }
         }));
@@ -450,7 +450,7 @@ template Tuple(Specs...)
         this(U)(U another)
         if (areCompatibleTuples!(typeof(this), U, "="))
         {
-            field[] = another.field[];
+            field[] = another[];
         }
 
         /**
@@ -459,13 +459,13 @@ template Tuple(Specs...)
         bool opEquals(R)(R rhs)
         if (areCompatibleTuples!(typeof(this), R, "=="))
         {
-            return field[] == rhs.field[];
+            return field[] == rhs[];
         }
         /// ditto
         bool opEquals(R)(R rhs) const
         if (areCompatibleTuples!(typeof(this), R, "=="))
         {
-            return field[] == rhs.field[];
+            return field[] == rhs[];
         }
 
         /**
@@ -476,9 +476,9 @@ template Tuple(Specs...)
         {
             foreach (i, Unused; Types)
             {
-                if (field[i] != rhs.field[i])
+                if (field[i] != rhs[i])
                 {
-                    return field[i] < rhs.field[i] ? -1 : 1;
+                    return field[i] < rhs[i] ? -1 : 1;
                 }
             }
             return 0;
@@ -489,9 +489,9 @@ template Tuple(Specs...)
         {
             foreach (i, Unused; Types)
             {
-                if (field[i] != rhs.field[i])
+                if (field[i] != rhs[i])
                 {
-                    return field[i] < rhs.field[i] ? -1 : 1;
+                    return field[i] < rhs[i] ? -1 : 1;
                 }
             }
             return 0;
@@ -512,7 +512,7 @@ template Tuple(Specs...)
             else
             {
                 // Do not swap; opAssign should be called on the fields.
-                field[] = rhs.field[];
+                field[] = rhs[];
             }
         }
 
