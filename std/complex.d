@@ -155,7 +155,7 @@ struct Complex(T)  if (isFloatingPoint!T)
         re = z.re;
         im = z.im;
     }
-    
+
     this(Rx : T, Ry : T)(Rx x, Ry y)
     {
         re = x;
@@ -497,7 +497,7 @@ unittest
 }
 
 unittest
-{    
+{
     // Assignments and comparisons
     Complex!double z;
 

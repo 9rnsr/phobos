@@ -627,79 +627,74 @@ template FormatSpec(Char)
  * ----
  */
 struct FormatSpec(Char)
-    if (is(Unqual!Char == Char))
+if (is(Unqual!Char == Char))
 {
     /**
-       Minimum _width, default $(D 0).
+     * Minimum _width, default $(D 0).
      */
     int width = 0;
 
     /**
-       Precision. Its semantics depends on the argument type. For
-       floating point numbers, _precision dictates the number of
-       decimals printed.
+     * Precision. Its semantics depends on the argument type. For
+     * floating point numbers, _precision dictates the number of
+     * decimals printed.
      */
     int precision = UNSPECIFIED;
 
     /**
-       Special value for width and precision. $(D DYNAMIC) width or
-       precision means that they were specified with $(D '*') in the
-       format string and are passed at runtime through the varargs.
+     * Special value for width and precision. $(D DYNAMIC) width or
+     * precision means that they were specified with $(D '*') in the
+     * format string and are passed at runtime through the varargs.
      */
     enum int DYNAMIC = int.max;
 
     /**
-       Special value for precision, meaning the format specifier
-       contained no explicit precision.
+     * Special value for precision, meaning the format specifier
+     * contained no explicit precision.
      */
     enum int UNSPECIFIED = DYNAMIC - 1;
 
     /**
-       The actual format specifier, $(D 's') by default.
-    */
+     * The actual format specifier, $(D 's') by default.
+     */
     char spec = 's';
 
     /**
-       Index of the argument for positional parameters, from $(D 1) to
-       $(D ubyte.max). ($(D 0) means not used).
-    */
+     * Index of the argument for positional parameters, from $(D 1) to
+     * $(D ubyte.max). ($(D 0) means not used).
+     */
     ubyte indexStart;
 
     /**
-       Index of the last argument for positional parameter range, from
-       $(D 1) to $(D ubyte.max). ($(D 0) means not used).
-    */
+     * Index of the last argument for positional parameter range, from
+     * $(D 1) to $(D ubyte.max). ($(D 0) means not used).
+     */
     ubyte indexEnd;
 
     version(StdDdoc)
     {
         /**
-         The format specifier contained a $(D '-') ($(D printf)
-         compatibility).
+         * The format specifier contained a $(D '-') ($(D printf) compatibility).
          */
         bool flDash;
 
         /**
-         The format specifier contained a $(D '0') ($(D printf)
-         compatibility).
+         * The format specifier contained a $(D '0') ($(D printf) compatibility).
          */
         bool flZero;
 
         /**
-         The format specifier contained a $(D ' ') ($(D printf)
-         compatibility).
+         * The format specifier contained a $(D ' ') ($(D printf) compatibility).
          */
         bool flSpace;
 
         /**
-         The format specifier contained a $(D '+') ($(D printf)
-         compatibility).
+         * The format specifier contained a $(D '+') ($(D printf) compatibility).
          */
         bool flPlus;
 
         /**
-         The format specifier contained a $(D '#') ($(D printf)
-         compatibility).
+         * The format specifier contained a $(D '#') ($(D printf) compatibility).
          */
         bool flHash;
 
@@ -722,50 +717,50 @@ struct FormatSpec(Char)
     }
 
     /**
-       In case of a compound format specifier starting with $(D
-       "%$(LPAREN)") and ending with $(D "%$(RPAREN)"), $(D _nested)
-       contains the string contained within the two separators.
+     * In case of a compound format specifier starting with $(D
+     * "%$(LPAREN)") and ending with $(D "%$(RPAREN)"), $(D _nested)
+     * contains the string contained within the two separators.
      */
     const(Char)[] nested;
 
     /**
-       In case of a compound format specifier, $(D _sep) contains the
-       string positioning after $(D "%|").
+     * In case of a compound format specifier, $(D _sep) contains the
+     * string positioning after $(D "%|").
      */
     const(Char)[] sep;
 
     /**
-       $(D _trailing) contains the rest of the format string.
+     * $(D _trailing) contains the rest of the format string.
      */
     const(Char)[] trailing;
 
     /*
-       This string is inserted before each sequence (e.g. array)
-       formatted (by default $(D "[")).
+     * This string is inserted before each sequence (e.g. array)
+     * formatted (by default $(D "[")).
      */
     enum immutable(Char)[] seqBefore = "[";
 
     /*
-       This string is inserted after each sequence formatted (by
-       default $(D "]")).
+     * This string is inserted after each sequence formatted (by
+     * default $(D "]")).
      */
     enum immutable(Char)[] seqAfter = "]";
 
     /*
-       This string is inserted after each element keys of a sequence (by
-       default $(D ":")).
+     * This string is inserted after each element keys of a sequence (by
+     * default $(D ":")).
      */
     enum immutable(Char)[] keySeparator = ":";
 
     /*
-       This string is inserted in between elements of a sequence (by
-       default $(D ", ")).
+     * This string is inserted in between elements of a sequence (by
+     * default $(D ", ")).
      */
     enum immutable(Char)[] seqSeparator = ", ";
 
     /**
-       Construct a new $(D FormatSpec) using the format string $(D fmt), no
-       processing is done until needed.
+     * Construct a new $(D FormatSpec) using the format string $(D fmt), no
+     * processing is done until needed.
      */
     this(in Char[] fmt)
     {
@@ -1284,7 +1279,7 @@ unittest
 }
 
 /**
-   $(D null) literal is formatted as $(D "null").
+ * $(D null) literal is formatted as $(D "null").
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
 if (is(T == typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
@@ -1304,7 +1299,7 @@ if (is(T == typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
 }
 
 /**
-   Integrals are formatted like $(D printf) does.
+ * Integrals are formatted like $(D printf) does.
  */
 void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
 if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))

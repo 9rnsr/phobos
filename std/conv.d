@@ -276,14 +276,14 @@ might fail the range check.
 template to(T)
 {
     T to(A...)(A args)
-        if (!isRawStaticArray!A)
+    if (!isRawStaticArray!A)
     {
         return toImpl!T(args);
     }
 
     // Fix issue 6175
     T to(S)(ref S arg)
-        if (isRawStaticArray!S)
+    if (isRawStaticArray!S)
     {
         return toImpl!T(arg);
     }
@@ -331,12 +331,12 @@ template to(T)
 }
 
 /**
-If the source type is implicitly convertible to the target type, $(D
-to) simply performs the implicit conversion.
+ * If the source type is implicitly convertible to the target type, $(D
+ * to) simply performs the implicit conversion.
  */
 T toImpl(T, S)(S value)
-    if (isImplicitlyConvertible!(S, T) &&
-        !isEnumStrToStr!(S, T) && !isNullToStr!(S, T))
+if (isImplicitlyConvertible!(S, T) &&
+    !isEnumStrToStr!(S, T) && !isNullToStr!(S, T))
 {
     template isSignedInt(T)
     {
@@ -447,7 +447,7 @@ T toImpl(T, S)(S value)
   Converting static arrays forwards to their dynamic counterparts.
  */
 T toImpl(T, S)(ref S s)
-    if (isRawStaticArray!S)
+if (isRawStaticArray!S)
 {
     return toImpl!(T, typeof(s[0])[])(s);
 }
@@ -463,8 +463,8 @@ T toImpl(T, S)(ref S s)
 When source type supports member template function opCast, is is used.
 */
 T toImpl(T, S)(S value)
-    if (is(typeof(S.init.opCast!T()) : T) &&
-        !isExactSomeString!T)
+if (is(typeof(S.init.opCast!T()) : T) &&
+    !isExactSomeString!T)
 {
     return value.opCast!T();
 }
@@ -494,8 +494,8 @@ $(UL $(LI If target type is struct, $(D T(value)) is used.)
      $(LI If target type is class, $(D new T(value)) is used.))
 */
 T toImpl(T, S)(S value)
-    if (!isImplicitlyConvertible!(S, T) &&
-        is(T == struct) && is(typeof(T(value))))
+if (!isImplicitlyConvertible!(S, T) &&
+    is(T == struct) && is(typeof(T(value))))
 {
     return T(value);
 }
@@ -544,8 +544,8 @@ T toImpl(T, S)(S value)
 
 /// ditto
 T toImpl(T, S)(S value)
-    if (!isImplicitlyConvertible!(S, T) &&
-        is(T == class) && is(typeof(new T(value))))
+if (!isImplicitlyConvertible!(S, T) &&
+    is(T == class) && is(typeof(new T(value))))
 {
     return new T(value);
 }
@@ -617,9 +617,9 @@ Object-to-object conversions by dynamic casting throw exception when the source 
 non-null and the target is null.
  */
 T toImpl(T, S)(S value)
-    if (!isImplicitlyConvertible!(S, T) &&
-        (is(S == class) || is(S == interface)) && !is(typeof(value.opCast!T()) : T) &&
-        (is(T == class) || is(T == interface)) && !is(typeof(new T(value))))
+if (!isImplicitlyConvertible!(S, T) &&
+    (is(S == class) || is(S == interface)) && !is(typeof(value.opCast!T()) : T) &&
+    (is(T == class) || is(T == interface)) && !is(typeof(new T(value))))
 {
     static if (is(T == immutable))
     {
@@ -776,9 +776,9 @@ $(UL
        If pointer is $(D char*), treat it as C-style strings.))
 */
 T toImpl(T, S)(S value)
-    if (!(isImplicitlyConvertible!(S, T) &&
-          !isEnumStrToStr!(S, T) && !isNullToStr!(S, T)) &&
-        isExactSomeString!T)
+if (!(isImplicitlyConvertible!(S, T) &&
+      !isEnumStrToStr!(S, T) && !isNullToStr!(S, T)) &&
+    isExactSomeString!T)
 {
     static if (isExactSomeString!S && value[0].sizeof == ElementEncodingType!T.sizeof)
     {
@@ -1070,8 +1070,8 @@ unittest
 
 /// ditto
 T toImpl(T, S)(S value, uint radix)
-    if (isIntegral!S &&
-        isExactSomeString!T)
+if (isIntegral!S &&
+    isExactSomeString!T)
 in
 {
     assert(radix >= 2 && radix <= 36);
@@ -1605,8 +1605,8 @@ $(UL
   $(LI When the source is a narrow string, normal text parsing occurs.))
 */
 T toImpl(T, S)(S value)
-    if ( isExactSomeString!S && isDynamicArray!S &&
-        !isExactSomeString!T && is(typeof(parse!T(value))))
+if ( isExactSomeString!S && isDynamicArray!S &&
+    !isExactSomeString!T && is(typeof(parse!T(value))))
 {
     scope(success)
     {
@@ -1620,8 +1620,8 @@ T toImpl(T, S)(S value)
 
 /// ditto
 T toImpl(T, S)(S value, uint radix)
-    if ( isExactSomeString!S && isDynamicArray!S &&
-        !isExactSomeString!T && is(typeof(parse!T(value, radix))))
+if ( isExactSomeString!S && isDynamicArray!S &&
+    !isExactSomeString!T && is(typeof(parse!T(value, radix))))
 {
     scope(success)
     {
@@ -1656,14 +1656,14 @@ T toImpl(T, S)(S value, uint radix)
 }
 
 /**
-Convert a value that is implicitly convertible to the enum base type
-into an Enum value. If the value does not match any enum member values
-a ConvException is thrown.
-Enums with floating-point or string base types are not supported.
-*/
+ * Convert a value that is implicitly convertible to the enum base type
+ * into an Enum value. If the value does not match any enum member values
+ * a ConvException is thrown.
+ * Enums with floating-point or string base types are not supported.
+ */
 T toImpl(T, S)(S value)
-    if (is(T == enum) && !is(S == enum) && is(S : OriginalType!T)
-        && !isFloatingPoint!(OriginalType!T) && !isSomeString!(OriginalType!T))
+if (is(T == enum) && !is(S == enum) && is(S : OriginalType!T)
+    && !isFloatingPoint!(OriginalType!T) && !isSomeString!(OriginalType!T))
 {
     foreach (Member; EnumMembers!T)
     {
@@ -1688,20 +1688,20 @@ T toImpl(T, S)(S value)
 }
 
 /***************************************************************
- Rounded conversion from floating point to integral.
-
-Example:
----------------
-assert(roundTo!int(3.14) == 3);
-assert(roundTo!int(3.49) == 3);
-assert(roundTo!int(3.5) == 4);
-assert(roundTo!int(3.999) == 4);
-assert(roundTo!int(-3.14) == -3);
-assert(roundTo!int(-3.49) == -3);
-assert(roundTo!int(-3.5) == -4);
-assert(roundTo!int(-3.999) == -4);
----------------
-Rounded conversions do not work with non-integral target types.
+ * Rounded conversion from floating point to integral.
+ *
+ * Example:
+ * ---------------
+ * assert(roundTo!int(3.14) == 3);
+ * assert(roundTo!int(3.49) == 3);
+ * assert(roundTo!int(3.5) == 4);
+ * assert(roundTo!int(3.999) == 4);
+ * assert(roundTo!int(-3.14) == -3);
+ * assert(roundTo!int(-3.49) == -3);
+ * assert(roundTo!int(-3.5) == -4);
+ * assert(roundTo!int(-3.999) == -4);
+ * ---------------
+ * Rounded conversions do not work with non-integral target types.
  */
 
 template roundTo(Target)
@@ -1761,8 +1761,8 @@ unittest
  */
 
 Target parse(Target, Source)(ref Source s)
-    if (isSomeChar!(ElementType!Source) &&
-        isIntegral!Target && !is(Target == enum))
+if (isSomeChar!(ElementType!Source) &&
+    isIntegral!Target && !is(Target == enum))
 {
     static if (Target.sizeof < int.sizeof)
     {
@@ -2021,8 +2021,8 @@ Lerr:
 
 /// ditto
 Target parse(Target, Source)(ref Source s, uint radix)
-    if (isSomeChar!(ElementType!Source) &&
-        isIntegral!Target && !is(Target == enum))
+if (isSomeChar!(ElementType!Source) &&
+    isIntegral!Target && !is(Target == enum))
 in
 {
     assert(radix >= 2 && radix <= 36);
@@ -2117,8 +2117,8 @@ Lerr:
 }
 
 Target parse(Target, Source)(ref Source s)
-    if (isExactSomeString!Source &&
-        is(Target == enum))
+if (isExactSomeString!Source &&
+    is(Target == enum))
 {
     Target result;
     size_t longest_match = 0;
@@ -2176,8 +2176,8 @@ unittest
 }
 
 Target parse(Target, Source)(ref Source p)
-    if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
-        isFloatingPoint!Target && !is(Target == enum))
+if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
+    isFloatingPoint!Target && !is(Target == enum))
 {
     static import core.stdc.math/* : HUGE_VAL*/;
 
@@ -2648,12 +2648,12 @@ unittest
 }
 
 /**
-Parsing one character off a string returns the character and bumps the
-string up one position.
+ * Parsing one character off a string returns the character and bumps the
+ * string up one position.
  */
 Target parse(Target, Source)(ref Source s)
-    if (isExactSomeString!Source &&
-        staticIndexOf!(Unqual!Target, dchar, Unqual!(ElementEncodingType!Source)) >= 0)
+if (isExactSomeString!Source &&
+    staticIndexOf!(Unqual!Target, dchar, Unqual!(ElementEncodingType!Source)) >= 0)
 {
     if (s.empty)
         throw convError!(Source, Target)(s);
@@ -2690,8 +2690,8 @@ Target parse(Target, Source)(ref Source s)
 }
 
 Target parse(Target, Source)(ref Source s)
-    if (!isSomeString!Source && isInputRange!Source && isSomeChar!(ElementType!Source) &&
-        isSomeChar!Target && Target.sizeof >= ElementType!Source.sizeof && !is(Target == enum))
+if (!isSomeString!Source && isInputRange!Source && isSomeChar!(ElementType!Source) &&
+    isSomeChar!Target && Target.sizeof >= ElementType!Source.sizeof && !is(Target == enum))
 {
     if (s.empty)
         throw convError!(Source, Target)(s);
@@ -2702,15 +2702,15 @@ Target parse(Target, Source)(ref Source s)
 
 // string to bool conversions
 Target parse(Target, Source)(ref Source s)
-    if (isExactSomeString!Source &&
-        is(Unqual!Target == bool))
+if (isExactSomeString!Source &&
+    is(Unqual!Target == bool))
 {
-    if (s.length >= 4 && icmp(s[0 .. 4], "true") == 0)
+    if (s.length >= 4 && std.string.icmp(s[0 .. 4], "true") == 0)
     {
         s = s[4 .. $];
         return true;
     }
-    if (s.length >= 5 && icmp(s[0 .. 5], "false") == 0)
+    if (s.length >= 5 && std.string.icmp(s[0 .. 5], "false") == 0)
     {
         s = s[5 .. $];
         return false;
@@ -2719,8 +2719,8 @@ Target parse(Target, Source)(ref Source s)
 }
 
 /*
-    Tests for to!bool and parse!bool
-*/
+ * Tests for to!bool and parse!bool
+ */
 @safe pure unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
@@ -2749,10 +2749,10 @@ Target parse(Target, Source)(ref Source s)
 
 // string to null literal conversions
 Target parse(Target, Source)(ref Source s)
-    if (isExactSomeString!Source &&
-        is(Unqual!Target == typeof(null)))
+if (isExactSomeString!Source &&
+    is(Unqual!Target == typeof(null)))
 {
-    if (s.length >= 4 && icmp(s[0 .. 4], "null") == 0)
+    if (s.length >= 4 && std.string.icmp(s[0 .. 4], "null") == 0)
     {
         s = s[4 .. $];
         return null;
@@ -2809,8 +2809,8 @@ package void skipWS(R)(ref R r)
  * default $(D ',')).
  */
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
-    if (isExactSomeString!Source &&
-        isDynamicArray!Target && !is(Target == enum))
+if (isExactSomeString!Source &&
+    isDynamicArray!Target && !is(Target == enum))
 {
     Target result;
 
@@ -2915,8 +2915,8 @@ unittest
 
 /// ditto
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
-    if (isExactSomeString!Source &&
-        isStaticArray!Target && !is(Target == enum))
+if (isExactSomeString!Source &&
+    isStaticArray!Target && !is(Target == enum))
 {
     static if (hasIndirections!Target)
         Target result = Target.init[0].init;
@@ -2986,8 +2986,8 @@ Lfewerr:
  * ':')), and element seprator (by default $(D ',')).
  */
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar keyval = ':', dchar comma = ',')
-    if (isExactSomeString!Source &&
-        isAssociativeArray!Target && !is(Target == enum))
+if (isExactSomeString!Source &&
+    isAssociativeArray!Target && !is(Target == enum))
 {
     alias KeyType = typeof(Target.keys[0]);
     alias ValType = typeof(Target.values[0]);
@@ -3050,7 +3050,7 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
 }
 
 private dchar parseEscape(Source)(ref Source s)
-    if (isInputRange!Source && isSomeChar!(ElementType!Source))
+if (isInputRange!Source && isSomeChar!(ElementType!Source))
 {
     parseCheck!s('\\');
     if (s.empty)
@@ -3162,8 +3162,8 @@ private dchar parseEscape(Source)(ref Source s)
 
 // Undocumented
 Target parseElement(Target, Source)(ref Source s)
-    if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
-        isExactSomeString!Target)
+if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
+    isExactSomeString!Target)
 {
     auto result = appender!Target();
 
@@ -3226,8 +3226,8 @@ Target parseElement(Target, Source)(ref Source s)
 
 // ditto
 Target parseElement(Target, Source)(ref Source s)
-    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
-        !isSomeString!Target && !isSomeChar!Target)
+if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
+    !isSomeString!Target && !isSomeChar!Target)
 {
     return parse!Target(s);
 }
