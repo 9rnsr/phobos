@@ -407,6 +407,23 @@ My friends are John, Nancy.
  */
 uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
 {
+    // Fix for issue 1591
+    int getNthInt(A...)(uint index, ref A args) @safe pure
+    {
+        static if (A.length)
+        {
+            if (index)
+                return getNthInt(index - 1, args[1 .. $]);
+
+            static if (isIntegral!(typeof(args[0])))
+                return to!int(args[0]);
+            else
+                throw new FormatException("int expected");
+        }
+        else
+            throw new FormatException("int expected");
+    }
+
     alias FPfmt = void function(Writer, const(void)*, ref FormatSpec!Char) @safe pure nothrow;
 
     auto spec = FormatSpec!Char(fmt);
@@ -3027,31 +3044,6 @@ unittest
     int[0] empt = [];
     formatTest( "(%s)", empt,
                 "([])" );
-}
-
-//------------------------------------------------------------------------------
-// Fix for issue 1591
-private int getNthInt(A...)(uint index, A args)
-{
-    static if (A.length)
-    {
-        if (index)
-        {
-            return getNthInt(index - 1, args[1 .. $]);
-        }
-        static if (isIntegral!(typeof(args[0])))
-        {
-            return to!int(args[0]);
-        }
-        else
-        {
-            throw new FormatException("int expected");
-        }
-    }
-    else
-    {
-        throw new FormatException("int expected");
-    }
 }
 
 /* ======================== Unit Tests ====================================== */
