@@ -6560,7 +6560,7 @@ L_Replace_Loop:
             }
             else if(format[0] == '{')
             {
-                auto x = find!"!std.ascii.isAlpha(a)"(format[1..$]);
+                auto x = find!(a => !ascii.isAlpha(a))(format[1..$]);
                 enforce(!x.empty && x[0] == '}', "no matching '}' in replacement format");
                 auto name = format[1 .. $ - x.length];
                 format = x[1..$];
@@ -7348,6 +7348,8 @@ else
     {
         void test(alias matchFn)()
         {
+            import std.string;
+
             foreach(i, v; TypeTuple!(string, wstring, dstring))
             {
                 auto baz(Cap)(Cap m)
