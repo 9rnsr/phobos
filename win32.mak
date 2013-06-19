@@ -131,7 +131,26 @@ SRC_STD_DIGEST= std\digest\crc.d std\digest\sha.d std\digest\md.d \
     std\digest\ripemd.d std\digest\digest.d
 SRC_STD_4= std\uuid.d $(SRC_STD_DIGEST)
 
-SRC_STD_5_HEAVY= std\algorithm.d
+SRC_STD_ALGORITHM= std\algorithm\package.d \
+	std\algorithm\map.d \
+	std\algorithm\reduce.d \
+	std\algorithm\fill.d \
+	std\algorithm\filter.d \
+	std\algorithm\move.d \
+	std\algorithm\splitter.d \
+	std\algorithm\joiner.d \
+	std\algorithm\uniq.d \
+	std\algorithm\group.d \
+	std\algorithm\find.d \
+	std\algorithm\count.d \
+	std\algorithm\until.d \
+	std\algorithm\predicate.d \
+	std\algorithm\compare.d \
+	std\algorithm\distance.d \
+	std\algorithm\sort.d \
+	std\algorithm\set.d
+
+SRC_STD_5_HEAVY= $(SRC_STD_ALGORITHM)
 
 SRC_STD_6= std\variant.d \
 	std\syserror.d std\zlib.d \
@@ -165,7 +184,9 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\signals.d std\typetuple.d std\traits.d \
 	std\metastrings.d std\getopt.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d std\mathspecial.d \
-	std\functional.d std\algorithm.d std\array.d std\typecons.d \
+	std\functional.d \
+	$(SRC_STD_ALGORITHM) \
+	std\array.d std\typecons.d \
 	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
 	std\range.d std\stdiobase.d std\parallelism.d \
 	std\regex.d \
