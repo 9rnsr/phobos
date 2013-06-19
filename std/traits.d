@@ -175,7 +175,8 @@ unittest
     // static assert(packageName!std == "std");  // this package (currently: "std.std")
     static assert(packageName!(std.traits) == "std");     // this module
     static assert(packageName!packageName == "std");      // symbol in this module
-    static assert(packageName!(std.algorithm) == "std");  // other module from same package
+  //static assert(packageName!(std.algorithm) == "std");  // other module from same package
+    static assert(packageName!(std.typecons) == "std");   // other module from same package
 
     import core.sync.barrier;  // local import
     static assert(packageName!core == "core");
@@ -221,8 +222,10 @@ unittest
     static assert(!__traits(compiles, moduleName!std));
     static assert(moduleName!(std.traits) == "std.traits");            // this module
     static assert(moduleName!moduleName == "std.traits");              // symbol in this module
-    static assert(moduleName!(std.algorithm) == "std.algorithm");      // other module
-    static assert(moduleName!(std.algorithm.map) == "std.algorithm");  // symbol in other module
+  //static assert(moduleName!(std.algorithm) == "std.algorithm");      // other module
+  //static assert(moduleName!(std.algorithm.map) == "std.algorithm");  // symbol in other module
+    static assert(moduleName!(std.typecons) == "std.typecons");        // other module
+    static assert(moduleName!(std.typecons.Tuple) == "std.typecons");  // symbol in other module
 
     import core.sync.barrier;  // local import
     static assert(!__traits(compiles, moduleName!(core.sync)));

@@ -1390,7 +1390,8 @@ assert(equal(splitter(a), ["", "a", "bcd", "ef", "gh"][]));
 auto splitter(C)(C[] s)
     if(isSomeString!(C[]))
 {
-    return std.algorithm.splitter!(std.uni.isWhite)(s);
+    import std.algorithm;
+    return /*std.algorithm.*/splitter!(std.uni.isWhite)(s);
 }
 
 unittest
