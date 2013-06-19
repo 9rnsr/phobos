@@ -258,41 +258,28 @@
  * Source: $(PHOBOSSRC std/_algorithm.d)
  */
 module std.algorithm;
-//debug = std_algorithm;
-
-import std.range;
 
 public
 {
-    import std.algorithm.map;       /// inherit
-    import std.algorithm.reduce;    /// inherit
-    import std.algorithm.fill;      /// inherit
-    import std.algorithm.filter;    /// inherit
-    import std.algorithm.move;      /// inherit
-    import std.algorithm.splitter;  /// inherit
-    import std.algorithm.joiner;    /// inherit
-    import std.algorithm.uniq;      /// inherit
-    import std.algorithm.group;     /// inherit
-    import std.algorithm.find;      /// inherit
-    import std.algorithm.count;     /// inherit
-    import std.algorithm.until;     /// inherit
-    import std.algorithm.predicate; /// inherit
-    import std.algorithm.compare;   /// inherit
-    import std.algorithm.distance;  /// inherit
-    import std.algorithm.sort;      /// inherit
-    import std.algorithm.set;       /// inherit
+    import std.algorithm.searching;     /// inherit
+    import std.algorithm.comparison;    /// inherit
+    import std.algorithm.iteration;     /// inherit
+    import std.algorithm.sorting;       /// inherit
+    import std.algorithm.setop;         /// inherit
+    import std.algorithm.mutation;      /// inherit
 }
 
 
 // Internal random array generators
-/*package */    // @@@BUG@@@ should work
 version(unittest)
 {
+    import std.range;
     import std.random : Random, unpredictableSeed, uniform;
 
     enum size_t maxArraySize = 50;
     enum size_t minArraySize = maxArraySize - 1;
 
+//package:  // @@@BUG@@@ should work
     string[] rndstuff(T : string)()
     {
         static Random rnd;

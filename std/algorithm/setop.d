@@ -1,11 +1,13 @@
-module std.algorithm.set;
+// Written in the D programming language.
+
+module std.algorithm.setop;
+//debug = std_algorithm;
 
 import std.algorithm;
-import std.range, std.functional, std.traits, std.typetuple;
+import std.range, std.traits;
+import std.functional : unaryFun, binaryFun;
+import std.typetuple : TypeTuple;
 
-version(unittest)
-{
-}
 
 /**
  * Lazily computes the union of two or more ranges $(D rs). The ranges
@@ -146,6 +148,7 @@ unittest
     static assert(isForwardRange!(typeof(setUnion(a, b))));
 }
 
+
 /**
  * Lazily computes the intersection of two or more input ranges $(D
  * rs). The ranges are assumed to be sorted by $(D less). The element
@@ -261,6 +264,7 @@ unittest
     // assert(equal(setIntersection(c, b, a), [1, 4, 7]));
 }
 
+
 /**
  * Lazily computes the difference of $(D r1) and $(D r2). The two ranges
  * are assumed to be sorted by $(D less). The element types of the two
@@ -344,6 +348,7 @@ unittest
     assert(equal(setDifference(a, b), [5, 9]));
     static assert(isForwardRange!(typeof(setDifference(a, b))));
 }
+
 
 /**
  * Lazily computes the symmetric difference of $(D r1) and $(D r2),
@@ -451,6 +456,7 @@ unittest
     static assert(isForwardRange!(typeof(setSymmetricDifference(a, b))));
 }
 
+
 /**
  * Computes the union of multiple sets. The input sets are passed as a
  * range of ranges and each is assumed to be sorted by $(D
@@ -548,6 +554,7 @@ unittest
     assert(equal(nWayUnion(a), witness[]));
 }
 
+
 /**
  * Given a range of sorted forward ranges $(D ror), copies to $(D tgt)
  * the elements that are common to most ranges, along with their number
@@ -609,6 +616,7 @@ void largestPartialIntersection
     }
     return largestPartialIntersectionWeighted!less(ror, tgt, UnitWeights(), sorted);
 }
+
 
 /**
  * Similar to $(D largestPartialIntersection), but associates a weight
@@ -699,348 +707,6 @@ unittest
     assert(arrayOne == arrayTwo);
 }
 
-/**
- * Permutes $(D range) in-place to the next lexicographically greater
- * permutation.
- *
- * The predicate $(D less) defines the lexicographical ordering to be used on
- * the range.
- *
- * If the range is currently the lexicographically greatest permutation, it is
- * permuted back to the least permutation and false is returned.  Otherwise,
- * true is returned. One can thus generate all permutations of a range by
- * sorting it according to $(D less), which produces the lexicographically
- * least permutation, and then calling nextPermutation until it returns false.
- * This is guaranteed to generate all distinct permutations of the range
- * exactly once.  If there are $(I N) elements in the range and all of them are
- * unique, then $(I N)! permutations will be generated. Otherwise, if there are
- * some duplicated elements, fewer permutations will be produced.
- */
-unittest
-{
-    // Enumerate all permutations
-    int[] a = [1, 2, 3, 4, 5];
-    while (nextPermutation(a))
-    {
-        // a now contains the next permutation of the array.
-    }
-}
-/**
- * Returns: false if the range was lexicographically the greatest, in which
- * case the range is reversed back to the lexicographically smallest
- * permutation; otherwise returns true.
- */
-unittest
-{
-    // Step through all permutations of a sorted array in lexicographic order
-    int[] a = [1, 2, 3];
-    assert( nextPermutation(a) && a == [1, 3, 2]);
-    assert( nextPermutation(a) && a == [2, 1, 3]);
-    assert( nextPermutation(a) && a == [2, 3, 1]);
-    assert( nextPermutation(a) && a == [3, 1, 2]);
-    assert( nextPermutation(a) && a == [3, 2, 1]);
-    assert(!nextPermutation(a) && a == [1, 2, 3]);
-}
-///
-unittest
-{
-    // Step through permutations of an array containing duplicate elements:
-    int[] a = [1, 1, 2];
-    assert( nextPermutation(a) && a == [1,2,1]);
-    assert( nextPermutation(a) && a == [2,1,1]);
-    assert(!nextPermutation(a) && a == [1,1,2]);
-}
-///
-bool nextPermutation
-(alias less="a<b", BidirectionalRange)
-(ref BidirectionalRange range)
-if (isBidirectionalRange!BidirectionalRange &&
-    hasSwappableElements!BidirectionalRange)
-{
-    // Ranges of 0 or 1 element have no distinct permutations.
-    if (range.empty)
-        return false;
-
-    auto i = retro(range);
-    auto last = i.save;
-
-    // Find last occurring increasing pair of elements
-    size_t n = 1;
-    for (i.popFront(); !i.empty; i.popFront(), last.popFront(), n++)
-    {
-        if (binaryFun!less(i.front, last.front))
-            break;
-    }
-
-    if (i.empty)
-    {
-        // Entire range is decreasing: it's lexicographically the greatest. So
-        // wrap it around.
-        range.reverse();
-        return false;
-    }
-
-    // Find last element greater than i.front.
-    auto j = find!(a => binaryFun!less(i.front, a))
-                  (takeExactly(retro(range), n));
-
-    assert(!j.empty);   // shouldn't happen since i.front < last.front
-    swap(i.front, j.front);
-    reverse(takeExactly(retro(range), n));
-
-    return true;
-}
-
-unittest
-{
-    // Boundary cases: arrays of 0 or 1 element.
-    int[] a1 = [];
-    assert(!nextPermutation(a1));
-    assert(a1 == []);
-
-    int[] a2 = [1];
-    assert(!nextPermutation(a2));
-    assert(a2 == [1]);
-}
-
-unittest
-{
-    auto a1 = [1, 2, 3, 4];
-    assert( nextPermutation(a1) && equal(a1, [1, 2, 4, 3]));
-    assert( nextPermutation(a1) && equal(a1, [1, 3, 2, 4]));
-    assert( nextPermutation(a1) && equal(a1, [1, 3, 4, 2]));
-    assert( nextPermutation(a1) && equal(a1, [1, 4, 2, 3]));
-    assert( nextPermutation(a1) && equal(a1, [1, 4, 3, 2]));
-    assert( nextPermutation(a1) && equal(a1, [2, 1, 3, 4]));
-    assert( nextPermutation(a1) && equal(a1, [2, 1, 4, 3]));
-    assert( nextPermutation(a1) && equal(a1, [2, 3, 1, 4]));
-    assert( nextPermutation(a1) && equal(a1, [2, 3, 4, 1]));
-    assert( nextPermutation(a1) && equal(a1, [2, 4, 1, 3]));
-    assert( nextPermutation(a1) && equal(a1, [2, 4, 3, 1]));
-    assert( nextPermutation(a1) && equal(a1, [3, 1, 2, 4]));
-    assert( nextPermutation(a1) && equal(a1, [3, 1, 4, 2]));
-    assert( nextPermutation(a1) && equal(a1, [3, 2, 1, 4]));
-    assert( nextPermutation(a1) && equal(a1, [3, 2, 4, 1]));
-    assert( nextPermutation(a1) && equal(a1, [3, 4, 1, 2]));
-    assert( nextPermutation(a1) && equal(a1, [3, 4, 2, 1]));
-    assert( nextPermutation(a1) && equal(a1, [4, 1, 2, 3]));
-    assert( nextPermutation(a1) && equal(a1, [4, 1, 3, 2]));
-    assert( nextPermutation(a1) && equal(a1, [4, 2, 1, 3]));
-    assert( nextPermutation(a1) && equal(a1, [4, 2, 3, 1]));
-    assert( nextPermutation(a1) && equal(a1, [4, 3, 1, 2]));
-    assert( nextPermutation(a1) && equal(a1, [4, 3, 2, 1]));
-    assert(!nextPermutation(a1) && equal(a1, [1, 2, 3, 4]));
-}
-
-unittest
-{
-    // Test with non-default sorting order
-    int[] a = [3, 2, 1];
-    assert( nextPermutation!"a > b"(a) && a == [3, 1, 2]);
-    assert( nextPermutation!"a > b"(a) && a == [2, 3, 1]);
-    assert( nextPermutation!"a > b"(a) && a == [2, 1, 3]);
-    assert( nextPermutation!"a > b"(a) && a == [1, 3, 2]);
-    assert( nextPermutation!"a > b"(a) && a == [1, 2, 3]);
-    assert(!nextPermutation!"a > b"(a) && a == [3, 2, 1]);
-}
-
-/**
- * Permutes $(D range) in-place to the next lexicographically greater $(I even)
- * permutation.
- *
- * The predicate $(D less) defines the lexicographical ordering to be used on
- * the range.
- *
- * An even permutation is one which is produced by swapping an even number of
- * pairs of elements in the original range. The set of $(I even) permutations
- * is distinct from the set of $(I all) permutations only when there are no
- * duplicate elements in the range. If the range has $(I N) unique elements,
- * then there are exactly $(I N)!/2 even permutations.
- *
- * If the range is already the lexicographically greatest even permutation, it
- * is permuted back to the least even permutation and false is returned.
- * Otherwise, true is returned, and the range is modified in-place to be the
- * lexicographically next even permutation.
- *
- * One can thus generate the even permutations of a range with unique elements
- * by starting with the lexicographically smallest permutation, and repeatedly
- * calling nextEvenPermutation until it returns false.
- */
-unittest
-{
-    // Enumerate even permutations
-    int[] a = [1, 2, 3, 4, 5];
-    while (nextEvenPermutation(a))
-    {
-        // a now contains the next even permutation of the array.
-    }
-}
-/**
- * One can also generate the $(I odd) permutations of a range by noting that
- * permutations obey the rule that even + even = even, and odd + even = odd.
- * Thus, by swapping the last two elements of a lexicographically least range,
- * it is turned into the first odd permutation. Then calling
- * nextEvenPermutation on this first odd permutation will generate the next
- * even permutation relative to this odd permutation, which is actually the
- * next odd permutation of the original range. Thus, by repeatedly calling
- * nextEvenPermutation until it returns false, one enumerates the odd
- * permutations of the original range.
- */
-unittest
-{
-    // Enumerate odd permutations
-    int[] a = [1,2,3,4,5];
-    swap(a[$-2], a[$-1]);    // a is now the first odd permutation of [1,2,3,4,5]
-    while (nextEvenPermutation(a))
-    {
-        // a now contains the next odd permutation of the original array
-        // (which is an even permutation of the first odd permutation).
-    }
-}
-/**
- *
- * Warning: Since even permutations are only distinct from all permutations
- * when the range elements are unique, this function assumes that there are no
- * duplicate elements under the specified ordering. If this is not _true, some
- * permutations may fail to be generated. When the range has non-unique
- * elements, you should use $(MYREF nextPermutation) instead.
- *
- * Returns: false if the range was lexicographically the greatest, in which
- * case the range is reversed back to the lexicographically smallest
- * permutation; otherwise returns true.
- */
-unittest
-{
-    // Step through even permutations of a sorted array in lexicographic order
-    int[] a = [1, 2, 3];
-    assert( nextEvenPermutation(a) && a == [2, 3, 1]);
-    assert( nextEvenPermutation(a) && a == [3, 1, 2]);
-    assert(!nextEvenPermutation(a) && a == [1, 2, 3]);
-}
-/**
- * Even permutations are useful for generating coordinates of certain geometric
- * shapes. Here's a non-trivial example:
- */
-unittest
-{
-    // Print the 60 vertices of a uniform truncated icosahedron (soccer ball)
-    import std.math, std.stdio;
-    enum real Phi = (1.0 + sqrt(5.0)) / 2.0;    // Golden ratio
-    real[][] seeds = [
-        [0.0, 1.0, 3.0*Phi],
-        [1.0, 2.0+Phi, 2.0*Phi],
-        [Phi, 2.0, Phi^^3]
-    ];
-    size_t n;
-    foreach (seed; seeds)
-    {
-        // Loop over even permutations of each seed
-        do
-        {
-            // Loop over all sign changes of each permutation
-            size_t i;
-            do
-            {
-                // Generate all possible sign changes
-                for (i=0; i < seed.length; i++)
-                {
-                    if (seed[i] != 0.0)
-                    {
-                        seed[i] = -seed[i];
-                        if (seed[i] < 0.0)
-                            break;
-                    }
-                }
-                //writeln(seed);
-                n++;
-            } while (i < seed.length);
-        } while (nextEvenPermutation(seed));
-    }
-    assert(n == 60);
-}
-///
-bool nextEvenPermutation
-(alias less="a<b", BidirectionalRange)
-(ref BidirectionalRange range)
-if (isBidirectionalRange!BidirectionalRange &&
-    hasSwappableElements!BidirectionalRange)
-{
-    // Ranges of 0 or 1 element have no distinct permutations.
-    if (range.empty)
-        return false;
-
-    bool oddParity = false;
-    bool ret = true;
-    do
-    {
-        auto i = retro(range);
-        auto last = i.save;
-
-        // Find last occurring increasing pair of elements
-        size_t n = 1;
-        for (i.popFront();
-             !i.empty;
-             i.popFront(), last.popFront(), n++)
-        {
-            if (binaryFun!less(i.front, last.front))
-                break;
-        }
-
-        if (!i.empty)
-        {
-            // Find last element greater than i.front.
-            auto j = find!(a => binaryFun!less(i.front, a))
-                          (takeExactly(retro(range), n));
-
-            // shouldn't happen since i.front < last.front
-            assert(!j.empty);
-
-            swap(i.front, j.front);
-            oddParity = !oddParity;
-        }
-        else
-        {
-            // Entire range is decreasing: it's lexicographically
-            // the greatest.
-            ret = false;
-        }
-
-        reverse(takeExactly(retro(range), n));
-        if ((n / 2) % 2 == 1)
-            oddParity = !oddParity;
-    } while(oddParity);
-
-    return ret;
-}
-
-unittest
-{
-    auto a3 = [ 1, 2, 3, 4 ];
-    int count = 1;
-    while (nextEvenPermutation(a3)) count++;
-    assert(count == 12);
-}
-
-unittest
-{
-    // Test with non-default sorting order
-    auto a = [ 3, 2, 1 ];
-    assert( nextEvenPermutation!"a > b"(a) && a == [ 2, 1, 3 ]);
-    assert( nextEvenPermutation!"a > b"(a) && a == [ 1, 3, 2 ]);
-    assert(!nextEvenPermutation!"a > b"(a) && a == [ 3, 2, 1 ]);
-}
-
-unittest
-{
-    // Test various cases of rollover
-    auto a = [ 3, 1, 2 ];
-    assert(nextEvenPermutation(a) == false);
-    assert(a == [ 1, 2, 3 ]);
-
-    auto b = [ 3, 2, 1 ];
-    assert(nextEvenPermutation(b) == false);
-    assert(b == [ 1, 3, 2 ]);
-}
 
 /**
  * Lazily computes the Cartesian product of two or more ranges. The product is a

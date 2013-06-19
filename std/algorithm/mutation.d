@@ -1,11 +1,420 @@
-module std.algorithm.move;
+// Written in the D programming language.
+
+module std.algorithm.mutation;
+//debug = std_algorithm;
 
 import std.algorithm;
-import std.range, std.functional, std.traits;
+import std.range, std.traits;
+import std.typetuple : TypeTuple;
+import std.functional : unaryFun, binaryFun;
+import std.typecons : Tuple, tuple;
 
-version(unittest)
+
+/**
+ * Fills $(D range) with a $(D filler).
+ */
+void fill(Range, Value)(Range range, Value filler)
+if (isInputRange!Range && is(typeof(range.front = filler)))
 {
+    alias E = ElementType!Range;
+
+    static if (is(typeof(range[] = filler)))
+    {
+        range[] = filler;
+    }
+    else static if (is(typeof(range[] = E(filler))))
+    {
+        range[] = E(filler);
+    }
+    else
+    {
+        for ( ; !range.empty; range.popFront())
+        {
+            range.front = filler;
+        }
+    }
 }
+/**
+ */
+unittest
+{
+    int[] a = [ 1, 2, 3, 4 ];
+    fill(a, 5);
+    assert(a == [ 5, 5, 5, 5 ]);
+}
+
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+
+    int[] a = [ 1, 2, 3 ];
+    fill(a, 6);
+    assert(a == [ 6, 6, 6 ]);
+
+    void fun0()
+    {
+        foreach (i; 0 .. 1000)
+        {
+            foreach (ref e; a) e = 6;
+        }
+    }
+    void fun1() { foreach (i; 0 .. 1000) fill(a, 6); }
+    //void fun2() { foreach (i; 0 .. 1000) fill2(a, 6); }
+    //writeln(benchmark!(fun0, fun1, fun2)(10000));
+
+    with (DummyRanges!())
+    {
+        // fill should accept InputRange
+        alias InputRange = DummyRange!(ReturnBy.Ref, Length.No, RangeType.Input);
+        enum filler = uint.max;
+        InputRange range;
+        fill(range, filler);
+        foreach (value; range.arr)
+            assert(value == filler);
+    }
+}
+unittest
+{
+    //ER8638_1 IS_NOT self assignable
+    static struct ER8638_1
+    {
+        void opAssign(int){}
+    }
+
+    //ER8638_1 IS self assignable
+    static struct ER8638_2
+    {
+        void opAssign(ER8638_2){}
+        void opAssign(int){}
+    }
+
+    auto er8638_1 = new ER8638_1[](10);
+    auto er8638_2 = new ER8638_2[](10);
+    er8638_1.fill(5); //generic case
+    er8638_2.fill(5); //opSlice(T.init) case
+}
+unittest
+{
+    {
+        int[] a = [1, 2, 3];
+        immutable(int) b = 0;
+        static assert(__traits(compiles, a.fill(b)));
+    }
+    {
+        double[] a = [1, 2, 3];
+        immutable(int) b = 0;
+        static assert(__traits(compiles, a.fill(b)));
+    }
+}
+
+
+/**
+ * Fills $(D range) with a pattern copied from $(D filler). The length of
+ * $(D range) does not have to be a multiple of the length of $(D
+ * filler). If $(D filler) is empty, an exception is thrown.
+ */
+void fill(Range1, Range2)(Range1 range, Range2 filler)
+if (isInputRange!Range1 &&
+    (isForwardRange!Range2 || isInputRange!Range2 && isInfinite!Range2) &&
+    is(typeof(Range1.init.front = Range2.init.front)))
+{
+    import std.exception : enforce;
+
+    static if (isInfinite!Range2)
+    {
+        //Range2 is infinite, no need for bounds checking or saving
+        static if (hasSlicing!Range2 && hasLength!Range1 &&
+                   is(typeof(filler[0 .. range.length])))
+        {
+            copy(filler[0 .. range.length], range);
+        }
+        else
+        {
+            //manual feed
+            for (; !range.empty; range.popFront(), filler.popFront())
+            {
+                range.front = filler.front;
+            }
+        }
+    }
+    else
+    {
+        enforce(!filler.empty, "Cannot fill range with an empty filler");
+
+        static if (hasLength!Range1 && hasLength!Range2 &&
+                   is(typeof(range.length > filler.length)))
+        {
+            //Case we have access to length
+            auto len = filler.length;
+            //Start by bulk copies
+            while (range.length > len)
+            {
+                range = copy(filler.save, range);
+            }
+
+            //and finally fill the partial range. No need to save here.
+            static if (hasSlicing!Range2 && is(typeof(filler[0 .. range.length])))
+            {
+                //use a quick copy
+                auto len2 = range.length;
+                range = copy(filler[0 .. len2], range);
+            }
+            else
+            {
+                //iterate. No need to check filler, it's length is longer than range's
+                for (; !range.empty; range.popFront(), filler.popFront())
+                {
+                    range.front = filler.front;
+                }
+            }
+        }
+        else
+        {
+            //Most basic case.
+            auto bck = filler.save;
+            for (; !range.empty; range.popFront(), filler.popFront())
+            {
+                if (filler.empty)
+                    filler = bck.save;
+                range.front = filler.front;
+            }
+        }
+    }
+}
+/**
+ */
+unittest
+{
+    int[] a = [ 1, 2, 3, 4, 5 ];
+    int[] b = [ 8, 9 ];
+    fill(a, b);
+    assert(a == [ 8, 9, 8, 9, 8 ]);
+}
+
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+
+    import std.exception : assertThrown;
+
+    int[] a = [ 1, 2, 3, 4, 5 ];
+    int[] b = [ 1, 2 ];
+    fill(a, b);
+    assert(a == [ 1, 2, 1, 2, 1 ]);
+
+    // fill should accept InputRange
+    with (DummyRanges!())
+    {
+        alias InputRange = DummyRange!(ReturnBy.Ref, Length.No, RangeType.Input);
+        InputRange range;
+        fill(range, [1, 2]);
+        foreach (i, value; range.arr)
+            assert(value == (i%2==0?1:2));
+    }
+
+    //test with a input being a "reference forward" range
+    fill(a, new ReferenceForwardRange!int([8, 9]));
+    assert(a == [8, 9, 8, 9, 8]);
+
+    //test with a input being an "infinite input" range
+    fill(a, new ReferenceInfiniteInputRange!int());
+    assert(a == [0, 1, 2, 3, 4]);
+
+    //empty filler test
+    assertThrown(fill(a, a[$..$]));
+
+}
+
+
+/**
+ * Fills a range with a value. Assumes that the range does not currently
+ * contain meaningful content. This is of interest for structs that
+ * define copy constructors (for all other types, fill and
+ * uninitializedFill are equivalent).
+ *
+ * uninitializedFill will only operate on ranges that expose references to its
+ * members and have assignable elements.
+ *
+ * Example:
+ * ----
+ * struct S { ... }
+ * S[] s = (cast(S*) malloc(5 * S.sizeof))[0 .. 5];
+ * uninitializedFill(s, 42);
+ * assert(s == [ 42, 42, 42, 42, 42 ]);
+ * ----
+ */
+void uninitializedFill(Range, Value)(Range range, Value filler)
+if (isInputRange!Range &&
+    hasLvalueElements!Range &&
+    is(typeof(range.front = filler)))
+{
+    import std.conv : emplace;
+
+    alias E = ElementType!Range;
+    static if (hasElaborateAssign!E)
+    {
+        // Must construct stuff by the book
+        for (; !range.empty; range.popFront())
+            emplace(&range.front(), filler);
+    }
+    else
+    {
+        // Doesn't matter whether fill is initialized or not
+        return fill(range, filler);
+    }
+}
+
+deprecated("Cannot reliably call uninitializedFill on range that does not expose references. Use fill instead.")
+void uninitializedFill(Range, Value)(Range range, Value filler)
+if (isInputRange!Range &&
+    !hasLvalueElements!Range &&
+    is(typeof(range.front = filler)))
+{
+    alias E = ElementType!Range;
+    static assert(hasElaborateAssign!E,
+        "Cannot execute uninitializedFill a range that does not expose references, and whose objects have an elaborate assign.");
+    return fill(range, filler);
+}
+
+
+/**
+ * Initializes all elements of a range with their $(D .init)
+ * value. Assumes that the range does not currently contain meaningful
+ * content.
+ *
+ * initializeAll will operate on ranges that expose references to its
+ * members and have assignable elements, as well as on (mutable) strings.
+ *
+ * Example:
+ * ----
+ * struct S { ... }
+ * S[] s = (cast(S*) malloc(5 * S.sizeof))[0 .. 5];
+ * initializeAll(s);
+ * assert(s == [ 0, 0, 0, 0, 0 ]);
+ * ----
+ */
+void initializeAll(Range)(Range range)
+if (isInputRange!Range &&
+    hasLvalueElements!Range &&
+    hasAssignableElements!Range)
+{
+    import core.stdc.string : memcpy, memset;
+
+    alias E = ElementType!Range;
+    static if (hasElaborateAssign!E)
+    {
+        //Elaborate opAssign. Must go the memcpy road.
+        //We avoid calling emplace here, because our goal is to initialize to
+        //the static state of E.init,
+        //So we want to avoid any un-necassarilly CC'ing of E.init
+        auto p = typeid(E).init().ptr;
+        if (p)
+            for ( ; !range.empty ; range.popFront() )
+                memcpy(&range.front(), p, E.sizeof);
+        else
+            static if (isDynamicArray!Range)
+                memset(range.ptr, 0, range.length * E.sizeof);
+            else
+                for ( ; !range.empty ; range.popFront() )
+                    memset(&range.front(), 0, E.sizeof);
+    }
+    else
+        fill(range, E.init);
+}
+
+// ditto
+void initializeAll(Range)(Range range)
+if (is(Range == char[]) || is(Range == wchar[]))
+{
+    alias E = ElementEncodingType!Range;
+    range[] = E.init;
+}
+
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+
+    //Test strings:
+    //Must work on narrow strings.
+    //Must reject const
+    char[3] a = void;
+    a[].initializeAll();
+    assert(a[] == [char.init, char.init, char.init]);
+    string s;
+    assert(!__traits(compiles, s.initializeAll()));
+
+    //Note: Cannot call uninitializedFill on narrow strings
+
+    enum e { e1, e2 }
+    e[3] b1 = void;
+    b1[].initializeAll();
+    assert(b1[] == [e.e1, e.e1, e.e1]);
+    e[3] b2 = void;
+    b2[].uninitializedFill(e.e2);
+    assert(b2[] == [e.e2, e.e2, e.e2]);
+
+    static struct S1
+    {
+        int i;
+    }
+    static struct S2
+    {
+        int i = 1;
+    }
+    static struct S3
+    {
+        int i;
+        this(this){};
+    }
+    static struct S4
+    {
+        int i = 1;
+        this(this){};
+    }
+    static assert(!hasElaborateAssign!S1);
+    static assert(!hasElaborateAssign!S2);
+    static assert( hasElaborateAssign!S3);
+    static assert( hasElaborateAssign!S4);
+    assert(!typeid(S1).init().ptr);
+    assert( typeid(S2).init().ptr);
+    assert(!typeid(S3).init().ptr);
+    assert( typeid(S4).init().ptr);
+
+    foreach (S; TypeTuple!(S1, S2, S3, S4))
+    {
+        //initializeAll
+        {
+            //Array
+            S[3] ss1 = void;
+            ss1[].initializeAll();
+            assert(ss1[] == [S.init, S.init, S.init]);
+
+            //Not array
+            S[3] ss2 = void;
+            auto sf = ss2[].filter!"true"();
+
+            sf.initializeAll();
+            assert(ss2[] == [S.init, S.init, S.init]);
+        }
+        //uninitializedFill
+        {
+            //Array
+            S[3] ss1 = void;
+            ss1[].uninitializedFill(S(2));
+            assert(ss1[] == [S(2), S(2), S(2)]);
+
+            //Not array
+            S[3] ss2 = void;
+            auto sf = ss2[].filter!"true"();
+            sf.uninitializedFill(S(2));
+            assert(ss2[] == [S(2), S(2), S(2)]);
+        }
+    }
+}
+
 
 /**
  * Moves $(D source) into $(D target) via a destructive
@@ -268,6 +677,7 @@ unittest// Issue 8057
     static assert(__traits(compiles, move(x, x) ));
 }
 
+
 /**
  * For each element $(D a) in $(D src) and each element $(D b) in $(D
  * tgt) in lockstep in increasing order, calls $(D move(a, b)). Returns
@@ -315,13 +725,15 @@ unittest
     assert(a == [ 1, 2, 3 ]);
 }
 
+
 /**
  * For each element $(D a) in $(D src) and each element $(D b) in $(D
  * tgt) in lockstep in increasing order, calls $(D move(a, b)). Stops
  * when either $(D src) or $(D tgt) have been exhausted. Returns the
  * leftover portions of the two ranges.
  */
-Tuple!(Range1, Range2) moveSome(Range1, Range2)(Range1 src, Range2 tgt)
+Tuple!(Range1, Range2)
+moveSome(Range1, Range2)(Range1 src, Range2 tgt)
 if (isInputRange!Range1 &&
     isInputRange!Range2 &&
     is(typeof(move(src.front, tgt.front))))
@@ -347,6 +759,7 @@ unittest
     assert(a[0 .. 3] == b);
     assert(a == [ 1, 2, 3, 4, 5 ]);
 }
+
 
 /**
  * Swaps $(D lhs) and $(D rhs). See also $(XREF exception, pointsTo).
@@ -490,6 +903,7 @@ if (isInputRange!R1 && isInputRange!R2)
         r2.front = move(t1);
     }
 }
+
 
 /**
  * Forwards function arguments with saving ref-ness.
@@ -721,6 +1135,7 @@ unittest
     });
 }
 
+
 /**
  * Swaps all elements of $(D r1) with successive elements in $(D r2).
  * Returns a tuple containing the remainder portions of $(D r1) and $(D
@@ -751,6 +1166,7 @@ unittest
     assert(a == [ 100, 2, 3, 103 ]);
     assert(b == [ 0, 1, 101, 102 ]);
 }
+
 
 /**
  * Reverses $(D r) in-place.  Performs $(D r.length / 2) evaluations of $(D
@@ -862,6 +1278,7 @@ unittest
     test("\U00010143", "\U00010143");
     test("abcdefcdef", "fedcfedcba");
 }
+
 
 /**
  * The $(D bringToFront) function has considerable flexibility and
@@ -1061,6 +1478,7 @@ unittest
     }
 }
 
+
 /**
  * Defines the swapping strategy for algorithms that need to swap
  * elements in a range (such as partition and sort). The strategy
@@ -1111,6 +1529,7 @@ enum SwapStrategy
      */
     stable,
 }
+
 
 /**
  * Eliminates elements at given offsets from $(D range) and returns the
@@ -1386,7 +1805,8 @@ int[] a = [ 1, 2, 3, 2, 3, 4, 5, 2, 5, 6 ];
 assert(remove!("a == 2")(a) == [ 1, 3, 3, 4, 5, 5, 6 ]);
 ----
  */
-Range remove(alias pred, SwapStrategy ss = SwapStrategy.stable, Range)
+Range remove
+(alias pred, SwapStrategy ss = SwapStrategy.stable, Range)
 (Range range)
 if (isBidirectionalRange!Range)
 {
@@ -1437,6 +1857,7 @@ unittest
     assert(remove!("a == 2", SwapStrategy.stable)(a) ==
             [ 1, 3, 3, 4, 5, 5, 6 ]);
 }
+
 
 // eliminate
 /* *
@@ -1504,468 +1925,72 @@ assert(arr == [ 1, 3, 4, 5, 4, 5, 2  ]);
 //     assert(arr == [ 1, 3, 4, 5, 4, 5, 2  ]);
 // }
 
-/**
- * Partitions a range in two using $(D pred) as a
- * predicate. Specifically, reorders the range $(D r = [left,
- * right$(RPAREN)) using $(D swap) such that all elements $(D i) for
- * which $(D pred(i)) is $(D true) come before all elements $(D j) for
- * which $(D pred(j)) returns $(D false).
+
+/*
+ * Reduces $(D r) by shifting it to the left until no adjacent elements
+ * $(D a), $(D b) remain in $(D r) such that $(D pred(a, b)). Shifting is
+ * performed by evaluating $(D move(source, target)) as a primitive. The
+ * algorithm is stable and runs in $(BIGOH r.length) time. Returns the
+ * reduced range.
  *
- * Performs $(BIGOH r.length) (if unstable or semistable) or $(BIGOH
- * r.length * log(r.length)) (if stable) evaluations of $(D less) and $(D
- * swap). The unstable version computes the minimum possible evaluations
- * of $(D swap) (roughly half of those performed by the semistable
- * version).
+ * The default $(XREF _algorithm, move) performs a potentially
+ * destructive assignment of $(D source) to $(D target), so the objects
+ * beyond the returned range should be considered "empty". By default $(D
+ * pred) compares for equality, in which case $(D overwriteAdjacent)
+ * collapses adjacent duplicate elements to one (functionality akin to
+ * the $(WEB wikipedia.org/wiki/Uniq, uniq) system utility).
  *
- * See also STL's $(WEB sgi.com/tech/stl/_partition.html, _partition) and
- * $(WEB sgi.com/tech/stl/stable_partition.html, stable_partition).
- *
- * Returns:
- *
- * The right part of $(D r) after partitioning.
- *
- * If $(D ss == SwapStrategy.stable), $(D partition) preserves the
- * relative ordering of all elements $(D a), $(D b) in $(D r) for which
- * $(D pred(a) == pred(b)). If $(D ss == SwapStrategy.semistable), $(D
- * partition) preserves the relative ordering of all elements $(D a), $(D
- * b) in the left part of $(D r) for which $(D pred(a) == pred(b)).
+ * Example:
+ * ----
+ * int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
+ * auto r = overwriteAdjacent(arr);
+ * assert(r == [ 1, 2, 3, 4, 5 ]);
+ * ----
  */
-Range partition(alias predicate, SwapStrategy ss = SwapStrategy.unstable, Range)(Range r)
-if ((ss == SwapStrategy.stable && isRandomAccessRange!Range)||
-    (ss != SwapStrategy.stable && isForwardRange!Range))
-{
-    alias pred = unaryFun!predicate;
+// Range overwriteAdjacent(alias pred, alias move, Range)(Range r)
+// {
+//     if (r.empty) return r;
+//     //auto target = begin(r), e = end(r);
+//     auto target = r;
+//     auto source = r;
+//     source.popFront();
+//     while (!source.empty)
+//     {
+//         if (!pred(target.front, source.front))
+//         {
+//             target.popFront();
+//             continue;
+//         }
+//         // found an equal *source and *target
+//         for (;;)
+//         {
+//             //@@@
+//             //move(source.front, target.front);
+//             target[0] = source[0];
+//             source.popFront();
+//             if (source.empty) break;
+//             if (!pred(target.front, source.front)) target.popFront();
+//         }
+//         break;
+//     }
+//     return range(begin(r), target + 1);
+// }
 
-    if (r.empty)
-        return r;
-    static if (ss == SwapStrategy.stable)
-    {
-        if (r.length == 1)
-        {
-            if (pred(r.front)) r.popFront();
-            return r;
-        }
-        const middle = r.length / 2;
-        alias .partition!(pred, ss, Range) recurse;
-        auto lower = recurse(r[0 .. middle]);
-        auto upper = recurse(r[middle .. $]);
-        bringToFront(lower, r[middle .. r.length - upper.length]);
-        return r[r.length - lower.length - upper.length .. r.length];
-    }
-    else static if (ss == SwapStrategy.semistable)
-    {
-        for (; !r.empty; r.popFront())
-        {
-            // skip the initial portion of "correct" elements
-            if (pred(r.front)) continue;
-            // hit the first "bad" element
-            auto result = r;
-            for (r.popFront(); !r.empty; r.popFront())
-            {
-                if (!pred(r.front)) continue;
-                swap(result.front, r.front);
-                result.popFront();
-            }
-            return result;
-        }
-        return r;
-    }
-    else // ss == SwapStrategy.unstable
-    {
-        // Inspired from www.stepanovpapers.com/PAM3-partition_notes.pdf,
-        // section "Bidirectional Partition Algorithm (Hoare)"
-        auto result = r;
-        for (;;)
-        {
-            for (;;)
-            {
-                if (r.empty)
-                    return result;
-                if (!pred(r.front))
-                    break;
-                r.popFront();
-                result.popFront();
-            }
-            // found the left bound
-            assert(!r.empty);
-            for (;;)
-            {
-                if (pred(r.back))
-                    break;
-                r.popBack();
-                if (r.empty)
-                    return result;
-            }
-            // found the right bound, swap & make progress
-            static if (is(typeof(swap(r.front, r.back))))
-            {
-                swap(r.front, r.back);
-            }
-            else
-            {
-                auto t1 = moveFront(r);
-                auto t2 = moveBack(r);
-                r.front = t2;
-                r.back = t1;
-            }
-            r.popFront();
-            result.popFront();
-            r.popBack();
-        }
-    }
-}
+// /// Ditto
+// Range overwriteAdjacent(
+//     string fun = "a == b",
+//     alias move = .move,
+//     Range)(Range r)
+// {
+//     return .overwriteAdjacent!(binaryFun!(fun), move, Range)(r);
+// }
 
-///
-unittest
-{
-    auto Arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-    auto arr = Arr.dup;
-    static bool even(int a) { return (a & 1) == 0; }
+// unittest
+// {
+//     int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
+//     auto r = overwriteAdjacent(arr);
+//     assert(r == [ 1, 2, 3, 4, 5 ]);
+//     assert(arr == [ 1, 2, 3, 4, 5, 3, 4, 4, 4, 5 ]);
+// }
 
-    // Partition arr such that even numbers come first
-    auto r = partition!even(arr);
-    // Now arr is separated in evens and odds.
-    // Numbers may have become shuffled due to instability
-    assert(r == arr[5 .. $]);
-    assert(count!even(arr[0 .. $ - r.length]) == r.length);
-    assert(find!even(r).empty);
 
-    // Notice that numbers have become shuffled due to instability
-
-    // Can also specify the predicate as a string.
-    // Use 'a' as the predicate argument name
-    arr[] = Arr[];
-    r = partition!(q{(a & 1) == 0})(arr);
-    assert(r == arr[5 .. $]);
-
-    // Same result as above. Now for a stable partition:
-    arr[] = Arr[];
-    r = partition!(q{(a & 1) == 0}, SwapStrategy.stable)(arr);
-    // Now arr is [2 4 6 8 10 1 3 5 7 9], and r points to 1
-    assert(arr == [2, 4, 6, 8, 10, 1, 3, 5, 7, 9] && r == arr[5 .. $]);
-
-    // In case the predicate needs to hold its own state, use a delegate:
-    arr[] = Arr[];
-    int x = 3;
-    // Put stuff greater than 3 on the left
-    bool fun(int a) { return a > x; }
-    r = partition!(fun, SwapStrategy.semistable)(arr);
-    // Now arr is [4 5 6 7 8 9 10 2 3 1] and r points to 2
-    assert(arr == [4, 5, 6, 7, 8, 9, 10, 2, 3, 1] && r == arr[7 .. $]);
-}
-
-unittest
-{
-    static bool even(int a) { return (a & 1) == 0; }
-
-    // test with random data
-    auto a = rndstuff!int();
-    partition!even(a);
-    assert(isPartitioned!even(a));
-    auto b = rndstuff!string();
-    partition!(`a.length < 5`)(b);
-    assert(isPartitioned!`a.length < 5`(b));
-}
-
-/**
- * Returns $(D true) if $(D r) is partitioned according to predicate $(D pred).
- */
-bool isPartitioned(alias pred, Range)(Range r)
-if (isForwardRange!Range)
-{
-    for (; !r.empty; r.popFront())
-    {
-        if (unaryFun!pred(r.front))
-            continue;
-        for (r.popFront(); !r.empty; r.popFront())
-        {
-            if (unaryFun!pred(r.front))
-                return false;
-        }
-        break;
-    }
-    return true;
-}
-
-///
-unittest
-{
-    int[] r = [ 1, 3, 5, 7, 8, 2, 4, ];
-    assert(isPartitioned!("a & 1")(r));
-}
-
-/**
- * Rearranges elements in $(D r) in three adjacent ranges and returns
- * them. The first and leftmost range only contains elements in $(D r)
- * less than $(D pivot). The second and middle range only contains
- * elements in $(D r) that are equal to $(D pivot). Finally, the third
- * and rightmost range only contains elements in $(D r) that are greater
- * than $(D pivot). The less-than test is defined by the binary function
- * $(D less).
- *
- * BUGS: stable $(D partition3) has not been implemented yet.
- */
-auto partition3
-(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable, Range, E)
-(Range r, E pivot)
-if (ss == SwapStrategy.unstable &&
-    isRandomAccessRange!Range && hasSwappableElements!Range && hasLength!Range &&
-    is(typeof(binaryFun!less(r.front, pivot)) == bool) &&
-    is(typeof(binaryFun!less(pivot, r.front)) == bool) &&
-    is(typeof(binaryFun!less(r.front, r.front)) == bool))
-{
-    // The algorithm is described in "Engineering a sort function" by
-    // Jon Bentley et al, pp 1257.
-
-    alias lessFun = binaryFun!less;
-    size_t i, j, k = r.length, l = k;
-
- bigloop:
-    for (;;)
-    {
-        for (;; ++j)
-        {
-            if (j == k)
-                break bigloop;
-            assert(j < r.length);
-            if (lessFun(r[j], pivot))
-                continue;
-            if (lessFun(pivot, r[j]))
-                break;
-            swap(r[i++], r[j]);
-        }
-        assert(j < k);
-        for (;;)
-        {
-            assert(k > 0);
-            if (!lessFun(pivot, r[--k]))
-            {
-                if (lessFun(r[k], pivot))
-                    break;
-                swap(r[k], r[--l]);
-            }
-            if (j == k)
-                break bigloop;
-        }
-        // Here we know r[j] > pivot && r[k] < pivot
-        swap(r[j++], r[k]);
-    }
-
-    // Swap the equal ranges from the extremes into the middle
-    auto strictlyLess = j - i, strictlyGreater = l - k;
-    auto swapLen = min(i, strictlyLess);
-    swapRanges(r[0 .. swapLen], r[j - swapLen .. j]);
-    swapLen = min(r.length - l, strictlyGreater);
-    swapRanges(r[k .. k + swapLen], r[r.length - swapLen .. r.length]);
-    return tuple(r[0 .. strictlyLess],
-                 r[strictlyLess .. r.length - strictlyGreater],
-                 r[r.length - strictlyGreater .. r.length]);
-}
-
-///
-unittest
-{
-    auto a = [ 8, 3, 4, 1, 4, 7, 4 ];
-    auto pieces = partition3(a, 4);
-    assert(a == [ 1, 3, 4, 4, 4, 8, 7 ]);
-    assert(pieces[0] == [ 1, 3 ]);
-    assert(pieces[1] == [ 4, 4, 4 ]);
-    assert(pieces[2] == [ 8, 7 ]);
-}
-unittest
-{
-    import std.random : uniform;
-
-    int[] a = null;
-    auto pieces = partition3(a, 4);
-    assert(a.empty);
-    assert(pieces[0].empty);
-    assert(pieces[1].empty);
-    assert(pieces[2].empty);
-
-    a.length = uniform(0, 100);
-    foreach (ref e; a)
-    {
-        e = uniform(0, 50);
-    }
-    pieces = partition3(a, 25);
-    assert(pieces[0].length + pieces[1].length + pieces[2].length == a.length);
-    foreach (e; pieces[0])
-    {
-        assert(e < 25);
-    }
-    foreach (e; pieces[1])
-    {
-        assert(e == 25);
-    }
-    foreach (e; pieces[2])
-    {
-        assert(e > 25);
-    }
-}
-
-/**
- * Reorders the range $(D r) using $(D swap) such that $(D r[nth]) refers
- * to the element that would fall there if the range were fully
- * sorted. In addition, it also partitions $(D r) such that all elements
- * $(D e1) from $(D r[0]) to $(D r[nth]) satisfy $(D !less(r[nth], e1)),
- * and all elements $(D e2) from $(D r[nth]) to $(D r[r.length]) satisfy
- * $(D !less(e2, r[nth])). Effectively, it finds the nth smallest
- * (according to $(D less)) elements in $(D r). Performs an expected
- * $(BIGOH r.length) (if unstable) or $(BIGOH r.length * log(r.length))
- * (if stable) evaluations of $(D less) and $(D swap). See also $(WEB
- * sgi.com/tech/stl/nth_element.html, STL's nth_element).
- *
- * If $(D n >= r.length), the algorithm has no effect.
- *
- * BUGS: Stable topN has not been implemented yet.
- */
-void topN
-(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable, Range)
-(Range r, size_t nth)
-if (isRandomAccessRange!Range && hasLength!Range)
-{
-    static assert(ss == SwapStrategy.unstable,
-            "Stable topN not yet implemented");
-    while (r.length > nth)
-    {
-        import std.random : uniform;
-
-        auto pivot = uniform(0, r.length);
-        swap(r[pivot], r.back);
-        assert(!binaryFun!less(r.back, r.back));
-        auto right = partition!(a => binaryFun!less(a, r.back), ss)(r);
-        assert(right.length >= 1);
-        swap(right.front, r.back);
-        pivot = r.length - right.length;
-        if (pivot == nth)
-            return;
-        if (pivot < nth)
-        {
-            ++pivot;
-            r = r[pivot .. $];
-            nth -= pivot;
-        }
-        else
-        {
-            assert(pivot < r.length);
-            r = r[0 .. pivot];
-        }
-    }
-}
-
-///
-unittest
-{
-    int[] v = [ 25, 7, 9, 2, 0, 5, 21 ];
-    auto n = 4;
-    topN(v, n);
-    assert(v[n] == 9);
-    // Equivalent form:
-    topN!("a < b")(v, n);
-    assert(v[n] == 9);
-}
-
-unittest
-{
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-
-    //scope(failure) writeln(stderr, "Failure testing algorithm");
-    //auto v = ([ 25, 7, 9, 2, 0, 5, 21 ]).dup;
-    int[] v = [ 7, 6, 5, 4, 3, 2, 1, 0 ];
-    ptrdiff_t n = 3;
-    topN!("a < b")(v, n);
-    assert(reduce!max(v[0 .. n]) <= v[n]);
-    assert(reduce!min(v[n + 1 .. $]) >= v[n]);
-    //
-    v = ([3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5]).dup;
-    n = 3;
-    topN(v, n);
-    assert(reduce!max(v[0 .. n]) <= v[n]);
-    assert(reduce!min(v[n + 1 .. $]) >= v[n]);
-    //
-    v = ([3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5]).dup;
-    n = 1;
-    topN(v, n);
-    assert(reduce!max(v[0 .. n]) <= v[n]);
-    assert(reduce!min(v[n + 1 .. $]) >= v[n]);
-    //
-    v = ([3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5]).dup;
-    n = v.length - 1;
-    topN(v, n);
-    assert(v[n] == 7);
-    //
-    v = ([3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5]).dup;
-    n = 0;
-    topN(v, n);
-    assert(v[n] == 1);
-
-    double[][] v1 = [[-10, -5], [-10, -3], [-10, -5], [-10, -4],
-            [-10, -5], [-9, -5], [-9, -3], [-9, -5],];
-
-    // double[][] v1 = [ [-10, -5], [-10, -4], [-9, -5], [-9, -5],
-    //         [-10, -5], [-10, -3], [-10, -5], [-9, -3],];
-    double[]*[] idx = [ &v1[0], &v1[1], &v1[2], &v1[3], &v1[4], &v1[5], &v1[6], &v1[7], ];
-
-    auto mid = v1.length / 2;
-    topN!((a, b) => (*a)[1] < (*b)[1])(idx, mid);
-    foreach (e; idx[0 .. mid]) assert((*e)[1] <= (*idx[mid])[1]);
-    foreach (e; idx[mid .. $]) assert((*e)[1] >= (*idx[mid])[1]);
-}
-
-unittest
-{
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-
-    import std.random : uniform;
-
-    int[] a = new int[uniform(1, 10000)];
-    foreach (ref e; a)
-        e = uniform(-1000, 1000);
-    auto k = uniform(0, a.length);
-    topN(a, k);
-    if (k > 0)
-    {
-        auto left = reduce!max(a[0 .. k]);
-        assert(left <= a[k]);
-    }
-    if (k + 1 < a.length)
-    {
-        auto right = reduce!min(a[k + 1 .. $]);
-        assert(right >= a[k]);
-    }
-}
-
-/**
-Stores the smallest elements of the two ranges in the left-hand range.
- */
-void topN
-(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable, Range1, Range2)
-(Range1 r1, Range2 r2)
-if (isRandomAccessRange!Range1 && hasLength!Range1 &&
-    isInputRange!Range2 &&
-    is(ElementType!Range1 == ElementType!Range2))
-{
-    import std.container : BinaryHeap;
-
-    static assert(ss == SwapStrategy.unstable,
-            "Stable topN not yet implemented");
-
-    auto heap = BinaryHeap!Range1(r1);
-    for (; !r2.empty; r2.popFront())
-    {
-        heap.conditionalInsert(r2.front);
-    }
-}
-
-/// Ditto
-unittest
-{
-    int[] a = [ 5, 7, 2, 6, 7 ];
-    int[] b = [ 2, 1, 5, 6, 7, 3, 0 ];
-    topN(a, b);
-    sort(a);
-    assert(a == [0, 1, 2, 2, 3]);
-}

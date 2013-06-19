@@ -169,7 +169,7 @@ endif
 MAIN = $(ROOT)/emptymain.d
 
 # Stuff in std/
-STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint		\
+STD_MODULES = $(addprefix std/, array ascii base64 bigint		\
         bitmanip compiler complex concurrency container conv		\
         cstream csv datetime demangle encoding exception	\
         file format functional getopt json math mathspecial md5	\
@@ -177,6 +177,8 @@ STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint		\
         process random range regex signals socket socketstream	\
         stdint stdio stdiobase stream string syserror system traits		\
         typecons typetuple uni uri utf uuid variant xml zip zlib)
+
+STD_ALGORITHM_MODULES = $(addprefix std/algorithm/, comparison iteration mutation searching setop sorting package)
 
 STD_NET_MODULES = $(addprefix std/net/, isemail curl)
 
@@ -205,7 +207,7 @@ EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
 	processinit uni uni_tab)
 
 # Aggregate all D modules relevant to this build
-D_MODULES = crc32 $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES) $(STD_DIGEST_MODULES)
+D_MODULES = crc32 $(STD_MODULES) $(EXTRA_MODULES) $(STD_ALGORITHM_MODULES) $(STD_NET_MODULES) $(STD_DIGEST_MODULES)
 # Add the .d suffix to the module names
 D_FILES = $(addsuffix .d,$(D_MODULES))
 # Aggregate all D modules over all OSs (this is for the zip file)
@@ -353,6 +355,10 @@ $(DOC_OUTPUT_DIR)/std_c_linux_%.html : std/c/linux/%.d $(STDDOC)
 
 $(DOC_OUTPUT_DIR)/std_c_windows_%.html : std/c/windows/%.d $(STDDOC)
 	$(DDOC) $(DDOCFLAGS) -Df$@ $<
+
+#todo
+$(DOC_OUTPUT_DIR)/std_algorithm.html : std/algorithm/%.d $(STDDOC)
+	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ std/algorithm/package.d
 
 $(DOC_OUTPUT_DIR)/std_net_%.html : std/net/%.d $(STDDOC)
 	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<

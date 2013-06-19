@@ -131,7 +131,14 @@ SRC_STD_DIGEST= std\digest\crc.d std\digest\sha.d std\digest\md.d \
     std\digest\ripemd.d std\digest\digest.d
 SRC_STD_4= std\uuid.d $(SRC_STD_DIGEST)
 
-SRC_STD_5_HEAVY= std\algorithm.d
+SRC_STD_ALGORITHM= \
+	std\algorithm\searching.d \
+	std\algorithm\comparison.d \
+	std\algorithm\iteration.d \
+	std\algorithm\sorting.d \
+	std\algorithm\setop.d \
+	std\algorithm\mutation.d
+SRC_STD_5_HEAVY= std\algorithm\package.d $(SRC_STD_ALGORITHM)
 
 SRC_STD_6a=std\variant.d
 SRC_STD_6b=std\syserror.d
@@ -184,7 +191,8 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\signals.d std\typetuple.d std\traits.d \
 	std\metastrings.d std\getopt.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d std\mathspecial.d \
-	std\functional.d std\algorithm.d std\array.d std\typecons.d \
+	std\functional.d std\array.d std\typecons.d \
+	$(SRC_STD_ALGORITHM) std\algorithm\package.d \
 	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
 	std\range.d std\stdiobase.d std\parallelism.d \
 	std\regex.d \
@@ -508,8 +516,9 @@ $(DOC)\core_sync_rwmutex.html : $(STDDOC) $(DRUNTIME)\src\core\sync\rwmutex.d
 $(DOC)\core_sync_semaphore.html : $(STDDOC) $(DRUNTIME)\src\core\sync\semaphore.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\core_sync_semaphore.html $(STDDOC) $(DRUNTIME)\src\core\sync\semaphore.d -I$(DRUNTIME)\src\
 
-$(DOC)\std_algorithm.html : $(STDDOC) std\algorithm.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm.html $(STDDOC) std\algorithm.d
+# todo
+$(DOC)\std_algorithm.html : $(STDDOC) std\algorithm\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm.html $(STDDOC) std\algorithm\package.d
 
 $(DOC)\std_array.html : $(STDDOC) std\array.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_array.html $(STDDOC) std\array.d

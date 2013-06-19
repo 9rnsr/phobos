@@ -1,11 +1,13 @@
-module std.algorithm.sort;
+// Written in the D programming language.
+
+module std.algorithm.sorting;
+//debug = std_algorithm;
 
 import std.algorithm;
-import std.range, std.functional, std.traits;
+import std.range, std.traits;
+import std.functional : unaryFun, binaryFun;
+import std.typecons : Tuple, tuple;
 
-version(unittest)
-{
-}
 
 /**
  * Sorts a random-access range according to the predicate $(D less). Performs
@@ -166,6 +168,7 @@ private template validPredicates(E, less...)
     }
 }
 
+
 /**
  * $(D void multiSort(Range)(Range r)
  *     if (validPredicates!(ElementType!Range, less));)
@@ -177,7 +180,8 @@ private template validPredicates(E, less...)
  * < b.id : a.date > b.date"(r)), but $(D multiSort) is faster because it
  * does fewer comparisons (in addition to being more convenient).
  */
-template multiSort(less...) //if (less.length > 1)
+template multiSort(less...)
+//if (less.length > 1)
 {
     void multiSort(Range)(Range r)
     if (validPredicates!(ElementType!Range, less))
@@ -1066,6 +1070,7 @@ unittest
     assert(y == "aebcd"d);
 }
 
+
 /**
  * Sorts a range using an algorithm akin to the $(WEB
  * wikipedia.org/wiki/Schwartzian_transform, Schwartzian transform), also
@@ -1228,6 +1233,7 @@ unittest
     assert(isSorted!("a < b")(map!entropy(arr)));
 }
 
+
 /**
  * Reorders the random-access range $(D r) such that the range $(D r[0
  * .. mid]) is the same as if the entire $(D r) were sorted, and leaves
@@ -1251,6 +1257,7 @@ unittest
     partialSort(a, 5);
     assert(a[0 .. 5] == [ 0, 1, 2, 3, 4 ]);
 }
+
 
 /**
  * Sorts the random-access range $(D chain(lhs, rhs)) according to
@@ -1288,6 +1295,7 @@ unittest
     assert(a == [ 0, 1, 2 ]);
     assert(b == [ 3, 4, 5, 6 ]);
 }
+
 
 /**
  * Checks whether a forward range is sorted according to the comparison
@@ -1371,6 +1379,7 @@ unittest
     assert(isSorted(ds));  // random-access
     assert(isSorted(s));   // bidirectional
 }
+
 
 /**
  * Computes an index for $(D r) based on the comparison $(D less). The
@@ -1497,6 +1506,7 @@ unittest
     assert(isSorted!((byte a, byte b) => arr1[a] < arr1[b])(index3));
 }
 
+
 /**
  * Specifies whether the output of certain algorithm is desired in sorted
  * format.
@@ -1506,6 +1516,7 @@ enum SortOutput
     no,  /// Don't sort output
     yes, /// Sort output
 }
+
 
 void topNIndex
 (alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable, Range, RangeIndex)
@@ -1669,6 +1680,7 @@ void topNIndexImpl
     }
 }
 
+
 /**
  * topNIndex
  */
@@ -1679,7 +1691,6 @@ void topNIndex
     return .topNIndexImpl!(binaryFun!less, false, ss)(source, target);
 }
 
-// partialIndex
 /**
  * Computes an index for $(D source) based on the comparison $(D less)
  * and deposits the result in $(D target). It is acceptable that $(D
@@ -1863,6 +1874,174 @@ unittest
 
 
 /**
+ * Reorders the range $(D r) using $(D swap) such that $(D r[nth]) refers
+ * to the element that would fall there if the range were fully
+ * sorted. In addition, it also partitions $(D r) such that all elements
+ * $(D e1) from $(D r[0]) to $(D r[nth]) satisfy $(D !less(r[nth], e1)),
+ * and all elements $(D e2) from $(D r[nth]) to $(D r[r.length]) satisfy
+ * $(D !less(e2, r[nth])). Effectively, it finds the nth smallest
+ * (according to $(D less)) elements in $(D r). Performs an expected
+ * $(BIGOH r.length) (if unstable) or $(BIGOH r.length * log(r.length))
+ * (if stable) evaluations of $(D less) and $(D swap). See also $(WEB
+ * sgi.com/tech/stl/nth_element.html, STL's nth_element).
+ *
+ * If $(D n >= r.length), the algorithm has no effect.
+ *
+ * BUGS: Stable topN has not been implemented yet.
+ */
+void topN
+(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable, Range)
+(Range r, size_t nth)
+if (isRandomAccessRange!Range && hasLength!Range)
+{
+    static assert(ss == SwapStrategy.unstable,
+            "Stable topN not yet implemented");
+    while (r.length > nth)
+    {
+        import std.random : uniform;
+
+        auto pivot = uniform(0, r.length);
+        swap(r[pivot], r.back);
+        assert(!binaryFun!less(r.back, r.back));
+        auto right = partition!(a => binaryFun!less(a, r.back), ss)(r);
+        assert(right.length >= 1);
+        swap(right.front, r.back);
+        pivot = r.length - right.length;
+        if (pivot == nth)
+            return;
+        if (pivot < nth)
+        {
+            ++pivot;
+            r = r[pivot .. $];
+            nth -= pivot;
+        }
+        else
+        {
+            assert(pivot < r.length);
+            r = r[0 .. pivot];
+        }
+    }
+}
+
+///
+unittest
+{
+    int[] v = [ 25, 7, 9, 2, 0, 5, 21 ];
+    auto n = 4;
+    topN(v, n);
+    assert(v[n] == 9);
+    // Equivalent form:
+    topN!("a < b")(v, n);
+    assert(v[n] == 9);
+}
+
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+
+    //scope(failure) writeln(stderr, "Failure testing algorithm");
+    //auto v = ([ 25, 7, 9, 2, 0, 5, 21 ]).dup;
+    int[] v = [ 7, 6, 5, 4, 3, 2, 1, 0 ];
+    ptrdiff_t n = 3;
+    topN!("a < b")(v, n);
+    assert(reduce!max(v[0 .. n]) <= v[n]);
+    assert(reduce!min(v[n + 1 .. $]) >= v[n]);
+    //
+    v = ([3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5]).dup;
+    n = 3;
+    topN(v, n);
+    assert(reduce!max(v[0 .. n]) <= v[n]);
+    assert(reduce!min(v[n + 1 .. $]) >= v[n]);
+    //
+    v = ([3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5]).dup;
+    n = 1;
+    topN(v, n);
+    assert(reduce!max(v[0 .. n]) <= v[n]);
+    assert(reduce!min(v[n + 1 .. $]) >= v[n]);
+    //
+    v = ([3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5]).dup;
+    n = v.length - 1;
+    topN(v, n);
+    assert(v[n] == 7);
+    //
+    v = ([3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5]).dup;
+    n = 0;
+    topN(v, n);
+    assert(v[n] == 1);
+
+    double[][] v1 = [[-10, -5], [-10, -3], [-10, -5], [-10, -4],
+            [-10, -5], [-9, -5], [-9, -3], [-9, -5],];
+
+    // double[][] v1 = [ [-10, -5], [-10, -4], [-9, -5], [-9, -5],
+    //         [-10, -5], [-10, -3], [-10, -5], [-9, -3],];
+    double[]*[] idx = [ &v1[0], &v1[1], &v1[2], &v1[3], &v1[4], &v1[5], &v1[6], &v1[7], ];
+
+    auto mid = v1.length / 2;
+    topN!((a, b) => (*a)[1] < (*b)[1])(idx, mid);
+    foreach (e; idx[0 .. mid]) assert((*e)[1] <= (*idx[mid])[1]);
+    foreach (e; idx[mid .. $]) assert((*e)[1] >= (*idx[mid])[1]);
+}
+
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+
+    import std.random : uniform;
+
+    int[] a = new int[uniform(1, 10000)];
+    foreach (ref e; a)
+        e = uniform(-1000, 1000);
+    auto k = uniform(0, a.length);
+    topN(a, k);
+    if (k > 0)
+    {
+        auto left = reduce!max(a[0 .. k]);
+        assert(left <= a[k]);
+    }
+    if (k + 1 < a.length)
+    {
+        auto right = reduce!min(a[k + 1 .. $]);
+        assert(right >= a[k]);
+    }
+}
+
+
+/**
+ * Stores the smallest elements of the two ranges in the left-hand range.
+ */
+void topN
+(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable, Range1, Range2)
+(Range1 r1, Range2 r2)
+if (isRandomAccessRange!Range1 && hasLength!Range1 &&
+    isInputRange!Range2 &&
+    is(ElementType!Range1 == ElementType!Range2))
+{
+    import std.container : BinaryHeap;
+
+    static assert(ss == SwapStrategy.unstable,
+            "Stable topN not yet implemented");
+
+    auto heap = BinaryHeap!Range1(r1);
+    for (; !r2.empty; r2.popFront())
+    {
+        heap.conditionalInsert(r2.front);
+    }
+}
+
+/// Ditto
+unittest
+{
+    int[] a = [ 5, 7, 2, 6, 7 ];
+    int[] b = [ 2, 1, 5, 6, 7, 3, 0 ];
+    topN(a, b);
+    sort(a);
+    assert(a == [0, 1, 2, 2, 3]);
+}
+
+
+/**
  * Copies the top $(D n) elements of the input range $(D source) into the
  * random-access range $(D target), where $(D n =
  * target.length). Elements of $(D source) are not touched. If $(D
@@ -1919,3 +2098,650 @@ unittest
     assert(isSorted!("a < b")(b));
 }
 
+
+/**
+ * Partitions a range in two using $(D pred) as a
+ * predicate. Specifically, reorders the range $(D r = [left,
+ * right$(RPAREN)) using $(D swap) such that all elements $(D i) for
+ * which $(D pred(i)) is $(D true) come before all elements $(D j) for
+ * which $(D pred(j)) returns $(D false).
+ *
+ * Performs $(BIGOH r.length) (if unstable or semistable) or $(BIGOH
+ * r.length * log(r.length)) (if stable) evaluations of $(D less) and $(D
+ * swap). The unstable version computes the minimum possible evaluations
+ * of $(D swap) (roughly half of those performed by the semistable
+ * version).
+ *
+ * See also STL's $(WEB sgi.com/tech/stl/_partition.html, _partition) and
+ * $(WEB sgi.com/tech/stl/stable_partition.html, stable_partition).
+ *
+ * Returns:
+ *
+ * The right part of $(D r) after partitioning.
+ *
+ * If $(D ss == SwapStrategy.stable), $(D partition) preserves the
+ * relative ordering of all elements $(D a), $(D b) in $(D r) for which
+ * $(D pred(a) == pred(b)). If $(D ss == SwapStrategy.semistable), $(D
+ * partition) preserves the relative ordering of all elements $(D a), $(D
+ * b) in the left part of $(D r) for which $(D pred(a) == pred(b)).
+ */
+Range partition(alias predicate, SwapStrategy ss = SwapStrategy.unstable, Range)(Range r)
+if ((ss == SwapStrategy.stable && isRandomAccessRange!Range)||
+    (ss != SwapStrategy.stable && isForwardRange!Range))
+{
+    alias pred = unaryFun!predicate;
+
+    if (r.empty)
+        return r;
+    static if (ss == SwapStrategy.stable)
+    {
+        if (r.length == 1)
+        {
+            if (pred(r.front)) r.popFront();
+            return r;
+        }
+        const middle = r.length / 2;
+        alias .partition!(pred, ss, Range) recurse;
+        auto lower = recurse(r[0 .. middle]);
+        auto upper = recurse(r[middle .. $]);
+        bringToFront(lower, r[middle .. r.length - upper.length]);
+        return r[r.length - lower.length - upper.length .. r.length];
+    }
+    else static if (ss == SwapStrategy.semistable)
+    {
+        for (; !r.empty; r.popFront())
+        {
+            // skip the initial portion of "correct" elements
+            if (pred(r.front)) continue;
+            // hit the first "bad" element
+            auto result = r;
+            for (r.popFront(); !r.empty; r.popFront())
+            {
+                if (!pred(r.front)) continue;
+                swap(result.front, r.front);
+                result.popFront();
+            }
+            return result;
+        }
+        return r;
+    }
+    else // ss == SwapStrategy.unstable
+    {
+        // Inspired from www.stepanovpapers.com/PAM3-partition_notes.pdf,
+        // section "Bidirectional Partition Algorithm (Hoare)"
+        auto result = r;
+        for (;;)
+        {
+            for (;;)
+            {
+                if (r.empty)
+                    return result;
+                if (!pred(r.front))
+                    break;
+                r.popFront();
+                result.popFront();
+            }
+            // found the left bound
+            assert(!r.empty);
+            for (;;)
+            {
+                if (pred(r.back))
+                    break;
+                r.popBack();
+                if (r.empty)
+                    return result;
+            }
+            // found the right bound, swap & make progress
+            static if (is(typeof(swap(r.front, r.back))))
+            {
+                swap(r.front, r.back);
+            }
+            else
+            {
+                auto t1 = moveFront(r);
+                auto t2 = moveBack(r);
+                r.front = t2;
+                r.back = t1;
+            }
+            r.popFront();
+            result.popFront();
+            r.popBack();
+        }
+    }
+}
+
+///
+unittest
+{
+    auto Arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    auto arr = Arr.dup;
+    static bool even(int a) { return (a & 1) == 0; }
+
+    // Partition arr such that even numbers come first
+    auto r = partition!even(arr);
+    // Now arr is separated in evens and odds.
+    // Numbers may have become shuffled due to instability
+    assert(r == arr[5 .. $]);
+    assert(count!even(arr[0 .. $ - r.length]) == r.length);
+    assert(find!even(r).empty);
+
+    // Notice that numbers have become shuffled due to instability
+
+    // Can also specify the predicate as a string.
+    // Use 'a' as the predicate argument name
+    arr[] = Arr[];
+    r = partition!(q{(a & 1) == 0})(arr);
+    assert(r == arr[5 .. $]);
+
+    // Same result as above. Now for a stable partition:
+    arr[] = Arr[];
+    r = partition!(q{(a & 1) == 0}, SwapStrategy.stable)(arr);
+    // Now arr is [2 4 6 8 10 1 3 5 7 9], and r points to 1
+    assert(arr == [2, 4, 6, 8, 10, 1, 3, 5, 7, 9] && r == arr[5 .. $]);
+
+    // In case the predicate needs to hold its own state, use a delegate:
+    arr[] = Arr[];
+    int x = 3;
+    // Put stuff greater than 3 on the left
+    bool fun(int a) { return a > x; }
+    r = partition!(fun, SwapStrategy.semistable)(arr);
+    // Now arr is [4 5 6 7 8 9 10 2 3 1] and r points to 2
+    assert(arr == [4, 5, 6, 7, 8, 9, 10, 2, 3, 1] && r == arr[7 .. $]);
+}
+
+unittest
+{
+    static bool even(int a) { return (a & 1) == 0; }
+
+    // test with random data
+    auto a = rndstuff!int();
+    partition!even(a);
+    assert(isPartitioned!even(a));
+    auto b = rndstuff!string();
+    partition!(`a.length < 5`)(b);
+    assert(isPartitioned!`a.length < 5`(b));
+}
+
+
+/**
+ * Returns $(D true) if $(D r) is partitioned according to predicate $(D pred).
+ */
+bool isPartitioned(alias pred, Range)(Range r)
+if (isForwardRange!Range)
+{
+    for (; !r.empty; r.popFront())
+    {
+        if (unaryFun!pred(r.front))
+            continue;
+        for (r.popFront(); !r.empty; r.popFront())
+        {
+            if (unaryFun!pred(r.front))
+                return false;
+        }
+        break;
+    }
+    return true;
+}
+
+///
+unittest
+{
+    int[] r = [ 1, 3, 5, 7, 8, 2, 4, ];
+    assert(isPartitioned!("a & 1")(r));
+}
+
+
+/**
+ * Rearranges elements in $(D r) in three adjacent ranges and returns
+ * them. The first and leftmost range only contains elements in $(D r)
+ * less than $(D pivot). The second and middle range only contains
+ * elements in $(D r) that are equal to $(D pivot). Finally, the third
+ * and rightmost range only contains elements in $(D r) that are greater
+ * than $(D pivot). The less-than test is defined by the binary function
+ * $(D less).
+ *
+ * BUGS: stable $(D partition3) has not been implemented yet.
+ */
+auto partition3
+(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable, Range, E)
+(Range r, E pivot)
+if (ss == SwapStrategy.unstable &&
+    isRandomAccessRange!Range && hasSwappableElements!Range && hasLength!Range &&
+    is(typeof(binaryFun!less(r.front, pivot)) == bool) &&
+    is(typeof(binaryFun!less(pivot, r.front)) == bool) &&
+    is(typeof(binaryFun!less(r.front, r.front)) == bool))
+{
+    // The algorithm is described in "Engineering a sort function" by
+    // Jon Bentley et al, pp 1257.
+
+    alias lessFun = binaryFun!less;
+    size_t i, j, k = r.length, l = k;
+
+ bigloop:
+    for (;;)
+    {
+        for (;; ++j)
+        {
+            if (j == k)
+                break bigloop;
+            assert(j < r.length);
+            if (lessFun(r[j], pivot))
+                continue;
+            if (lessFun(pivot, r[j]))
+                break;
+            swap(r[i++], r[j]);
+        }
+        assert(j < k);
+        for (;;)
+        {
+            assert(k > 0);
+            if (!lessFun(pivot, r[--k]))
+            {
+                if (lessFun(r[k], pivot))
+                    break;
+                swap(r[k], r[--l]);
+            }
+            if (j == k)
+                break bigloop;
+        }
+        // Here we know r[j] > pivot && r[k] < pivot
+        swap(r[j++], r[k]);
+    }
+
+    // Swap the equal ranges from the extremes into the middle
+    auto strictlyLess = j - i, strictlyGreater = l - k;
+    auto swapLen = min(i, strictlyLess);
+    swapRanges(r[0 .. swapLen], r[j - swapLen .. j]);
+    swapLen = min(r.length - l, strictlyGreater);
+    swapRanges(r[k .. k + swapLen], r[r.length - swapLen .. r.length]);
+    return tuple(r[0 .. strictlyLess],
+                 r[strictlyLess .. r.length - strictlyGreater],
+                 r[r.length - strictlyGreater .. r.length]);
+}
+
+///
+unittest
+{
+    auto a = [ 8, 3, 4, 1, 4, 7, 4 ];
+    auto pieces = partition3(a, 4);
+    assert(a == [ 1, 3, 4, 4, 4, 8, 7 ]);
+    assert(pieces[0] == [ 1, 3 ]);
+    assert(pieces[1] == [ 4, 4, 4 ]);
+    assert(pieces[2] == [ 8, 7 ]);
+}
+unittest
+{
+    import std.random : uniform;
+
+    int[] a = null;
+    auto pieces = partition3(a, 4);
+    assert(a.empty);
+    assert(pieces[0].empty);
+    assert(pieces[1].empty);
+    assert(pieces[2].empty);
+
+    a.length = uniform(0, 100);
+    foreach (ref e; a)
+    {
+        e = uniform(0, 50);
+    }
+    pieces = partition3(a, 25);
+    assert(pieces[0].length + pieces[1].length + pieces[2].length == a.length);
+    foreach (e; pieces[0])
+    {
+        assert(e < 25);
+    }
+    foreach (e; pieces[1])
+    {
+        assert(e == 25);
+    }
+    foreach (e; pieces[2])
+    {
+        assert(e > 25);
+    }
+}
+
+
+/**
+ * Permutes $(D range) in-place to the next lexicographically greater
+ * permutation.
+ *
+ * The predicate $(D less) defines the lexicographical ordering to be used on
+ * the range.
+ *
+ * If the range is currently the lexicographically greatest permutation, it is
+ * permuted back to the least permutation and false is returned.  Otherwise,
+ * true is returned. One can thus generate all permutations of a range by
+ * sorting it according to $(D less), which produces the lexicographically
+ * least permutation, and then calling nextPermutation until it returns false.
+ * This is guaranteed to generate all distinct permutations of the range
+ * exactly once.  If there are $(I N) elements in the range and all of them are
+ * unique, then $(I N)! permutations will be generated. Otherwise, if there are
+ * some duplicated elements, fewer permutations will be produced.
+ */
+unittest
+{
+    // Enumerate all permutations
+    int[] a = [1, 2, 3, 4, 5];
+    while (nextPermutation(a))
+    {
+        // a now contains the next permutation of the array.
+    }
+}
+/**
+ * Returns: false if the range was lexicographically the greatest, in which
+ * case the range is reversed back to the lexicographically smallest
+ * permutation; otherwise returns true.
+ */
+unittest
+{
+    // Step through all permutations of a sorted array in lexicographic order
+    int[] a = [1, 2, 3];
+    assert( nextPermutation(a) && a == [1, 3, 2]);
+    assert( nextPermutation(a) && a == [2, 1, 3]);
+    assert( nextPermutation(a) && a == [2, 3, 1]);
+    assert( nextPermutation(a) && a == [3, 1, 2]);
+    assert( nextPermutation(a) && a == [3, 2, 1]);
+    assert(!nextPermutation(a) && a == [1, 2, 3]);
+}
+///
+unittest
+{
+    // Step through permutations of an array containing duplicate elements:
+    int[] a = [1, 1, 2];
+    assert( nextPermutation(a) && a == [1,2,1]);
+    assert( nextPermutation(a) && a == [2,1,1]);
+    assert(!nextPermutation(a) && a == [1,1,2]);
+}
+///
+bool nextPermutation
+(alias less="a<b", BidirectionalRange)
+(ref BidirectionalRange range)
+if (isBidirectionalRange!BidirectionalRange &&
+    hasSwappableElements!BidirectionalRange)
+{
+    // Ranges of 0 or 1 element have no distinct permutations.
+    if (range.empty)
+        return false;
+
+    auto i = retro(range);
+    auto last = i.save;
+
+    // Find last occurring increasing pair of elements
+    size_t n = 1;
+    for (i.popFront(); !i.empty; i.popFront(), last.popFront(), n++)
+    {
+        if (binaryFun!less(i.front, last.front))
+            break;
+    }
+
+    if (i.empty)
+    {
+        // Entire range is decreasing: it's lexicographically the greatest. So
+        // wrap it around.
+        range.reverse();
+        return false;
+    }
+
+    // Find last element greater than i.front.
+    auto j = find!(a => binaryFun!less(i.front, a))
+                  (takeExactly(retro(range), n));
+
+    assert(!j.empty);   // shouldn't happen since i.front < last.front
+    swap(i.front, j.front);
+    reverse(takeExactly(retro(range), n));
+
+    return true;
+}
+
+unittest
+{
+    // Boundary cases: arrays of 0 or 1 element.
+    int[] a1 = [];
+    assert(!nextPermutation(a1));
+    assert(a1 == []);
+
+    int[] a2 = [1];
+    assert(!nextPermutation(a2));
+    assert(a2 == [1]);
+}
+
+unittest
+{
+    auto a1 = [1, 2, 3, 4];
+    assert( nextPermutation(a1) && equal(a1, [1, 2, 4, 3]));
+    assert( nextPermutation(a1) && equal(a1, [1, 3, 2, 4]));
+    assert( nextPermutation(a1) && equal(a1, [1, 3, 4, 2]));
+    assert( nextPermutation(a1) && equal(a1, [1, 4, 2, 3]));
+    assert( nextPermutation(a1) && equal(a1, [1, 4, 3, 2]));
+    assert( nextPermutation(a1) && equal(a1, [2, 1, 3, 4]));
+    assert( nextPermutation(a1) && equal(a1, [2, 1, 4, 3]));
+    assert( nextPermutation(a1) && equal(a1, [2, 3, 1, 4]));
+    assert( nextPermutation(a1) && equal(a1, [2, 3, 4, 1]));
+    assert( nextPermutation(a1) && equal(a1, [2, 4, 1, 3]));
+    assert( nextPermutation(a1) && equal(a1, [2, 4, 3, 1]));
+    assert( nextPermutation(a1) && equal(a1, [3, 1, 2, 4]));
+    assert( nextPermutation(a1) && equal(a1, [3, 1, 4, 2]));
+    assert( nextPermutation(a1) && equal(a1, [3, 2, 1, 4]));
+    assert( nextPermutation(a1) && equal(a1, [3, 2, 4, 1]));
+    assert( nextPermutation(a1) && equal(a1, [3, 4, 1, 2]));
+    assert( nextPermutation(a1) && equal(a1, [3, 4, 2, 1]));
+    assert( nextPermutation(a1) && equal(a1, [4, 1, 2, 3]));
+    assert( nextPermutation(a1) && equal(a1, [4, 1, 3, 2]));
+    assert( nextPermutation(a1) && equal(a1, [4, 2, 1, 3]));
+    assert( nextPermutation(a1) && equal(a1, [4, 2, 3, 1]));
+    assert( nextPermutation(a1) && equal(a1, [4, 3, 1, 2]));
+    assert( nextPermutation(a1) && equal(a1, [4, 3, 2, 1]));
+    assert(!nextPermutation(a1) && equal(a1, [1, 2, 3, 4]));
+}
+
+unittest
+{
+    // Test with non-default sorting order
+    int[] a = [3, 2, 1];
+    assert( nextPermutation!"a > b"(a) && a == [3, 1, 2]);
+    assert( nextPermutation!"a > b"(a) && a == [2, 3, 1]);
+    assert( nextPermutation!"a > b"(a) && a == [2, 1, 3]);
+    assert( nextPermutation!"a > b"(a) && a == [1, 3, 2]);
+    assert( nextPermutation!"a > b"(a) && a == [1, 2, 3]);
+    assert(!nextPermutation!"a > b"(a) && a == [3, 2, 1]);
+}
+
+
+/**
+ * Permutes $(D range) in-place to the next lexicographically greater $(I even)
+ * permutation.
+ *
+ * The predicate $(D less) defines the lexicographical ordering to be used on
+ * the range.
+ *
+ * An even permutation is one which is produced by swapping an even number of
+ * pairs of elements in the original range. The set of $(I even) permutations
+ * is distinct from the set of $(I all) permutations only when there are no
+ * duplicate elements in the range. If the range has $(I N) unique elements,
+ * then there are exactly $(I N)!/2 even permutations.
+ *
+ * If the range is already the lexicographically greatest even permutation, it
+ * is permuted back to the least even permutation and false is returned.
+ * Otherwise, true is returned, and the range is modified in-place to be the
+ * lexicographically next even permutation.
+ *
+ * One can thus generate the even permutations of a range with unique elements
+ * by starting with the lexicographically smallest permutation, and repeatedly
+ * calling nextEvenPermutation until it returns false.
+ */
+unittest
+{
+    // Enumerate even permutations
+    int[] a = [1, 2, 3, 4, 5];
+    while (nextEvenPermutation(a))
+    {
+        // a now contains the next even permutation of the array.
+    }
+}
+/**
+ * One can also generate the $(I odd) permutations of a range by noting that
+ * permutations obey the rule that even + even = even, and odd + even = odd.
+ * Thus, by swapping the last two elements of a lexicographically least range,
+ * it is turned into the first odd permutation. Then calling
+ * nextEvenPermutation on this first odd permutation will generate the next
+ * even permutation relative to this odd permutation, which is actually the
+ * next odd permutation of the original range. Thus, by repeatedly calling
+ * nextEvenPermutation until it returns false, one enumerates the odd
+ * permutations of the original range.
+ */
+unittest
+{
+    // Enumerate odd permutations
+    int[] a = [1,2,3,4,5];
+    swap(a[$-2], a[$-1]);    // a is now the first odd permutation of [1,2,3,4,5]
+    while (nextEvenPermutation(a))
+    {
+        // a now contains the next odd permutation of the original array
+        // (which is an even permutation of the first odd permutation).
+    }
+}
+/**
+ *
+ * Warning: Since even permutations are only distinct from all permutations
+ * when the range elements are unique, this function assumes that there are no
+ * duplicate elements under the specified ordering. If this is not _true, some
+ * permutations may fail to be generated. When the range has non-unique
+ * elements, you should use $(MYREF nextPermutation) instead.
+ *
+ * Returns: false if the range was lexicographically the greatest, in which
+ * case the range is reversed back to the lexicographically smallest
+ * permutation; otherwise returns true.
+ */
+unittest
+{
+    // Step through even permutations of a sorted array in lexicographic order
+    int[] a = [1, 2, 3];
+    assert( nextEvenPermutation(a) && a == [2, 3, 1]);
+    assert( nextEvenPermutation(a) && a == [3, 1, 2]);
+    assert(!nextEvenPermutation(a) && a == [1, 2, 3]);
+}
+/**
+ * Even permutations are useful for generating coordinates of certain geometric
+ * shapes. Here's a non-trivial example:
+ */
+unittest
+{
+    // Print the 60 vertices of a uniform truncated icosahedron (soccer ball)
+    import std.math, std.stdio;
+    enum real Phi = (1.0 + sqrt(5.0)) / 2.0;    // Golden ratio
+    real[][] seeds = [
+        [0.0, 1.0, 3.0*Phi],
+        [1.0, 2.0+Phi, 2.0*Phi],
+        [Phi, 2.0, Phi^^3]
+    ];
+    size_t n;
+    foreach (seed; seeds)
+    {
+        // Loop over even permutations of each seed
+        do
+        {
+            // Loop over all sign changes of each permutation
+            size_t i;
+            do
+            {
+                // Generate all possible sign changes
+                for (i=0; i < seed.length; i++)
+                {
+                    if (seed[i] != 0.0)
+                    {
+                        seed[i] = -seed[i];
+                        if (seed[i] < 0.0)
+                            break;
+                    }
+                }
+                //writeln(seed);
+                n++;
+            } while (i < seed.length);
+        } while (nextEvenPermutation(seed));
+    }
+    assert(n == 60);
+}
+///
+bool nextEvenPermutation
+(alias less="a<b", BidirectionalRange)
+(ref BidirectionalRange range)
+if (isBidirectionalRange!BidirectionalRange &&
+    hasSwappableElements!BidirectionalRange)
+{
+    // Ranges of 0 or 1 element have no distinct permutations.
+    if (range.empty)
+        return false;
+
+    bool oddParity = false;
+    bool ret = true;
+    do
+    {
+        auto i = retro(range);
+        auto last = i.save;
+
+        // Find last occurring increasing pair of elements
+        size_t n = 1;
+        for (i.popFront();
+             !i.empty;
+             i.popFront(), last.popFront(), n++)
+        {
+            if (binaryFun!less(i.front, last.front))
+                break;
+        }
+
+        if (!i.empty)
+        {
+            // Find last element greater than i.front.
+            auto j = find!(a => binaryFun!less(i.front, a))
+                          (takeExactly(retro(range), n));
+
+            // shouldn't happen since i.front < last.front
+            assert(!j.empty);
+
+            swap(i.front, j.front);
+            oddParity = !oddParity;
+        }
+        else
+        {
+            // Entire range is decreasing: it's lexicographically
+            // the greatest.
+            ret = false;
+        }
+
+        reverse(takeExactly(retro(range), n));
+        if ((n / 2) % 2 == 1)
+            oddParity = !oddParity;
+    } while(oddParity);
+
+    return ret;
+}
+
+unittest
+{
+    auto a3 = [ 1, 2, 3, 4 ];
+    int count = 1;
+    while (nextEvenPermutation(a3)) count++;
+    assert(count == 12);
+}
+
+unittest
+{
+    // Test with non-default sorting order
+    auto a = [ 3, 2, 1 ];
+    assert( nextEvenPermutation!"a > b"(a) && a == [ 2, 1, 3 ]);
+    assert( nextEvenPermutation!"a > b"(a) && a == [ 1, 3, 2 ]);
+    assert(!nextEvenPermutation!"a > b"(a) && a == [ 3, 2, 1 ]);
+}
+
+unittest
+{
+    // Test various cases of rollover
+    auto a = [ 3, 1, 2 ];
+    assert(nextEvenPermutation(a) == false);
+    assert(a == [ 1, 2, 3 ]);
+
+    auto b = [ 3, 2, 1 ];
+    assert(nextEvenPermutation(b) == false);
+    assert(b == [ 1, 3, 2 ]);
+}
