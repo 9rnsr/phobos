@@ -31,18 +31,11 @@ import core.vararg, core.stdc.stdlib, core.stdc.string,
     std.range, std.regex, std.traits,
     std.typecons, std.typetuple, std.uni, std.utf;
 
-//Remove when repeat is finally removed. They're only here as part of the
-//deprecation of these functions in std.string.
-public import std.algorithm : startsWith, endsWith, cmp, count;
-public import std.array : join, split;
-
 version(Windows) extern (C)
 {
     size_t wcslen(in wchar *);
     int wcscmp(in wchar *, in wchar *);
 }
-
-version(unittest) import std.algorithm : filter;
 
 /* ************* Exceptions *************** */
 

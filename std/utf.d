@@ -1933,6 +1933,8 @@ unittest
 
 unittest
 {
+    import std.algorithm;
+
     assertCTFEable!(
     {
     foreach (S; TypeTuple!( char[], const  char[],  string,

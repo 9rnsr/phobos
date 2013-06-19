@@ -131,7 +131,14 @@ SRC_STD_DIGEST= std\digest\crc.d std\digest\sha.d std\digest\md.d \
     std\digest\ripemd.d std\digest\digest.d
 SRC_STD_4= std\uuid.d $(SRC_STD_DIGEST)
 
-SRC_STD_5_HEAVY= std\algorithm.d
+SRC_STD_ALGORITHM= std\algorithm\package.d \
+	std\algorithm\searching.d \
+	std\algorithm\comparison.d \
+	std\algorithm\iteration.d \
+	std\algorithm\sorting.d \
+	std\algorithm\setop.d \
+	std\algorithm\mutation.d
+SRC_STD_5_HEAVY= $(SRC_STD_ALGORITHM)
 
 SRC_STD_6= std\variant.d \
 	std\syserror.d std\zlib.d \
@@ -165,7 +172,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\signals.d std\typetuple.d std\traits.d \
 	std\metastrings.d std\getopt.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d std\mathspecial.d \
-	std\functional.d std\algorithm.d std\array.d std\typecons.d \
+	std\functional.d $(SRC_STD_ALGORITHM) std\array.d std\typecons.d \
 	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
 	std\range.d std\stdiobase.d std\parallelism.d \
 	std\regex.d \
@@ -435,7 +442,12 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -cov=100 -unittest -main -run std\digest\md.d
 	$(DMD) -cov=100 -unittest -main -run std\digest\ripemd.d
 	$(DMD) -cov=75 -unittest -main -run std\digest\digest.d
-	$(DMD) -cov=95 -unittest -main -run std\algorithm.d
+	$(DMD) -cov=94 -unittest -main -run std\algorithm\comparison.d
+	$(DMD) -cov=93 -unittest -main -run std\algorithm\iteration.d
+	$(DMD) -cov=97 -unittest -main -run std\algorithm\mutation.d
+	$(DMD) -cov=97 -unittest -main -run std\algorithm\searching.d
+	$(DMD) -cov=92 -unittest -main -run std\algorithm\setop.d
+	$(DMD) -cov=96 -unittest -main -run std\algorithm\sorting.d
 	$(DMD) -cov=83 -unittest -main -run std\variant.d
 	$(DMD) -cov=0  -unittest -main -run std\syserror.d
 	$(DMD) -cov=58 -unittest -main -run std\zlib.d
@@ -533,8 +545,8 @@ $(DOC)\core_sync_rwmutex.html : $(STDDOC) $(DRUNTIME)\src\core\sync\rwmutex.d
 $(DOC)\core_sync_semaphore.html : $(STDDOC) $(DRUNTIME)\src\core\sync\semaphore.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\core_sync_semaphore.html $(STDDOC) $(DRUNTIME)\src\core\sync\semaphore.d -I$(DRUNTIME)\src\
 
-$(DOC)\std_algorithm.html : $(STDDOC) std\algorithm.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm.html $(STDDOC) std\algorithm.d
+$(DOC)\std_algorithm.html : $(STDDOC) $(SRC_STD_ALGORITHM)
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm.html $(STDDOC) std\algorithm\package.d
 
 $(DOC)\std_array.html : $(STDDOC) std\array.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_array.html $(STDDOC) std\array.d

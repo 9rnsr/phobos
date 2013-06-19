@@ -291,27 +291,12 @@ import std.algorithm, std.conv, std.exception,  std.functional,
 // For testing only.  This code is included in a string literal to be included
 // in whatever module it's needed in, so that each module that uses it can be
 // tested individually, without needing to link to std.range.
-enum dummyRanges = q{
+template DummyRanges()
+{
     // Used with the dummy ranges for testing higher order ranges.
-    enum RangeType
-    {
-        Input,
-        Forward,
-        Bidirectional,
-        Random
-    }
-
-    enum Length
-    {
-        Yes,
-        No
-    }
-
-    enum ReturnBy
-    {
-        Reference,
-        Value
-    }
+    enum RangeType { Input, Fwd, Bidi, Random }
+    enum Length { Yes, No }
+    enum ReturnBy { Ref, Val }
 
     // Range that's useful for testing other higher order ranges,
     // can be parametrized with attributes.  It just dumbs down an array of
@@ -342,7 +327,7 @@ enum dummyRanges = q{
             return arr.length == 0;
         }
 
-        static if (r == ReturnBy.Reference)
+        static if (r == ReturnBy.Ref)
         {
             @property ref inout(uint) front() inout
             {
@@ -362,7 +347,7 @@ enum dummyRanges = q{
             }
         }
 
-        static if (rt >= RangeType.Forward)
+        static if (rt >= RangeType.Fwd)
         {
             @property typeof(this) save()
             {
@@ -370,14 +355,14 @@ enum dummyRanges = q{
             }
         }
 
-        static if (rt >= RangeType.Bidirectional)
+        static if (rt >= RangeType.Bidi)
         {
             void popBack()
             {
                 arr = arr[0..$ - 1];
             }
 
-            static if (r == ReturnBy.Reference)
+            static if (r == ReturnBy.Ref)
             {
                 @property ref inout(uint) back() inout
                 {
@@ -400,7 +385,7 @@ enum dummyRanges = q{
 
         static if (rt >= RangeType.Random)
         {
-            static if (r == ReturnBy.Reference)
+            static if (r == ReturnBy.Ref)
             {
                 ref inout(uint) opIndex(size_t index) inout
                 {
@@ -442,27 +427,19 @@ enum dummyRanges = q{
     enum dummyLength = 10;
 
     alias TypeTuple!(
-        DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Forward),
-        DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Bidirectional),
-        DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random),
-        DummyRange!(ReturnBy.Reference, Length.No, RangeType.Forward),
-        DummyRange!(ReturnBy.Reference, Length.No, RangeType.Bidirectional),
-        DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Input),
-        DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Forward),
-        DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Bidirectional),
-        DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random),
-        DummyRange!(ReturnBy.Value, Length.No, RangeType.Input),
-        DummyRange!(ReturnBy.Value, Length.No, RangeType.Forward),
-        DummyRange!(ReturnBy.Value, Length.No, RangeType.Bidirectional)
+        DummyRange!(ReturnBy.Ref, Length.Yes, RangeType.Fwd),
+        DummyRange!(ReturnBy.Ref, Length.Yes, RangeType.Bidi),
+        DummyRange!(ReturnBy.Ref, Length.Yes, RangeType.Random),
+        DummyRange!(ReturnBy.Ref, Length.No,  RangeType.Fwd),
+        DummyRange!(ReturnBy.Ref, Length.No,  RangeType.Bidi),
+        DummyRange!(ReturnBy.Val, Length.Yes, RangeType.Input),
+        DummyRange!(ReturnBy.Val, Length.Yes, RangeType.Fwd),
+        DummyRange!(ReturnBy.Val, Length.Yes, RangeType.Bidi),
+        DummyRange!(ReturnBy.Val, Length.Yes, RangeType.Random),
+        DummyRange!(ReturnBy.Val, Length.No,  RangeType.Input),
+        DummyRange!(ReturnBy.Val, Length.No,  RangeType.Fwd),
+        DummyRange!(ReturnBy.Val, Length.No,  RangeType.Bidi)
     ) AllDummyRanges;
-
-};
-
-version(unittest)
-{
-    import std.container, std.conv, std.math, std.stdio;
-
-    mixin(dummyRanges);
 
     // Tests whether forward, bidirectional and random access properties are
     // propagated properly from the base range(s) R to the higher order range
@@ -499,6 +476,11 @@ version(unittest)
             enum bool propagatesLength = !hasLength!H;
         }
     }
+}
+
+version(unittest)
+{
+    import std.container, std.conv, std.math, std.stdio;
 }
 
 /**
@@ -1596,6 +1578,7 @@ unittest
    immutable foo = [1,2,3].idup;
    retro(foo);
 
+    with (DummyRanges!())
     foreach (DummyType; AllDummyRanges)
     {
         static if (!isBidirectionalRange!DummyType)
@@ -1619,7 +1602,7 @@ unittest
                 assert(myRetro[0] == myRetro.front);
                 assert(myRetro.moveAt(2) == 8);
 
-                static if (DummyType.r == ReturnBy.Reference)
+                static if (DummyType.r == ReturnBy.Ref)
                 {
                     {
                         myRetro[9]++;
@@ -1928,6 +1911,7 @@ unittest
     // Check for infiniteness propagation.
     static assert(isInfinite!(typeof(stride(repeat(1), 3))));
 
+    with (DummyRanges!())
     foreach (DummyType; AllDummyRanges)
     {
         DummyType dummyRange;
@@ -1966,7 +1950,7 @@ unittest
             static assert(hasSlicing!(typeof(myStride)));
         }
 
-        static if (DummyType.r == ReturnBy.Reference)
+        static if (DummyType.r == ReturnBy.Ref)
         {
             // Make sure reference is propagated.
 
@@ -2411,6 +2395,7 @@ unittest
     // Check that chain at least instantiates and compiles with every possible
     // pair of DummyRange types, in either order.
 
+    with (DummyRanges!())
     foreach (DummyType1; AllDummyRanges)
     {
         DummyType1 dummy1;
@@ -2631,8 +2616,11 @@ unittest
     assert(r.front == 5);
 
     // Test instantiation without lvalue elements.
-    DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random) dummy;
-    assert(equal(radial(dummy, 4), [5, 6, 4, 7, 3, 8, 2, 9, 1, 10]));
+    with (DummyRanges!())
+    {
+        DummyRange!(ReturnBy.Val, Length.Yes, RangeType.Random) dummy;
+        assert(equal(radial(dummy, 4), [5, 6, 4, 7, 3, 8, 2, 9, 1, 10]));
+    }
 
     // immutable int[] immi = [ 1, 2 ];
     // static assert(is(typeof(radial(immi))));
@@ -2872,6 +2860,7 @@ unittest
     takeMyStrAgain = take(takeMyStr, 10);
     assert(equal(takeMyStrAgain, "This is"));
 
+    with (DummyRanges!())
     foreach (DummyType; AllDummyRanges)
     {
         DummyType dummy;
@@ -3054,6 +3043,7 @@ unittest
     //define length.
     static assert(!is(typeof(take(filter!"true"(a), 3)) == typeof(takeExactly(filter!"true"(a), 3))));
 
+    with (DummyRanges!())
     foreach (DummyType; AllDummyRanges)
     {
         {
@@ -4062,6 +4052,7 @@ unittest
 
     static assert(is(Cycle!(immutable int[])));
 
+    with (DummyRanges!())
     foreach (DummyType; AllDummyRanges)
     {
         static if (isForwardRange!DummyType)
@@ -4633,6 +4624,7 @@ unittest
     // make -fwin32.mak unittest makes the compiler completely run out of RAM.
     // You need to test just this module.
     /+
+     with (DummyRanges!())
      foreach (DummyType1; AllDummyRanges)
      {
          DummyType1 d1;
@@ -5818,6 +5810,7 @@ unittest
 {
     static assert(is(FrontTransversal!(immutable int[][])));
 
+    with (DummyRanges!())
     foreach (DummyType; AllDummyRanges)
     {
         auto dummies =
@@ -5849,7 +5842,7 @@ unittest
         // Test infiniteness propagation.
         static assert(isInfinite!(typeof(frontTransversal(repeat("foo")))));
 
-        static if (DummyType.r == ReturnBy.Reference)
+        static if (DummyType.r == ReturnBy.Ref)
         {
             {
                 ft.front++;
@@ -6147,13 +6140,16 @@ unittest
     }
 
     // Test w/o ref return.
-    alias D = DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random);
-    auto drs = [D.init, D.init];
-    foreach (num; 0..10)
+    with (DummyRanges!())
     {
-        auto t = transversal!(TransverseOptions.enforceNotJagged)(drs, num);
-        assert(t[0] == t[1]);
-        assert(t[1] == num + 1);
+        alias D = DummyRange!(ReturnBy.Val, Length.Yes, RangeType.Random);
+        auto drs = [D.init, D.init];
+        foreach (num; 0..10)
+        {
+            auto t = transversal!(TransverseOptions.enforceNotJagged)(drs, num);
+            assert(t[0] == t[1]);
+            assert(t[1] == num + 1);
+        }
     }
 
     static assert(isInfinite!(typeof(transversal(repeat([1,2,3]), 1))));
@@ -6477,6 +6473,7 @@ unittest
     assert(ind[0] == 6);
     assert(ind[5] == 6);
 
+    with (DummyRanges!())
     foreach (DummyType; AllDummyRanges)
     {
         auto d = DummyType.init;
@@ -7010,6 +7007,7 @@ unittest
     InputRange r;
     assert(moveFront(r) == 43);
 
+    with (DummyRanges!())
     foreach (DummyType; AllDummyRanges)
     {
         auto d = DummyType.init;
@@ -7494,6 +7492,7 @@ unittest
 
     assert(inputRangeObject(arrWrapped) is arrWrapped);
 
+    with (DummyRanges!())
     foreach (DummyType; AllDummyRanges)
     {
         auto d = DummyType.init;
