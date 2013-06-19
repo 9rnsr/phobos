@@ -4077,9 +4077,12 @@ unittest
     assert(poolInstance.reduce!("a + b", "a * b")(tuple(0, 1), [1,2,3,4]) ==
            tuple(10, 24));
 
-    immutable serialAns = std.algorithm.reduce!"a + b"(iota(1000));
+    import std.algorithm;
+    {
+    immutable serialAns = /*std.algorithm.*/reduce!"a + b"(iota(1000));
     assert(poolInstance.reduce!"a + b"(0, iota(1000)) == serialAns);
     assert(poolInstance.reduce!"a + b"(iota(1000)) == serialAns);
+    }
 
     // Test worker-local storage.
     auto wl = poolInstance.workerLocalStorage(0);
@@ -4136,9 +4139,11 @@ unittest
     }
     assert(equal(nums, iota(1000)));
 
+    import std.algorithm;
+    {
     assert(equal(
                poolInstance.map!"a * a"(iota(30_000_001), 10_000),
-               std.algorithm.map!"a * a"(iota(30_000_001))
+               /*std.algorithm.*/map!"a * a"(iota(30_000_001))
            ));
 
     // The filter is to kill random access and test the non-random access
@@ -4147,7 +4152,7 @@ unittest
                poolInstance.map!"a * a"(
                    filter!"a == a"(iota(30_000_001)
                                   ), 10_000, 1000),
-               std.algorithm.map!"a * a"(iota(30_000_001))
+               /*std.algorithm.*/map!"a * a"(iota(30_000_001))
            ));
 
     assert(
@@ -4155,9 +4160,10 @@ unittest
                        poolInstance.map!"a * a"(iota(3_000_001), 10_000)
                       ) ==
         reduce!"a + b"(0UL,
-                       std.algorithm.map!"a * a"(iota(3_000_001))
+                       /*std.algorithm.*/map!"a * a"(iota(3_000_001))
                       )
     );
+    }
 
     assert(equal(
                iota(1_000_002),

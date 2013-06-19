@@ -911,7 +911,6 @@ class Element : Item
          */
         override string[] pretty(uint indent=2)
         {
-
             if (isEmptyXML) return [ tag.toEmptyString() ];
 
             if (items.length == 1)
@@ -929,7 +928,8 @@ class Element : Item
                 string[] b = item.pretty(indent);
                 foreach(s;b)
                 {
-                    a ~= rightJustify(s,count(s) + indent);
+                    import std.algorithm;   // should not be necessary
+                    a ~= rightJustify(s, count(s) + indent);
                 }
             }
             a ~= tag.toEndString();

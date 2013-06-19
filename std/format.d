@@ -1523,8 +1523,9 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         }
         return;
     }
+    import std.algorithm : find;   // should not be necessary
     enforceEx!FormatException(
-            std.algorithm.find("fgFGaAeEs", fs.spec).length,
+            /*std.algorithm.*/find("fgFGaAeEs", fs.spec).length,
             "floating");
     version (Win64)
     {
@@ -3764,7 +3765,8 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     {
         return parse!T(input);
     }
-    enforce(std.algorithm.find(acceptedSpecs!long, spec.spec).length,
+    import std.algorithm;
+    enforce(/*std.algorithm.*/find(acceptedSpecs!long, spec.spec).length,
             text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
     return unformatValue!long(input, spec) != 0;
@@ -3827,7 +3829,8 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     if (isInputRange!Range && isIntegral!T && !is(T == enum))
 {
-    enforce(std.algorithm.find(acceptedSpecs!T, spec.spec).length,
+    import std.algorithm;
+    enforce(/*std.algorithm.*/find(acceptedSpecs!T, spec.spec).length,
             text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
     enforce(spec.width == 0);   // TODO
@@ -3874,7 +3877,8 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
         }
         return x.typed;
     }
-    enforce(std.algorithm.find(acceptedSpecs!T, spec.spec).length,
+    import std.algorithm;
+    enforce(/*std.algorithm.*/find(acceptedSpecs!T, spec.spec).length,
             text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
     return parse!T(input);
@@ -3929,7 +3933,8 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
         input.popFront();
         return result;
     }
-    enforce(std.algorithm.find(acceptedSpecs!T, spec.spec).length,
+    import std.algorithm;
+    enforce(/*std.algorithm.*/find(acceptedSpecs!T, spec.spec).length,
             text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
     static if (T.sizeof == 1)

@@ -1390,12 +1390,13 @@ assert(equal(splitter(a), ["", "a", "bcd", "ef", "gh"][]));
 auto splitter(C)(C[] s)
     if(isSomeString!(C[]))
 {
-    return std.algorithm.splitter!(std.uni.isWhite)(s);
+    import std.algorithm;
+    return /*std.algorithm.*/splitter!(std.uni.isWhite)(s);
 }
 
 unittest
 {
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach (S; TypeTuple!(string, wstring, dstring))
     {
         S a = " a     bcd   ef gh ";
         assert(equal(splitter(a), [to!S(""), to!S("a"), to!S("bcd"), to!S("ef"), to!S("gh")][]));
@@ -1413,9 +1414,11 @@ unittest
 Unqual!(S1)[] split(S1, S2)(S1 s, S2 delim)
 if (isForwardRange!(Unqual!S1) && isForwardRange!S2)
 {
+    import std.algorithm : splitter;  // should be unnecessary
+
     Unqual!S1 us = s;
     auto app = appender!(Unqual!(S1)[])();
-    foreach (word; std.algorithm.splitter(us, delim))
+    foreach (word; /*std.algorithm.*/splitter(us, delim))
     {
         app.put(word);
     }
@@ -1682,7 +1685,8 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
 {
     if (from.empty) return subject;
 
-    auto balance = std.algorithm.find(subject, from.save);
+    import std.algorithm;
+    auto balance = /*std.algorithm.*/find(subject, from.save);
     if (balance.empty)
         return subject;
 
@@ -1710,7 +1714,8 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
     }
     for (;;)
     {
-        auto balance = std.algorithm.find(subject, from.save);
+        import std.algorithm;
+        auto balance = /*std.algorithm.*/find(subject, from.save);
         if (balance.empty)
         {
             sink.put(subject);
@@ -2024,7 +2029,8 @@ if (isDynamicArray!(E[]) &&
     isForwardRange!R2 && is(typeof(appender!(E[])().put(to[0 .. 1]))))
 {
     if (from.empty) return subject;
-    auto balance = std.algorithm.find(subject, from.save);
+    import std.algorithm;
+    auto balance = /*std.algorithm.*/find(subject, from.save);
     if (balance.empty) return subject;
     auto app = appender!(E[])();
     app.put(subject[0 .. subject.length - balance.length]);

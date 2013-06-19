@@ -734,7 +734,8 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
             returnStatus ~= EmailStatusCode.rfc5321TopLevelDomainNumeric;
     }
 
-    returnStatus = array(std.algorithm.uniq(returnStatus));
+    import std.algorithm : uniq;
+    returnStatus = array(/*std.algorithm.*/uniq(returnStatus));
     auto finalStatus = returnStatus.max();
 
     if (returnStatus.length != 1)

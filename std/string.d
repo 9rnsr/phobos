@@ -33,16 +33,14 @@ import core.vararg, core.stdc.stdlib, core.stdc.string,
 
 //Remove when repeat is finally removed. They're only here as part of the
 //deprecation of these functions in std.string.
-public import std.algorithm : startsWith, endsWith, cmp, count;
-public import std.array : join, split;
+//public import std.algorithm : startsWith, endsWith, cmp, count;
+//public import std.array : join, split;
 
 version(Windows) extern (C)
 {
     size_t wcslen(in wchar *);
     int wcscmp(in wchar *, in wchar *);
 }
-
-version(unittest) import std.algorithm : filter;
 
 /* ************* Exceptions *************** */
 
@@ -154,6 +152,8 @@ int icmp(alias pred = "a < b", S1, S2)(S1 s1, S2 s2)
 unittest
 {
     debug(string) printf("string.icmp.unittest\n");
+
+    import std.algorithm : filter;
 
     assert(icmp("Ü", "ü") == 0, "Über failure");
     assert(icmp("abc", "abc") == 0);
@@ -409,11 +409,13 @@ ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s,
     const(Char1)[] balance;
     if (cs == CaseSensitive.yes)
     {
-        balance = std.algorithm.find(s, sub);
+        import std.algorithm : find;  // should not be necessary
+        balance = /*std.algorithm.*/find(s, sub);
     }
     else
     {
-        balance = std.algorithm.find!
+        import std.algorithm : find;  // should not be necessary
+        balance = /*std.algorithm.*/find!
             ((dchar a, dchar b){return std.uni.toLower(a) == std.uni.toLower(b);})
             (s, sub);
     }

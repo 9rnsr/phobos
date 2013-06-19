@@ -1937,17 +1937,19 @@ unittest
 
 unittest
 {
-    foreach(S; TypeTuple!(char[], const char[], string,
-                          wchar[], const wchar[], wstring,
-                          dchar[], const dchar[], dstring))
+    import std.algorithm;
+
+    foreach (S; TypeTuple!( char[], const  char[],  string,
+                           wchar[], const wchar[], wstring,
+                           dchar[], const dchar[], dstring))
     {
-        foreach(C; TypeTuple!(char, wchar, dchar))
+        foreach (C; TypeTuple!(char, wchar, dchar))
         {
             assert(codeLength!C(to!S("Walter Bright")) == to!(C[])("Walter Bright").length);
             assert(codeLength!C(to!S(`言語`)) == to!(C[])(`言語`).length);
             assert(codeLength!C(to!S(`ウェブサイト@La_Verité.com`)) ==
                    to!(C[])(`ウェブサイト@La_Verité.com`).length);
-			assert(codeLength!C(to!S(`ウェブサイト@La_Verité.com`).filter!(x => true)()) ==
+            assert(codeLength!C(to!S(`ウェブサイト@La_Verité.com`).filter!(x => true)()) ==
                    to!(C[])(`ウェブサイト@La_Verité.com`).length);
         }
     }

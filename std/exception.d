@@ -1364,7 +1364,7 @@ unittest
     static assert(!__traits(compiles, (new Object()).ifThrown(e=>1)));
 }
 
-version(unittest) package
+version(unittest) //package /* should work */
 @property void assertCTFEable(alias dg)()
 {
     static assert({ dg(); return true; }());
