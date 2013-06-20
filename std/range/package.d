@@ -4349,7 +4349,8 @@ auto iota(E)(E end)
 auto iota(B, E, S)(B begin, E end, S step)
 if (isFloatingPoint!(CommonType!(B, E, S)))
 {
-    alias Unqual!(CommonType!(B, E, S)) Value;
+    alias Value = Unqual!(CommonType!(B, E, S));
+
     static struct Result
     {
         private Value start, step;
@@ -4419,7 +4420,7 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
             return count - index;
         }
 
-        alias length opDollar;
+        alias opDollar = length;
     }
 
     return Result(begin, end, step);
@@ -4539,10 +4540,11 @@ unittest
 
     // Issue 8920
     foreach (Type; TypeTuple!(byte, ubyte, short, ushort,
-        int, uint, long, ulong))
+                              int, uint, long, ulong))
     {
         Type val;
-        foreach (i; iota(cast(Type)0, cast(Type)10)) { val++; }
+        foreach (i; iota(cast(Type)0, cast(Type)10))
+            val++;
         assert(val == 10);
     }
 }
@@ -4555,10 +4557,10 @@ unittest
 
 unittest
 {
-    foreach(range; TypeTuple!(iota(2, 27, 4),
-                              iota(3, 9),
-                              iota(2.7, 12.3, .1),
-                              iota(3.2, 9.7)))
+    foreach (range; TypeTuple!(iota(2, 27, 4),
+                               iota(3, 9),
+                               iota(2.7, 12.3, .1),
+                               iota(3.2, 9.7)))
     {
         const cRange = range;
         const e = cRange.empty;
@@ -4597,35 +4599,39 @@ unittest
     }
 }
 
-/**
-   Options for the $(LREF FrontTransversal) and $(LREF Transversal) ranges
-   (below).
-*/
-enum TransverseOptions
-{
-/**
-   When transversed, the elements of a range of ranges are assumed to
-   have different lengths (e.g. a jagged array).
-*/
-    assumeJagged,                      //default
-    /**
-       The transversal enforces that the elements of a range of ranges have
-       all the same length (e.g. an array of arrays, all having the same
-       length). Checking is done once upon construction of the transversal
-       range.
-    */
-        enforceNotJagged,
-    /**
-       The transversal assumes, without verifying, that the elements of a
-       range of ranges have all the same length. This option is useful if
-       checking was already done from the outside of the range.
-    */
-        assumeNotJagged,
-        }
 
 /**
-   Given a range of ranges, iterate transversally through the first
-   elements of each of the enclosed ranges.
+ * Options for the $(LREF FrontTransversal) and $(LREF Transversal) ranges
+ * (below).
+ */
+enum TransverseOptions
+{
+    /**
+     * When transversed, the elements of a range of ranges are assumed to
+     * have different lengths (e.g. a jagged array).
+     */
+    assumeJagged,                      //default
+
+    /**
+     * The transversal enforces that the elements of a range of ranges have
+     * all the same length (e.g. an array of arrays, all having the same
+     * length). Checking is done once upon construction of the transversal
+     * range.
+     */
+    enforceNotJagged,
+
+    /**
+     * The transversal assumes, without verifying, that the elements of a
+     * range of ranges have all the same length. This option is useful if
+     * checking was already done from the outside of the range.
+     */
+    assumeNotJagged,
+}
+
+
+/**
+ * Given a range of ranges, iterate transversally through the first
+ * elements of each of the enclosed ranges.
 
    Example:
    ----
@@ -4635,13 +4641,12 @@ enum TransverseOptions
    auto ror = frontTransversal(x);
    assert(equal(ror, [ 1, 3 ][]));
    ---
-*/
-struct FrontTransversal(Ror,
-        TransverseOptions opt = TransverseOptions.assumeJagged)
+ */
+struct FrontTransversal(RoR, TransverseOptions opt = TransverseOptions.assumeJagged)
 {
-    alias Unqual!(Ror)               RangeOfRanges;
-    alias .ElementType!RangeOfRanges RangeType;
-    alias .ElementType!RangeType     ElementType;
+    alias RangeOfRanges = Unqual!RoR;
+    alias RangeType     = .ElementType!RangeOfRanges;
+    alias ElementType   = .ElementType!RangeType;
 
     private void prime()
     {
@@ -4661,9 +4666,9 @@ struct FrontTransversal(Ror,
         }
     }
 
-/**
-   Construction from an input.
-*/
+    /**
+     * Construction from an input.
+     */
     this(RangeOfRanges input)
     {
         _input = input;
@@ -4681,9 +4686,9 @@ struct FrontTransversal(Ror,
         }
     }
 
-/**
-   Forward range primitives.
-*/
+    /**
+     * Forward range primitives.
+     */
     static if (isInfinite!RangeOfRanges)
     {
         enum bool empty = false;
@@ -4728,11 +4733,11 @@ struct FrontTransversal(Ror,
         prime();
     }
 
-/**
-   Duplicates this $(D frontTransversal). Note that only the encapsulating
-   range of range will be duplicated. Underlying ranges will not be
-   duplicated.
-*/
+    /**
+     * Duplicates this $(D frontTransversal). Note that only the encapsulating
+     * range of range will be duplicated. Underlying ranges will not be
+     * duplicated.
+     */
     static if (isForwardRange!RangeOfRanges)
     {
         @property FrontTransversal save()
@@ -4743,10 +4748,10 @@ struct FrontTransversal(Ror,
 
     static if (isBidirectionalRange!RangeOfRanges)
     {
-/**
-   Bidirectional primitives. They are offered if $(D
-   isBidirectionalRange!RangeOfRanges).
-*/
+        /**
+         * Bidirectional primitives. They are offered if $(D
+         * isBidirectionalRange!RangeOfRanges).
+         */
         @property auto ref back()
         {
             assert(!empty);
@@ -4779,15 +4784,15 @@ struct FrontTransversal(Ror,
     }
 
     static if (isRandomAccessRange!RangeOfRanges &&
-            (opt == TransverseOptions.assumeNotJagged ||
-                    opt == TransverseOptions.enforceNotJagged))
+               (opt == TransverseOptions.assumeNotJagged ||
+                opt == TransverseOptions.enforceNotJagged))
     {
-/**
-   Random-access primitive. It is offered if $(D
-   isRandomAccessRange!RangeOfRanges && (opt ==
-   TransverseOptions.assumeNotJagged || opt ==
-   TransverseOptions.enforceNotJagged)).
-*/
+        /**
+         * Random-access primitive. It is offered if $(D
+         * isRandomAccessRange!RangeOfRanges && (opt ==
+         * TransverseOptions.assumeNotJagged || opt ==
+         * TransverseOptions.enforceNotJagged)).
+         */
         auto ref opIndex(size_t n)
         {
             return _input[n].front;
@@ -4810,10 +4815,10 @@ struct FrontTransversal(Ror,
             }
         }
 
-/**
-   Slicing if offered if $(D RangeOfRanges) supports slicing and all the
-   conditions for supporting indexing are met.
-*/
+        /**
+         * Slicing if offered if $(D RangeOfRanges) supports slicing and all the
+         * conditions for supporting indexing are met.
+         */
         static if (hasSlicing!RangeOfRanges)
         {
             typeof(this) opSlice(size_t lower, size_t upper)
@@ -4830,9 +4835,9 @@ private:
 }
 
 /// Ditto
-FrontTransversal!(RangeOfRanges, opt) frontTransversal(
-    TransverseOptions opt = TransverseOptions.assumeJagged,
-    RangeOfRanges)
+FrontTransversal!(RangeOfRanges, opt)
+frontTransversal
+(TransverseOptions opt = TransverseOptions.assumeJagged, RangeOfRanges)
 (RangeOfRanges rr)
 {
     return typeof(return)(rr);
@@ -4904,9 +4909,9 @@ unittest
 }
 
 /**
-   Given a range of ranges, iterate transversally through the the $(D
-   n)th element of each of the enclosed ranges. All elements of the
-   enclosing range must offer random access.
+ * Given a range of ranges, iterate transversally through the the $(D
+ * n)th element of each of the enclosed ranges. All elements of the
+ * enclosing range must offer random access.
 
    Example:
    ----
@@ -4916,13 +4921,15 @@ unittest
    auto ror = transversal(x, 1);
    assert(equal(ror, [ 2, 4 ][]));
    ---
-*/
-struct Transversal(Ror,
-        TransverseOptions opt = TransverseOptions.assumeJagged)
+ */
+struct Transversal(RoR, TransverseOptions opt = TransverseOptions.assumeJagged)
 {
-    private alias Unqual!Ror RangeOfRanges;
-    private alias ElementType!RangeOfRanges InnerRange;
-    private alias ElementType!InnerRange E;
+private:
+    RangeOfRanges _input;
+    size_t _n;
+    private alias RangeOfRanges = Unqual!RoR;
+    private alias InnerRange    = ElementType!RangeOfRanges;
+    private alias E             = ElementType!InnerRange;
 
     private void prime()
     {
@@ -4942,9 +4949,10 @@ struct Transversal(Ror,
         }
     }
 
-/**
-   Construction from an input and an index.
-*/
+public:
+    /**
+     * Construction from an input and an index.
+     */
     this(RangeOfRanges input, size_t n)
     {
         _input = input;
@@ -4961,9 +4969,9 @@ struct Transversal(Ror,
         }
     }
 
-/**
-   Forward range primitives.
-*/
+    /**
+     * Forward range primitives.
+     */
     static if (isInfinite!(RangeOfRanges))
     {
         enum bool empty = false;
@@ -5023,10 +5031,10 @@ struct Transversal(Ror,
 
     static if (isBidirectionalRange!RangeOfRanges)
     {
-/**
-   Bidirectional primitives. They are offered if $(D
-   isBidirectionalRange!RangeOfRanges).
-*/
+    /**
+     * Bidirectional primitives. They are offered if $(D
+     * isBidirectionalRange!RangeOfRanges).
+     */
         @property auto ref back()
         {
             return _input.back[_n];
@@ -5057,19 +5065,18 @@ struct Transversal(Ror,
                 _input.back[_n] = val;
             }
         }
-
     }
 
     static if (isRandomAccessRange!RangeOfRanges &&
             (opt == TransverseOptions.assumeNotJagged ||
                     opt == TransverseOptions.enforceNotJagged))
     {
-/**
-   Random-access primitive. It is offered if $(D
-   isRandomAccessRange!RangeOfRanges && (opt ==
-   TransverseOptions.assumeNotJagged || opt ==
-   TransverseOptions.enforceNotJagged)).
-*/
+    /**
+     * Random-access primitive. It is offered if $(D
+     * isRandomAccessRange!RangeOfRanges && (opt ==
+     * TransverseOptions.assumeNotJagged || opt ==
+     * TransverseOptions.enforceNotJagged)).
+     */
         auto ref opIndex(size_t n)
         {
             return _input[n][_n];
@@ -5104,10 +5111,10 @@ struct Transversal(Ror,
             alias length opDollar;
         }
 
-/**
-   Slicing if offered if $(D RangeOfRanges) supports slicing and all the
-   conditions for supporting indexing are met.
-*/
+        /**
+         * Slicing if offered if $(D RangeOfRanges) supports slicing and all the
+         * conditions for supporting indexing are met.
+         */
         static if (hasSlicing!RangeOfRanges)
         {
             typeof(this) opSlice(size_t lower, size_t upper)
@@ -5118,10 +5125,6 @@ struct Transversal(Ror,
     }
 
     auto opSlice() { return this; }
-
-private:
-    RangeOfRanges _input;
-    size_t _n;
 }
 
 /// Ditto
@@ -5140,7 +5143,8 @@ unittest
     auto ror = transversal!(TransverseOptions.assumeNotJagged)(x, 1);
     auto witness = [ 2, 4 ];
     uint i;
-    foreach (e; ror) assert(e == witness[i++]);
+    foreach (e; ror)
+        assert(e == witness[i++]);
     assert(i == 2);
     assert(ror.length == 2);
 
@@ -5195,8 +5199,10 @@ unittest
 
 struct Transposed(RangeOfRanges)
 {
-    //alias typeof(map!"a.front"(RangeOfRanges.init)) ElementType;
+private:
+    RangeOfRanges _input;
 
+public:
     this(RangeOfRanges input)
     {
         this._input = input;
@@ -5211,7 +5217,8 @@ struct Transposed(RangeOfRanges)
     {
         foreach (ref e; _input)
         {
-            if (e.empty) continue;
+            if (e.empty)
+                continue;
             e.popFront();
         }
     }
@@ -5224,7 +5231,10 @@ struct Transposed(RangeOfRanges)
     @property bool empty()
     {
         foreach (e; _input)
-            if (!e.empty) return false;
+        {
+            if (!e.empty)
+                return false;
+        }
         return true;
     }
 
@@ -5234,9 +5244,6 @@ struct Transposed(RangeOfRanges)
     }
 
     auto opSlice() { return this; }
-
-private:
-    RangeOfRanges _input;
 }
 
 auto transposed(RangeOfRanges)(RangeOfRanges rr)
@@ -5260,33 +5267,38 @@ unittest
 }
 
 /**
-This struct takes two ranges, $(D source) and $(D indices), and creates a view
-of $(D source) as if its elements were reordered according to $(D indices).
-$(D indices) may include only a subset of the elements of $(D source) and
-may also repeat elements.
+ * This struct takes two ranges, $(D source) and $(D indices), and creates a view
+ * of $(D source) as if its elements were reordered according to $(D indices).
+ * $(D indices) may include only a subset of the elements of $(D source) and
+ * may also repeat elements.
+ *
+ * $(D Source) must be a random access range.  The returned range will be
+ * bidirectional or random-access if $(D Indices) is bidirectional or
+ * random-access, respectively.
 
-$(D Source) must be a random access range.  The returned range will be
-bidirectional or random-access if $(D Indices) is bidirectional or
-random-access, respectively.
+   Examples:
+   ---
+   auto source = [1, 2, 3, 4, 5];
+   auto indices = [4, 3, 1, 2, 0, 4];
+   auto ind = indexed(source, indices);
+   assert(equal(ind, [5, 4, 2, 3, 1, 5]));
 
-Examples:
----
-auto source = [1, 2, 3, 4, 5];
-auto indices = [4, 3, 1, 2, 0, 4];
-auto ind = indexed(source, indices);
-assert(equal(ind, [5, 4, 2, 3, 1, 5]));
-
-// When elements of indices are duplicated and Source has lvalue elements,
-// these are aliased in ind.
-ind[0]++;
-assert(ind[0] == 6);
-assert(ind[5] == 6);
----
-*/
+   // When elements of indices are duplicated and Source has lvalue elements,
+   // these are aliased in ind.
+   ind[0]++;
+   assert(ind[0] == 6);
+   assert(ind[5] == 6);
+   ---
+ */
 struct Indexed(Source, Indices)
-    if(isRandomAccessRange!Source && isInputRange!Indices &&
-        is(typeof(Source.init[ElementType!(Indices).init])))
+if (isRandomAccessRange!Source && isInputRange!Indices &&
+    is(typeof(Source.init[ElementType!(Indices).init])))
 {
+private:
+    Source _source;
+    Indices _indices;
+
+public:
     this(Source source, Indices indices)
     {
         this._source = source;
@@ -5457,26 +5469,21 @@ struct Indexed(Source, Indices)
     static if(isRandomAccessRange!Indices)
     {
         /**
-        Returns the physical index into the source range corresponding to a
-        given logical index.  This is useful, for example, when indexing
-        an $(D Indexed) without adding another layer of indirection.
+         * Returns the physical index into the source range corresponding to a
+         * given logical index.  This is useful, for example, when indexing
+         * an $(D Indexed) without adding another layer of indirection.
 
-        Examples:
-        ---
-        auto ind = indexed([1, 2, 3, 4, 5], [1, 3, 4]);
-        assert(ind.physicalIndex(0) == 1);
-        ---
-        */
+           Examples:
+           ---
+           auto ind = indexed([1, 2, 3, 4, 5], [1, 3, 4]);
+           assert(ind.physicalIndex(0) == 1);
+           ---
+         */
         size_t physicalIndex(size_t logicalIndex)
         {
             return _indices[logicalIndex];
         }
     }
-
-private:
-    Source _source;
-    Indices _indices;
-
 }
 
 /// Ditto
@@ -5516,28 +5523,33 @@ unittest
 }
 
 /**
-This range iterates over fixed-sized chunks of size $(D chunkSize) of a
-$(D source) range. $(D Source) must be a forward range.
+ * This range iterates over fixed-sized chunks of size $(D chunkSize) of a
+ * $(D source) range. $(D Source) must be a forward range.
+ *
+ * If $(D !isInfinitite!Source) and $(D source.walkLength) is not evenly
+ * divisible by $(D chunkSize), the back element of this range will contain
+ * fewer than $(D chunkSize) elements.
 
-If $(D !isInfinitite!Source) and $(D source.walkLength) is not evenly
-divisible by $(D chunkSize), the back element of this range will contain
-fewer than $(D chunkSize) elements.
-
-Examples:
----
-auto source = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-auto chunks = chunks(source, 4);
-assert(chunks[0] == [1, 2, 3, 4]);
-assert(chunks[1] == [5, 6, 7, 8]);
-assert(chunks[2] == [9, 10]);
-assert(chunks.back == chunks[2]);
-assert(chunks.front == chunks[0]);
-assert(chunks.length == 3);
----
+   Examples:
+   ---
+   auto source = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+   auto chunks = chunks(source, 4);
+   assert(chunks[0] == [1, 2, 3, 4]);
+   assert(chunks[1] == [5, 6, 7, 8]);
+   assert(chunks[2] == [9, 10]);
+   assert(chunks.back == chunks[2]);
+   assert(chunks.front == chunks[0]);
+   assert(chunks.length == 3);
+   ---
 */
 struct Chunks(Source)
-    if (isForwardRange!Source)
+if (isForwardRange!Source)
 {
+private:
+    Source _source;
+    size_t _chunkSize;
+
+public:
     /// Standard constructor
     this(Source source, size_t chunkSize)
     {
@@ -5724,14 +5736,10 @@ struct Chunks(Source)
             _source = _source[0 .. end];
         }
     }
-
-private:
-    Source _source;
-    size_t _chunkSize;
 }
 
 /// Ditto
-Chunks!(Source) chunks(Source)(Source source, size_t chunkSize)
+Chunks!Source chunks(Source)(Source source, size_t chunkSize)
 {
     return typeof(return)(source, chunkSize);
 }
@@ -5813,18 +5821,19 @@ unittest
     assert(equal!`equal(a, b)`(oddsByPairs[3 .. $].take(2), [[13, 15], [17, 19]]));
 }
 
+
 /**
-This range iterates a single element. This is useful when a sole value
-must be passed to an algorithm expecting a range.
+ * This range iterates a single element. This is useful when a sole value
+ * must be passed to an algorithm expecting a range.
 
-Example:
-----
-assert(equal(only('♡'), "♡"));
-assert([1, 2, 3, 4].findSplitBefore(only(3))[0] == [1, 2]);
+   Example:
+   ----
+   assert(equal(only('♡'), "♡"));
+   assert([1, 2, 3, 4].findSplitBefore(only(3))[0] == [1, 2]);
 
-string title = "The D Programming Language";
-assert(filter!isUpper(title).map!only().join(".") == "T.D.P.L");
-----
+   string title = "The D Programming Language";
+   assert(filter!isUpper(title).map!only().join(".") == "T.D.P.L");
+   ----
  */
 auto only(T)(T value)
 {
@@ -5919,10 +5928,10 @@ unittest
 }
 
 /**
-   Moves the front of $(D r) out and returns it. Leaves $(D r.front) in a
-   destroyable state that does not allocate any resources (usually equal
-   to its $(D .init) value).
-*/
+ * Moves the front of $(D r) out and returns it. Leaves $(D r.front) in a
+ * destroyable state that does not allocate any resources (usually equal
+ * to its $(D .init) value).
+ */
 ElementType!R moveFront(R)(R r)
 {
     static if (is(typeof(&r.moveFront)))
@@ -5956,10 +5965,10 @@ unittest
 }
 
 /**
-   Moves the back of $(D r) out and returns it. Leaves $(D r.back) in a
-   destroyable state that does not allocate any resources (usually equal
-   to its $(D .init) value).
-*/
+ * Moves the back of $(D r) out and returns it. Leaves $(D r.back) in a
+ * destroyable state that does not allocate any resources (usually equal
+ * to its $(D .init) value).
+ */
 ElementType!R moveBack(R)(R r)
 {
     static if (is(typeof(&r.moveBack)))
@@ -5999,10 +6008,10 @@ unittest
 }
 
 /**
-   Moves element at index $(D i) of $(D r) out and returns it. Leaves $(D
-   r.front) in a destroyable state that does not allocate any resources
-   (usually equal to its $(D .init) value).
-*/
+ * Moves element at index $(D i) of $(D r) out and returns it. Leaves $(D
+ * r.front) in a destroyable state that does not allocate any resources
+ * (usually equal to its $(D .init) value).
+ */
 ElementType!R moveAt(R, I)(R r, I i) if (isIntegral!I)
 {
     static if (is(typeof(&r.moveAt)))
@@ -6064,16 +6073,17 @@ public
 
 
 /**
-  Returns true if $(D fn) accepts variables of type T1 and T2 in any order.
-  The following code should compile:
-  ---
-  T1 foo();
-  T2 bar();
+ * Returns true if $(D fn) accepts variables of type T1 and T2 in any order.
+ * The following code should compile:
 
-  fn(foo(), bar());
-  fn(bar(), foo());
-  ---
-*/
+   ---
+   T1 foo();
+   T2 bar();
+
+   fn(foo(), bar());
+   fn(bar(), foo());
+   ---
+ */
 template isTwoWayCompatible(alias fn, T1, T2)
 {
     enum isTwoWayCompatible = is(typeof( (){
@@ -6088,55 +6098,55 @@ template isTwoWayCompatible(alias fn, T1, T2)
 
 
 /**
-   Policy used with the searching primitives $(D lowerBound), $(D
-   upperBound), and $(D equalRange) of $(LREF SortedRange) below.
+ * Policy used with the searching primitives $(D lowerBound), $(D
+ * upperBound), and $(D equalRange) of $(LREF SortedRange) below.
  */
 enum SearchPolicy
 {
     /**
-       Searches with a step that is grows linearly (1, 2, 3,...)
-       leading to a quadratic search schedule (indexes tried are 0, 1,
-       3, 6, 10, 15, 21, 28,...) Once the search overshoots its target,
-       the remaining interval is searched using binary search. The
-       search is completed in $(BIGOH sqrt(n)) time. Use it when you
-       are reasonably confident that the value is around the beginning
-       of the range.
-    */
+     * Searches with a step that is grows linearly (1, 2, 3,...)
+     * leading to a quadratic search schedule (indexes tried are 0, 1,
+     * 3, 6, 10, 15, 21, 28,...) Once the search overshoots its target,
+     * the remaining interval is searched using binary search. The
+     * search is completed in $(BIGOH sqrt(n)) time. Use it when you
+     * are reasonably confident that the value is around the beginning
+     * of the range.
+     */
     trot,
 
     /**
-       Performs a $(LUCKY galloping search algorithm), i.e. searches
-       with a step that doubles every time, (1, 2, 4, 8, ...)  leading
-       to an exponential search schedule (indexes tried are 0, 1, 3,
-       7, 15, 31, 63,...) Once the search overshoots its target, the
-       remaining interval is searched using binary search. A value is
-       found in $(BIGOH log(n)) time.
-    */
-        gallop,
+     * Performs a $(LUCKY galloping search algorithm), i.e. searches
+     * with a step that doubles every time, (1, 2, 4, 8, ...)  leading
+     * to an exponential search schedule (indexes tried are 0, 1, 3,
+     * 7, 15, 31, 63,...) Once the search overshoots its target, the
+     * remaining interval is searched using binary search. A value is
+     * found in $(BIGOH log(n)) time.
+     */
+    gallop,
 
     /**
-       Searches using a classic interval halving policy. The search
-       starts in the middle of the range, and each search step cuts
-       the range in half. This policy finds a value in $(BIGOH log(n))
-       time but is less cache friendly than $(D gallop) for large
-       ranges. The $(D binarySearch) policy is used as the last step
-       of $(D trot), $(D gallop), $(D trotBackwards), and $(D
-       gallopBackwards) strategies.
-    */
-        binarySearch,
+     * Searches using a classic interval halving policy. The search
+     * starts in the middle of the range, and each search step cuts
+     * the range in half. This policy finds a value in $(BIGOH log(n))
+     * time but is less cache friendly than $(D gallop) for large
+     * ranges. The $(D binarySearch) policy is used as the last step
+     * of $(D trot), $(D gallop), $(D trotBackwards), and $(D
+     * gallopBackwards) strategies.
+     */
+    binarySearch,
 
     /**
-       Similar to $(D trot) but starts backwards. Use it when
-       confident that the value is around the end of the range.
-    */
-        trotBackwards,
+     * Similar to $(D trot) but starts backwards. Use it when
+     * confident that the value is around the end of the range.
+     */
+    trotBackwards,
 
     /**
-       Similar to $(D gallop) but starts backwards. Use it when
-       confident that the value is around the end of the range.
-    */
-        gallopBackwards
-        }
+     * Similar to $(D gallop) but starts backwards. Use it when
+     * confident that the value is around the end of the range.
+     */
+    gallopBackwards
+}
 
 /**
  * Represents a sorted random-access range. In addition to the regular
@@ -6146,20 +6156,19 @@ enum SearchPolicy
  * corresponding $(D SortedRange). To construct a $(D SortedRange)
  * from a range $(D r) that is known to be already sorted, use
  * $(LREF assumeSorted) described below.
- *
- * Example:
- *
- * ----
- * auto a = [ 1, 2, 3, 42, 52, 64 ];
- * auto r = assumeSorted(a);
- * assert(r.contains(3));
- * assert(!r.contains(32));
- * auto r1 = sort!"a > b"(a);
- * assert(r1.contains(3));
- * assert(!r1.contains(32));
- * assert(r1.release() == [ 64, 52, 42, 3, 2, 1 ]);
- * ----
- *
+
+   Examples:
+   ----
+   auto a = [ 1, 2, 3, 42, 52, 64 ];
+   auto r = assumeSorted(a);
+   assert(r.contains(3));
+   assert(!r.contains(32));
+   auto r1 = sort!"a > b"(a);
+   assert(r1.contains(3));
+   assert(!r1.contains(32));
+   assert(r1.release() == [ 64, 52, 42, 3, 2, 1 ]);
+   ----
+
  * $(D SortedRange) could accept ranges weaker than random-access, but it
  * is unable to provide interesting functionality for them. Therefore,
  * $(D SortedRange) is currently restricted to random-access ranges.
@@ -6265,11 +6274,11 @@ if (isRandomAccessRange!Range && hasLength!Range)
         return _input.length;
     }
 
-    alias length opDollar;
+    alias opDollar = length;
 
-/**
-   Releases the controlled range and returns it.
-*/
+    /**
+     * Releases the controlled range and returns it.
+     */
     auto release()
     {
         return move(_input);
@@ -6369,13 +6378,13 @@ if (isRandomAccessRange!Range && hasLength!Range)
      * schedule and its complexity are documented in
      * $(LREF SearchPolicy).  See also STL's
      * $(WEB sgi.com/tech/stl/lower_bound.html, lower_bound).
-     *
-     * Example:
-     * ----
-     * auto a = assumeSorted([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]);
-     * auto p = a.lowerBound(4);
-     * assert(equal(p, [ 0, 1, 2, 3 ]));
-     * ----
+
+       Examples:
+       ----
+       auto a = assumeSorted([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]);
+       auto p = a.lowerBound(4);
+       assert(equal(p, [ 0, 1, 2, 3 ]));
+       ----
      */
     auto lowerBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V))
@@ -6391,13 +6400,13 @@ if (isRandomAccessRange!Range && hasLength!Range)
      * value)). The search schedule and its complexity are documented in
      * $(LREF SearchPolicy).  See also STL's
      * $(WEB sgi.com/tech/stl/lower_bound.html,upper_bound).
-     *
-     * Example:
-     * ----
-     * auto a = assumeSorted([ 1, 2, 3, 3, 3, 4, 4, 5, 6 ]);
-     * auto p = a.upperBound(3);
-     * assert(equal(p, [4, 4, 5, 6]));
-     * ----
+
+       Examples:
+       ----
+       auto a = assumeSorted([ 1, 2, 3, 3, 3, 4, 4, 5, 6 ]);
+       auto p = a.upperBound(3);
+       assert(equal(p, [4, 4, 5, 6]));
+       ----
      */
     auto upperBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V))
@@ -6417,13 +6426,13 @@ if (isRandomAccessRange!Range && hasLength!Range)
      * to be near the first found value (i.e., equal ranges are relatively
      * small). Completes the entire search in $(BIGOH log(n)) time. See also
      * STL's $(WEB sgi.com/tech/stl/equal_range.html, equal_range).
-     *
-     * Example:
-     * ----
-     * auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
-     * auto r = equalRange(a, 3);
-     * assert(equal(r, [ 3, 3, 3 ]));
-     * ----
+
+       Example:
+       ----
+       auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
+       auto r = equalRange(a, 3);
+       assert(equal(r, [ 3, 3, 3 ]));
+       ----
      */
     auto equalRange(V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V))
@@ -6470,15 +6479,15 @@ if (isRandomAccessRange!Range && hasLength!Range)
      * upperBound(value)). The call is faster than computing all three
      * separately. Uses a search schedule similar to $(D
      * equalRange). Completes the entire search in $(BIGOH log(n)) time.
-     *
-     * Example:
-     * ----
-     * auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
-     * auto r = assumeSorted(a).trisect(3);
-     * assert(equal(r[0], [ 1, 2 ]));
-     * assert(equal(r[1], [ 3, 3, 3 ]));
-     * assert(equal(r[2], [ 4, 4, 5, 6 ]));
-     * ----
+
+       Examples:
+       ----
+       auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
+       auto r = assumeSorted(a).trisect(3);
+       assert(equal(r[0], [ 1, 2 ]));
+       assert(equal(r[1], [ 3, 3, 3 ]));
+       assert(equal(r[2], [ 4, 4, 5, 6 ]));
+       ----
      */
     auto trisect(V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V))
@@ -6771,101 +6780,102 @@ unittest
  * $(D save) is ever called on the RefRange, then no operations on the saved
  * range will affect the original.
 
-Examples:
---------------------
-import std.algorithm;
-ubyte[] buffer = [1, 9, 45, 12, 22];
-auto found1 = find(buffer, 45);
-assert(found1 == [45, 12, 22]);
-assert(buffer == [1, 9, 45, 12, 22]);
+   Examples:
+   --------------------
+   import std.algorithm;
+   ubyte[] buffer = [1, 9, 45, 12, 22];
+   auto found1 = find(buffer, 45);
+   assert(found1 == [45, 12, 22]);
+   assert(buffer == [1, 9, 45, 12, 22]);
 
-auto wrapped1 = refRange(&buffer);
-auto found2 = find(wrapped1, 45);
-assert(*found2.ptr == [45, 12, 22]);
-assert(buffer == [45, 12, 22]);
+   auto wrapped1 = refRange(&buffer);
+   auto found2 = find(wrapped1, 45);
+   assert(*found2.ptr == [45, 12, 22]);
+   assert(buffer == [45, 12, 22]);
 
-auto found3 = find(wrapped2.save, 22);
-assert(*found3.ptr == [22]);
-assert(buffer == [45, 12, 22]);
+   auto found3 = find(wrapped2.save, 22);
+   assert(*found3.ptr == [22]);
+   assert(buffer == [45, 12, 22]);
 
-string str = "hello world";
-auto wrappedStr = refRange(&str);
-assert(str.front == 'h');
-str.popFrontN(5);
-assert(str == " world");
-assert(wrappedStr.front == ' ');
-assert(*wrappedStr.ptr == " world");
---------------------
+   string str = "hello world";
+   auto wrappedStr = refRange(&str);
+   assert(str.front == 'h');
+   str.popFrontN(5);
+   assert(str == " world");
+   assert(wrappedStr.front == ' ');
+   assert(*wrappedStr.ptr == " world");
+   --------------------
  */
 struct RefRange(R)
 if (isForwardRange!R)
 {
-public:
+private:
+    R* _range;
 
-    /++ +/
+public:
+    ///
     this(R* range) @safe pure nothrow
     {
         _range = range;
     }
 
+    /**
+     * This does not assign the pointer of $(D rhs) to this $(D RefRange).
+     * Rather it assigns the range pointed to by $(D rhs) to the range pointed
+     * to by this $(D RefRange). This is because $(I any) operation on a
+     * $(D RefRange) is the same is if it occurred to the original range. The
+     * one exception is when a $(D RefRange) is assigned $(D null) either
+     * directly or because $(D rhs) is $(D null). In that case, $(D RefRange)
+     * no longer refers to the original range but is $(D null).
 
-    /++
-        This does not assign the pointer of $(D rhs) to this $(D RefRange).
-        Rather it assigns the range pointed to by $(D rhs) to the range pointed
-        to by this $(D RefRange). This is because $(I any) operation on a
-        $(D RefRange) is the same is if it occurred to the original range. The
-        one exception is when a $(D RefRange) is assigned $(D null) either
-        directly or because $(D rhs) is $(D null). In that case, $(D RefRange)
-        no longer refers to the original range but is $(D null).
+       Examples:
+       --------------------
+       ubyte[] buffer1 = [1, 2, 3, 4, 5];
+       ubyte[] buffer2 = [6, 7, 8, 9, 10];
+       auto wrapped1 = refRange(&buffer1);
+       auto wrapped2 = refRange(&buffer2);
+       assert(wrapped1.ptr is &buffer1);
+       assert(wrapped2.ptr is &buffer2);
+       assert(wrapped1.ptr !is wrapped2.ptr);
+       assert(buffer1 != buffer2);
 
-    Examples:
---------------------
-ubyte[] buffer1 = [1, 2, 3, 4, 5];
-ubyte[] buffer2 = [6, 7, 8, 9, 10];
-auto wrapped1 = refRange(&buffer1);
-auto wrapped2 = refRange(&buffer2);
-assert(wrapped1.ptr is &buffer1);
-assert(wrapped2.ptr is &buffer2);
-assert(wrapped1.ptr !is wrapped2.ptr);
-assert(buffer1 != buffer2);
+       wrapped1 = wrapped2;
 
-wrapped1 = wrapped2;
+       //Everything points to the same stuff as before.
+       assert(wrapped1.ptr is &buffer1);
+       assert(wrapped2.ptr is &buffer2);
+       assert(wrapped1.ptr !is wrapped2.ptr);
 
-//Everything points to the same stuff as before.
-assert(wrapped1.ptr is &buffer1);
-assert(wrapped2.ptr is &buffer2);
-assert(wrapped1.ptr !is wrapped2.ptr);
+       //But buffer1 has changed due to the assignment.
+       assert(buffer1 == [6, 7, 8, 9, 10]);
+       assert(buffer2 == [6, 7, 8, 9, 10]);
 
-//But buffer1 has changed due to the assignment.
-assert(buffer1 == [6, 7, 8, 9, 10]);
-assert(buffer2 == [6, 7, 8, 9, 10]);
+       buffer2 = [11, 12, 13, 14, 15];
 
-buffer2 = [11, 12, 13, 14, 15];
+       //Everything points to the same stuff as before.
+       assert(wrapped1.ptr is &buffer1);
+       assert(wrapped2.ptr is &buffer2);
+       assert(wrapped1.ptr !is wrapped2.ptr);
 
-//Everything points to the same stuff as before.
-assert(wrapped1.ptr is &buffer1);
-assert(wrapped2.ptr is &buffer2);
-assert(wrapped1.ptr !is wrapped2.ptr);
+       //But buffer2 has changed due to the assignment.
+       assert(buffer1 == [6, 7, 8, 9, 10]);
+       assert(buffer2 == [11, 12, 13, 14, 15]);
 
-//But buffer2 has changed due to the assignment.
-assert(buffer1 == [6, 7, 8, 9, 10]);
-assert(buffer2 == [11, 12, 13, 14, 15]);
+       wrapped2 = null;
 
-wrapped2 = null;
+       //The pointer changed for wrapped2 but not wrapped1.
+       assert(wrapped1.ptr is &buffer1);
+       assert(wrapped2.ptr is null);
+       assert(wrapped1.ptr !is wrapped2.ptr);
 
-//The pointer changed for wrapped2 but not wrapped1.
-assert(wrapped1.ptr is &buffer1);
-assert(wrapped2.ptr is null);
-assert(wrapped1.ptr !is wrapped2.ptr);
-
-//buffer2 is not affected by the assignment.
-assert(buffer1 == [6, 7, 8, 9, 10]);
-assert(buffer2 == [11, 12, 13, 14, 15]);
---------------------
-      +/
+       //buffer2 is not affected by the assignment.
+       assert(buffer1 == [6, 7, 8, 9, 10]);
+       assert(buffer2 == [11, 12, 13, 14, 15]);
+       --------------------
+     */
     auto opAssign(RefRange rhs)
     {
-        if(_range && rhs._range)
+        if (_range && rhs._range)
             *_range = *rhs._range;
         else
             _range = rhs._range;
@@ -6873,29 +6883,27 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
         return this;
     }
 
-    /++ +/
+    ///
     auto opAssign(typeof(null) rhs)
     {
         _range = null;
     }
 
-
-    /++
-        A pointer to the wrapped range.
-      +/
+    /**
+     * A pointer to the wrapped range.
+     */
     @property inout(R*) ptr() @safe inout pure nothrow
     {
         return _range;
     }
 
-
     version(StdDdoc)
     {
-        /++ +/
+        ///
         @property auto front() {assert(0);}
-        /++ Ditto +/
+        /// ditto
         @property auto front() const {assert(0);}
-        /++ Ditto +/
+        /// ditto
         @property auto front(ElementType!R value) {assert(0);}
     }
     else
@@ -6905,12 +6913,14 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
             return (*_range).front;
         }
 
-        static if(is(typeof((*(cast(const R*)_range)).front))) @property ElementType!R front() const
+        static if (is(typeof((*(cast(const R*)_range)).front)))
+        @property ElementType!R front() const
         {
             return (*_range).front;
         }
 
-        static if(is(typeof((*_range).front = (*_range).front))) @property auto front(ElementType!R value)
+        static if (is(typeof((*_range).front = (*_range).front)))
+        @property auto front(ElementType!R value)
         {
             return (*_range).front = value;
         }
@@ -6922,8 +6932,10 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
         @property bool empty(); ///
         @property bool empty() const; ///Ditto
     }
-    else static if(isInfinite!R)
+    else static if (isInfinite!R)
+    {
         enum empty = false;
+    }
     else
     {
         @property bool empty()
@@ -6931,29 +6943,28 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
             return (*_range).empty;
         }
 
-        static if(is(typeof((*cast(const R*)_range).empty))) @property bool empty() const
+        static if (is(typeof((*cast(const R*)_range).empty)))
+        @property bool empty() const
         {
             return (*_range).empty;
         }
     }
 
-
-    /++ +/
+    ///
     void popFront()
     {
         return (*_range).popFront();
     }
 
-
     version(StdDdoc)
     {
-        /++ +/
+        ///
         @property auto save() {assert(0);}
-        /++ Ditto +/
+        /// ditto
         @property auto save() const {assert(0);}
-        /++ Ditto +/
+        /// ditto
         auto opSlice() {assert(0);}
-        /++ Ditto +/
+        /// ditto
         auto opSlice() const {assert(0);}
     }
     else
@@ -6963,14 +6974,15 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
             (*range).save;
         }
 
-        static if(isSafe!(_testSave!R))
+        static if (isSafe!(_testSave!R))
         {
             @property auto save() @trusted
             {
                 mixin(_genSave());
             }
 
-            static if(is(typeof((*cast(const R*)_range).save))) @property auto save() @trusted const
+            static if (is(typeof((*cast(const R*)_range).save)))
+            @property auto save() @trusted const
             {
                 mixin(_genSave());
             }
@@ -6982,18 +6994,19 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
                 mixin(_genSave());
             }
 
-            static if(is(typeof((*cast(const R*)_range).save))) @property auto save() const
+            static if (is(typeof((*cast(const R*)_range).save)))
+            @property auto save() const
             {
                 mixin(_genSave());
             }
         }
 
-        auto opSlice()()
+        auto opSlice()()      // TODO: template function is not necessary
         {
             return save;
         }
 
-        auto opSlice()() const
+        auto opSlice()() const      // TODO: template function is not necessary
         {
             return save;
         }
@@ -7014,13 +7027,13 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
 
     version(StdDdoc)
     {
-        /++
-            Only defined if $(D isBidirectionalRange!R) is $(D true).
-          +/
+        /**
+         * Only defined if $(D isBidirectionalRange!R) is $(D true).
+         */
         @property auto back() {assert(0);}
-        /++ Ditto +/
+        /// ditto
         @property auto back() const {assert(0);}
-        /++ Ditto +/
+        /// ditto
         @property auto back(ElementType!R value) {assert(0);}
     }
     else static if(isBidirectionalRange!R)
@@ -7030,12 +7043,14 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
             return (*_range).back;
         }
 
-        static if(is(typeof((*(cast(const R*)_range)).back))) @property ElementType!R back() const
+        static if (is(typeof((*(cast(const R*)_range)).back)))
+        @property ElementType!R back() const
         {
             return (*_range).back;
         }
 
-        static if(is(typeof((*_range).back = (*_range).back))) @property auto back(ElementType!R value)
+        static if (is(typeof((*_range).back = (*_range).back)))
+        @property auto back(ElementType!R value)
         {
             return (*_range).back = value;
         }
@@ -7043,7 +7058,8 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
 
 
     /++ Ditto +/
-    static if(isBidirectionalRange!R) void popBack()
+    static if (isBidirectionalRange!R)
+    void popBack()
     {
         return (*_range).popBack();
     }
@@ -7051,56 +7067,57 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
 
     version(StdDdoc)
     {
-        /++
-            Only defined if $(D isRandomAccesRange!R) is $(D true).
-          +/
+        /**
+         * Only defined if $(D isRandomAccesRange!R) is $(D true).
+         */
         auto ref opIndex(IndexType)(IndexType index) {assert(0);}
-
-        /++ Ditto +/
+        /// ditto
         auto ref opIndex(IndexType)(IndexType index) const {assert(0);}
     }
-    else static if(isRandomAccessRange!R)
+    else static if (isRandomAccessRange!R)
     {
         auto ref opIndex(IndexType)(IndexType index)
-            if(is(typeof((*_range)[index])))
+        if (is(typeof((*_range)[index])))
         {
             return (*_range)[index];
         }
 
         auto ref opIndex(IndexType)(IndexType index) const
-            if(is(typeof((*cast(const R*)_range)[index])))
+        if (is(typeof((*cast(const R*)_range)[index])))
         {
             return (*_range)[index];
         }
     }
 
 
-    /++
-        Only defined if $(D hasMobileElements!R) and $(D isForwardRange!R) are
-        $(D true).
-      +/
-    static if(hasMobileElements!R && isForwardRange!R) auto moveFront()
+    /**
+     * Only defined if $(D hasMobileElements!R) and $(D isForwardRange!R) are
+     * $(D true).
+     */
+    static if (hasMobileElements!R && isForwardRange!R) auto moveFront()
     {
         return (*_range).moveFront();
     }
 
 
-    /++
-        Only defined if $(D hasMobileElements!R) and $(D isBidirectionalRange!R)
-        are $(D true).
-      +/
-    static if(hasMobileElements!R && isBidirectionalRange!R) auto moveBack()
+    /**
+     * Only defined if $(D hasMobileElements!R) and $(D isBidirectionalRange!R)
+     * are $(D true).
+     */
+    static if (hasMobileElements!R && isBidirectionalRange!R)
+    auto moveBack()
     {
         return (*_range).moveBack();
     }
 
 
-    /++
-        Only defined if $(D hasMobileElements!R) and $(D isRandomAccessRange!R)
-        are $(D true).
-      +/
-    static if(hasMobileElements!R && isRandomAccessRange!R) auto moveAt(IndexType)(IndexType index)
-        if(is(typeof((*_range).moveAt(index))))
+    /**
+     * Only defined if $(D hasMobileElements!R) and $(D isRandomAccessRange!R)
+     * are $(D true).
+     */
+    static if (hasMobileElements!R && isRandomAccessRange!R)
+    auto moveAt(IndexType)(IndexType index)
+    if (is(typeof((*_range).moveAt(index))))
     {
         return (*_range).moveAt(index);
     }
@@ -7108,52 +7125,50 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
 
     version(StdDdoc)
     {
-        /++
-            Only defined if $(D hasLength!R) is $(D true).
-          +/
+        /**
+         * Only defined if $(D hasLength!R) is $(D true).
+         */
         @property auto length() {assert(0);}
-
-        /++ Ditto +/
+        /// ditto
         @property auto length() const {assert(0);}
     }
-    else static if(hasLength!R)
+    else static if (hasLength!R)
     {
         @property auto length()
         {
             return (*_range).length;
         }
 
-        static if(is(typeof((*cast(const R*)_range).length))) @property auto length() const
+        static if (is(typeof((*cast(const R*)_range).length)))
+        @property auto length() const
         {
             return (*_range).length;
         }
     }
 
-
     version(StdDdoc)
     {
-        /++
-            Only defined if $(D hasSlicing!R) is $(D true).
-          +/
+        /**
+         * Only defined if $(D hasSlicing!R) is $(D true).
+         */
         auto opSlice(IndexType1, IndexType2)
                     (IndexType1 begin, IndexType2 end) {assert(0);}
-
-        /++ Ditto +/
+        /// ditto
         auto opSlice(IndexType1, IndexType2)
                     (IndexType1 begin, IndexType2 end) const {assert(0);}
     }
-    else static if(hasSlicing!R)
+    else static if (hasSlicing!R)
     {
         auto opSlice(IndexType1, IndexType2)
                     (IndexType1 begin, IndexType2 end)
-            if(is(typeof((*_range)[begin .. end])))
+        if (is(typeof((*_range)[begin .. end])))
         {
             mixin(_genOpSlice());
         }
 
         auto opSlice(IndexType1, IndexType2)
                     (IndexType1 begin, IndexType2 end) const
-            if(is(typeof((*cast(const R*)_range)[begin .. end])))
+        if (is(typeof((*cast(const R*)_range)[begin .. end])))
         {
             mixin(_genOpSlice());
         }
@@ -7168,11 +7183,6 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
                    `return RefRange!S(cast(S*)mem.ptr);`;
         }
     }
-
-
-private:
-
-    R* _range;
 }
 
 //Verify Example.
@@ -7517,24 +7527,24 @@ unittest
     assert(sWrapper == s);
 }
 
-/++
-    Helper function for constructing a $(LREF RefRange).
-
-    If the given range is not a forward range or it is a class type (and thus is
-    already a reference type), then the original range is returned rather than
-    a $(LREF RefRange).
-  +/
+/**
+ * Helper function for constructing a $(LREF RefRange).
+ *
+ * If the given range is not a forward range or it is a class type (and thus is
+ * already a reference type), then the original range is returned rather than
+ * a $(LREF RefRange).
+ */
 auto refRange(R)(R* range)
-    if(isForwardRange!R && !is(R == class))
+if (isInputRange!R)
 {
-    return RefRange!R(range);
-}
-
-auto refRange(R)(R* range)
-    if((!isForwardRange!R && isInputRange!R) ||
-       is(R == class))
-{
-    return *range;
+    static if (isForwardRange!R && !is(R == class))
+    {
+        return RefRange!R(range);
+    }
+    else
+    {
+        return *range;
+    }
 }
 
 /*****************************************************************************/
