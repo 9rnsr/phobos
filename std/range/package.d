@@ -6057,496 +6057,11 @@ unittest
     }
 }
 
-/**These interfaces are intended to provide virtual function-based wrappers
- * around input ranges with element type E.  This is useful where a well-defined
- * binary interface is required, such as when a DLL function or virtual function
- * needs to accept a generic range as a parameter.  Note that
- * $(LREF isInputRange) and friends check for conformance to structural
- * interfaces, not for implementation of these $(D interface) types.
- *
- * Examples:
- * ---
- * void useRange(InputRange!int range)
- * {
- *     // Function body.
- * }
- *
- * // Create a range type.
- * auto squares = map!"a * a"(iota(10));
- *
- * // Wrap it in an interface.
- * auto squaresWrapped = inputRangeObject(squares);
- *
- * // Use it.
- * useRange(squaresWrapped);
- * ---
- *
- * Limitations:
- *
- * These interfaces are not capable of forwarding $(D ref) access to elements.
- *
- * Infiniteness of the wrapped range is not propagated.
- *
- * Length is not propagated in the case of non-random access ranges.
- *
- * See_Also:
- * $(LREF inputRangeObject)
- */
-interface InputRange(E)
+public
 {
-    ///
-    @property E front();
-
-    ///
-    E moveFront();
-
-    ///
-    void popFront();
-
-    ///
-    @property bool empty();
-
-    /* Measurements of the benefits of using opApply instead of range primitives
-     * for foreach, using timings for iterating over an iota(100_000_000) range
-     * with an empty loop body, using the same hardware in each case:
-     *
-     * Bare Iota struct, range primitives:  278 milliseconds
-     * InputRangeObject, opApply:           436 milliseconds  (1.57x penalty)
-     * InputRangeObject, range primitives:  877 milliseconds  (3.15x penalty)
-     */
-
-    /**$(D foreach) iteration uses opApply, since one delegate call per loop
-     * iteration is faster than three virtual function calls.
-     */
-    int opApply(int delegate(E));
-
-    /// Ditto
-    int opApply(int delegate(size_t, E));
-
+    import std.range.adapter;
 }
 
-/**Interface for a forward range of type $(D E).*/
-interface ForwardRange(E) : InputRange!E
-{
-    ///
-    @property ForwardRange!E save();
-}
-
-/**Interface for a bidirectional range of type $(D E).*/
-interface BidirectionalRange(E) : ForwardRange!E
-{
-    ///
-    @property BidirectionalRange!E save();
-
-    ///
-    @property E back();
-
-    ///
-    E moveBack();
-
-    ///
-    void popBack();
-}
-
-/**Interface for a finite random access range of type $(D E).*/
-interface RandomAccessFinite(E) : BidirectionalRange!E
-{
-    ///
-    @property RandomAccessFinite!E save();
-
-    ///
-    E opIndex(size_t);
-
-    ///
-    E moveAt(size_t);
-
-    ///
-    @property size_t length();
-
-    ///
-    alias length opDollar;
-
-    // Can't support slicing until issues with requiring slicing for all
-    // finite random access ranges are fully resolved.
-    version(none)
-    {
-        ///
-        RandomAccessFinite!E opSlice(size_t, size_t);
-    }
-}
-
-/**Interface for an infinite random access range of type $(D E).*/
-interface RandomAccessInfinite(E) : ForwardRange!E
-{
-    ///
-    E moveAt(size_t);
-
-    ///
-    @property RandomAccessInfinite!E save();
-
-    ///
-    E opIndex(size_t);
-}
-
-/**Adds assignable elements to InputRange.*/
-interface InputAssignable(E) : InputRange!E
-{
-    ///
-    @property void front(E newVal);
-}
-
-/**Adds assignable elements to ForwardRange.*/
-interface ForwardAssignable(E) : InputAssignable!E, ForwardRange!E
-{
-    ///
-    @property ForwardAssignable!E save();
-}
-
-/**Adds assignable elements to BidirectionalRange.*/
-interface BidirectionalAssignable(E) : ForwardAssignable!E, BidirectionalRange!E
-{
-    ///
-    @property BidirectionalAssignable!E save();
-
-    ///
-    @property void back(E newVal);
-}
-
-/**Adds assignable elements to RandomAccessFinite.*/
-interface RandomFiniteAssignable(E) : RandomAccessFinite!E, BidirectionalAssignable!E
-{
-    ///
-    @property RandomFiniteAssignable!E save();
-
-    ///
-    void opIndexAssign(E val, size_t index);
-}
-
-/**Interface for an output range of type $(D E).  Usage is similar to the
- * $(D InputRange) interface and descendants.*/
-interface OutputRange(E)
-{
-    ///
-    void put(E);
-}
-
-// CTFE function that generates mixin code for one put() method for each
-// type E.
-private string putMethods(E...)()
-{
-    string ret;
-
-    foreach (ti, Unused; E)
-    {
-        ret ~= "void put(E[" ~ to!string(ti) ~ "] e) { .put(_range, e); }";
-    }
-
-    return ret;
-}
-
-/**Implements the $(D OutputRange) interface for all types E and wraps the
- * $(D put) method for each type $(D E) in a virtual function.
- */
-class OutputRangeObject(R, E...) : staticMap!(OutputRange, E)
-{
-    // @BUG 4689:  There should be constraints on this template class, but
-    // DMD won't let me put them in.
-    private R _range;
-
-    this(R range)
-    {
-        this._range = range;
-    }
-
-    mixin(putMethods!E());
-}
-
-
-/**Returns the interface type that best matches $(D R).*/
-template MostDerivedInputRange(R) if (isInputRange!(Unqual!R))
-{
-    private alias ElementType!R E;
-
-    static if (isRandomAccessRange!R)
-    {
-        static if (isInfinite!R)
-        {
-            alias RandomAccessInfinite!E MostDerivedInputRange;
-        }
-        else static if (hasAssignableElements!R)
-        {
-            alias RandomFiniteAssignable!E MostDerivedInputRange;
-        }
-        else
-        {
-            alias RandomAccessFinite!E MostDerivedInputRange;
-        }
-    }
-    else static if (isBidirectionalRange!R)
-    {
-        static if (hasAssignableElements!R)
-        {
-            alias BidirectionalAssignable!E MostDerivedInputRange;
-        }
-        else
-        {
-            alias BidirectionalRange!E MostDerivedInputRange;
-        }
-    }
-    else static if (isForwardRange!R)
-    {
-        static if (hasAssignableElements!R)
-        {
-            alias ForwardAssignable!E MostDerivedInputRange;
-        }
-        else
-        {
-            alias ForwardRange!E MostDerivedInputRange;
-        }
-    }
-    else
-    {
-        static if (hasAssignableElements!R)
-        {
-            alias InputAssignable!E MostDerivedInputRange;
-        }
-        else
-        {
-            alias InputRange!E MostDerivedInputRange;
-        }
-    }
-}
-
-/**Implements the most derived interface that $(D R) works with and wraps
- * all relevant range primitives in virtual functions.  If $(D R) is already
- * derived from the $(D InputRange) interface, aliases itself away.
- */
-template InputRangeObject(R) if (isInputRange!(Unqual!R))
-{
-    static if (is(R : InputRange!(ElementType!R)))
-    {
-        alias R InputRangeObject;
-    }
-    else static if (!is(Unqual!R == R))
-    {
-        alias InputRangeObject!(Unqual!R) InputRangeObject;
-    }
-    else
-    {
-        ///
-        class InputRangeObject : MostDerivedInputRange!R
-        {
-            private R _range;
-            private alias ElementType!R E;
-
-            this(R range)
-            {
-                this._range = range;
-            }
-
-            @property E front() { return _range.front; }
-
-            E moveFront()
-            {
-                return .moveFront(_range);
-            }
-
-            void popFront() { _range.popFront(); }
-            @property bool empty() { return _range.empty; }
-
-            static if (isForwardRange!R)
-            {
-                @property typeof(this) save()
-                {
-                    return new typeof(this)(_range.save);
-                }
-            }
-
-            static if (hasAssignableElements!R)
-            {
-                @property void front(E newVal)
-                {
-                    _range.front = newVal;
-                }
-            }
-
-            static if (isBidirectionalRange!R)
-            {
-                @property E back() { return _range.back; }
-
-                E moveBack()
-                {
-                    return .moveBack(_range);
-                }
-
-                void popBack() { return _range.popBack(); }
-
-                static if (hasAssignableElements!R)
-                {
-                    @property void back(E newVal)
-                    {
-                        _range.back = newVal;
-                    }
-                }
-            }
-
-            static if (isRandomAccessRange!R)
-            {
-                E opIndex(size_t index)
-                {
-                    return _range[index];
-                }
-
-                E moveAt(size_t index)
-                {
-                    return .moveAt(_range, index);
-                }
-
-                static if (hasAssignableElements!R)
-                {
-                    void opIndexAssign(E val, size_t index)
-                    {
-                        _range[index] = val;
-                    }
-                }
-
-                static if (!isInfinite!R)
-                {
-                    @property size_t length()
-                    {
-                        return _range.length;
-                    }
-
-                    alias length opDollar;
-
-                    // Can't support slicing until all the issues with
-                    // requiring slicing support for finite random access
-                    // ranges are resolved.
-                    version(none)
-                    {
-                        typeof(this) opSlice(size_t lower, size_t upper)
-                        {
-                            return new typeof(this)(_range[lower..upper]);
-                        }
-                    }
-                }
-            }
-
-            // Optimization:  One delegate call is faster than three virtual
-            // function calls.  Use opApply for foreach syntax.
-            int opApply(int delegate(E) dg)
-            {
-                int res;
-
-                for (auto r = _range; !r.empty; r.popFront())
-                {
-                    res = dg(r.front);
-                    if (res) break;
-                }
-
-                return res;
-            }
-
-            int opApply(int delegate(size_t, E) dg)
-            {
-                int res;
-
-                size_t i = 0;
-                for (auto r = _range; !r.empty; r.popFront())
-                {
-                    res = dg(i, r.front);
-                    if (res) break;
-                    i++;
-                }
-
-                return res;
-            }
-        }
-    }
-}
-
-/**Convenience function for creating an $(D InputRangeObject) of the proper type.
- * See $(LREF InputRange) for an example.
- */
-InputRangeObject!R inputRangeObject(R)(R range) if (isInputRange!R)
-{
-    static if (is(R : InputRange!(ElementType!R)))
-    {
-        return range;
-    }
-    else
-    {
-        return new InputRangeObject!R(range);
-    }
-}
-
-/**Convenience function for creating an $(D OutputRangeObject) with a base range
- * of type $(D R) that accepts types $(D E).
-
- Examples:
- ---
- uint[] outputArray;
- auto app = appender(&outputArray);
- auto appWrapped = outputRangeObject!(uint, uint[])(app);
- static assert(is(typeof(appWrapped) : OutputRange!(uint[])));
- static assert(is(typeof(appWrapped) : OutputRange!(uint)));
- ---
-*/
-template outputRangeObject(E...)
-{
-    ///
-    OutputRangeObject!(R, E) outputRangeObject(R)(R range)
-    {
-        return new OutputRangeObject!(R, E)(range);
-    }
-}
-
-unittest
-{
-    static void testEquality(R)(iInputRange r1, R r2)
-    {
-        assert(equal(r1, r2));
-    }
-
-    auto arr = [1,2,3,4];
-    RandomFiniteAssignable!int arrWrapped = inputRangeObject(arr);
-    static assert(isRandomAccessRange!(typeof(arrWrapped)));
-    //    static assert(hasSlicing!(typeof(arrWrapped)));
-    static assert(hasLength!(typeof(arrWrapped)));
-    arrWrapped[0] = 0;
-    assert(arr[0] == 0);
-    assert(arr.moveFront() == 0);
-    assert(arr.moveBack() == 4);
-    assert(arr.moveAt(1) == 2);
-
-    foreach(elem; arrWrapped) {}
-    foreach(i, elem; arrWrapped) {}
-
-    assert(inputRangeObject(arrWrapped) is arrWrapped);
-
-    with (DummyRanges!())
-    foreach (DummyType; AllDummyRanges)
-    {
-        auto d = DummyType.init;
-        static assert(propagatesRangeType!(DummyType,
-                        typeof(inputRangeObject(d))));
-        static assert(propagatesRangeType!(DummyType,
-                        MostDerivedInputRange!DummyType));
-        InputRange!uint wrapped = inputRangeObject(d);
-        assert(equal(wrapped, d));
-    }
-
-    // Test output range stuff.
-    auto app = appender!(uint[])();
-    auto appWrapped = outputRangeObject!(uint, uint[])(app);
-    static assert(is(typeof(appWrapped) : OutputRange!(uint[])));
-    static assert(is(typeof(appWrapped) : OutputRange!(uint)));
-
-    appWrapped.put(1);
-    appWrapped.put([2, 3]);
-    assert(app.data.length == 3);
-    assert(equal(app.data, [1,2,3]));
-}
 
 /**
   Returns true if $(D fn) accepts variables of type T1 and T2 in any order.
@@ -6624,45 +6139,35 @@ enum SearchPolicy
         }
 
 /**
-   Represents a sorted random-access range. In addition to the regular
-   range primitives, supports fast operations using binary search. To
-   obtain a $(D SortedRange) from an unsorted range $(D r), use
-   $(XREF algorithm, sort) which sorts $(D r) in place and returns the
-   corresponding $(D SortedRange). To construct a $(D SortedRange)
-   from a range $(D r) that is known to be already sorted, use
-   $(LREF assumeSorted) described below.
-
-   Example:
-
-   ----
-   auto a = [ 1, 2, 3, 42, 52, 64 ];
-   auto r = assumeSorted(a);
-   assert(r.contains(3));
-   assert(!r.contains(32));
-   auto r1 = sort!"a > b"(a);
-   assert(r1.contains(3));
-   assert(!r1.contains(32));
-   assert(r1.release() == [ 64, 52, 42, 3, 2, 1 ]);
-   ----
-
-   $(D SortedRange) could accept ranges weaker than random-access, but it
-   is unable to provide interesting functionality for them. Therefore,
-   $(D SortedRange) is currently restricted to random-access ranges.
-
-   No copy of the original range is ever made. If the underlying range is
-   changed concurrently with its corresponding $(D SortedRange) in ways
-   that break its sortedness, $(D SortedRange) will work erratically.
-
-   Example:
-
-   ----
-   auto a = [ 1, 2, 3, 42, 52, 64 ];
-   auto r = assumeSorted(a);
-   assert(r.contains(42));
-   swap(a[3], a[5]);                      // illegal to break sortedness of original range
-   assert(!r.contains(42));                // passes although it shouldn't
-   ----
-*/
+ * Represents a sorted random-access range. In addition to the regular
+ * range primitives, supports fast operations using binary search. To
+ * obtain a $(D SortedRange) from an unsorted range $(D r), use
+ * $(XREF algorithm, sort) which sorts $(D r) in place and returns the
+ * corresponding $(D SortedRange). To construct a $(D SortedRange)
+ * from a range $(D r) that is known to be already sorted, use
+ * $(LREF assumeSorted) described below.
+ *
+ * Example:
+ *
+ * ----
+ * auto a = [ 1, 2, 3, 42, 52, 64 ];
+ * auto r = assumeSorted(a);
+ * assert(r.contains(3));
+ * assert(!r.contains(32));
+ * auto r1 = sort!"a > b"(a);
+ * assert(r1.contains(3));
+ * assert(!r1.contains(32));
+ * assert(r1.release() == [ 64, 52, 42, 3, 2, 1 ]);
+ * ----
+ *
+ * $(D SortedRange) could accept ranges weaker than random-access, but it
+ * is unable to provide interesting functionality for them. Therefore,
+ * $(D SortedRange) is currently restricted to random-access ranges.
+ *
+ * No copy of the original range is ever made. If the underlying range is
+ * changed concurrently with its corresponding $(D SortedRange) in ways
+ * that break its sortedness, $(D SortedRange) will work erratically.
+ */
 struct SortedRange(Range, alias pred = "a < b")
 if (isRandomAccessRange!Range && hasLength!Range)
 {
@@ -6856,73 +6361,70 @@ if (isRandomAccessRange!Range && hasLength!Range)
             SearchPolicy.binarySearch, test, V)(v);
     }
 
-// lowerBound
-/**
-   This function uses binary search with policy $(D sp) to find the
-   largest left subrange on which $(D pred(x, value)) is $(D true) for
-   all $(D x) (e.g., if $(D pred) is "less than", returns the portion of
-   the range with elements strictly smaller than $(D value)). The search
-   schedule and its complexity are documented in
-   $(LREF SearchPolicy).  See also STL's
-   $(WEB sgi.com/tech/stl/lower_bound.html, lower_bound).
-
-   Example:
-   ----
-   auto a = assumeSorted([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]);
-   auto p = a.lowerBound(4);
-   assert(equal(p, [ 0, 1, 2, 3 ]));
-   ----
-*/
+    /**
+     * This function uses binary search with policy $(D sp) to find the
+     * largest left subrange on which $(D pred(x, value)) is $(D true) for
+     * all $(D x) (e.g., if $(D pred) is "less than", returns the portion of
+     * the range with elements strictly smaller than $(D value)). The search
+     * schedule and its complexity are documented in
+     * $(LREF SearchPolicy).  See also STL's
+     * $(WEB sgi.com/tech/stl/lower_bound.html, lower_bound).
+     *
+     * Example:
+     * ----
+     * auto a = assumeSorted([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]);
+     * auto p = a.lowerBound(4);
+     * assert(equal(p, [ 0, 1, 2, 3 ]));
+     * ----
+     */
     auto lowerBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V))
     {
         return this[0 .. getTransitionIndex!(sp, geq)(value)];
     }
 
-// upperBound
-/**
-   This function uses binary search with policy $(D sp) to find the
-   largest right subrange on which $(D pred(value, x)) is $(D true)
-   for all $(D x) (e.g., if $(D pred) is "less than", returns the
-   portion of the range with elements strictly greater than $(D
-   value)). The search schedule and its complexity are documented in
-   $(LREF SearchPolicy).  See also STL's
-   $(WEB sgi.com/tech/stl/lower_bound.html,upper_bound).
-
-   Example:
-   ----
-   auto a = assumeSorted([ 1, 2, 3, 3, 3, 4, 4, 5, 6 ]);
-   auto p = a.upperBound(3);
-   assert(equal(p, [4, 4, 5, 6]));
-   ----
-*/
+    /**
+     * This function uses binary search with policy $(D sp) to find the
+     * largest right subrange on which $(D pred(value, x)) is $(D true)
+     * for all $(D x) (e.g., if $(D pred) is "less than", returns the
+     * portion of the range with elements strictly greater than $(D
+     * value)). The search schedule and its complexity are documented in
+     * $(LREF SearchPolicy).  See also STL's
+     * $(WEB sgi.com/tech/stl/lower_bound.html,upper_bound).
+     *
+     * Example:
+     * ----
+     * auto a = assumeSorted([ 1, 2, 3, 3, 3, 4, 4, 5, 6 ]);
+     * auto p = a.upperBound(3);
+     * assert(equal(p, [4, 4, 5, 6]));
+     * ----
+     */
     auto upperBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V))
     {
         return this[getTransitionIndex!(sp, gt)(value) .. length];
     }
 
-// equalRange
-/**
-   Returns the subrange containing all elements $(D e) for which both $(D
-   pred(e, value)) and $(D pred(value, e)) evaluate to $(D false) (e.g.,
-   if $(D pred) is "less than", returns the portion of the range with
-   elements equal to $(D value)). Uses a classic binary search with
-   interval halving until it finds a value that satisfies the condition,
-   then uses $(D SearchPolicy.gallopBackwards) to find the left boundary
-   and $(D SearchPolicy.gallop) to find the right boundary. These
-   policies are justified by the fact that the two boundaries are likely
-   to be near the first found value (i.e., equal ranges are relatively
-   small). Completes the entire search in $(BIGOH log(n)) time. See also
-   STL's $(WEB sgi.com/tech/stl/equal_range.html, equal_range).
-
-   Example:
-   ----
-   auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
-   auto r = equalRange(a, 3);
-   assert(equal(r, [ 3, 3, 3 ]));
-   ----
-*/
+    /**
+     * Returns the subrange containing all elements $(D e) for which both $(D
+     * pred(e, value)) and $(D pred(value, e)) evaluate to $(D false) (e.g.,
+     * if $(D pred) is "less than", returns the portion of the range with
+     * elements equal to $(D value)). Uses a classic binary search with
+     * interval halving until it finds a value that satisfies the condition,
+     * then uses $(D SearchPolicy.gallopBackwards) to find the left boundary
+     * and $(D SearchPolicy.gallop) to find the right boundary. These
+     * policies are justified by the fact that the two boundaries are likely
+     * to be near the first found value (i.e., equal ranges are relatively
+     * small). Completes the entire search in $(BIGOH log(n)) time. See also
+     * STL's $(WEB sgi.com/tech/stl/equal_range.html, equal_range).
+     *
+     * Example:
+     * ----
+     * auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
+     * auto r = equalRange(a, 3);
+     * assert(equal(r, [ 3, 3, 3 ]));
+     * ----
+     */
     auto equalRange(V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V))
     {
@@ -6961,24 +6463,23 @@ if (isRandomAccessRange!Range && hasLength!Range)
         return this.init;
     }
 
-// trisect
-/**
-Returns a tuple $(D r) such that $(D r[0]) is the same as the result
-of $(D lowerBound(value)), $(D r[1]) is the same as the result of $(D
-equalRange(value)), and $(D r[2]) is the same as the result of $(D
-upperBound(value)). The call is faster than computing all three
-separately. Uses a search schedule similar to $(D
-equalRange). Completes the entire search in $(BIGOH log(n)) time.
-
-Example:
-----
-auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
-auto r = assumeSorted(a).trisect(3);
-assert(equal(r[0], [ 1, 2 ]));
-assert(equal(r[1], [ 3, 3, 3 ]));
-assert(equal(r[2], [ 4, 4, 5, 6 ]));
-----
-*/
+    /**
+     * Returns a tuple $(D r) such that $(D r[0]) is the same as the result
+     * of $(D lowerBound(value)), $(D r[1]) is the same as the result of $(D
+     * equalRange(value)), and $(D r[2]) is the same as the result of $(D
+     * upperBound(value)). The call is faster than computing all three
+     * separately. Uses a search schedule similar to $(D
+     * equalRange). Completes the entire search in $(BIGOH log(n)) time.
+     *
+     * Example:
+     * ----
+     * auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
+     * auto r = assumeSorted(a).trisect(3);
+     * assert(equal(r[0], [ 1, 2 ]));
+     * assert(equal(r[1], [ 3, 3, 3 ]));
+     * assert(equal(r[2], [ 4, 4, 5, 6 ]));
+     * ----
+     */
     auto trisect(V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V))
     {
@@ -7019,14 +6520,12 @@ assert(equal(r[2], [ 4, 4, 5, 6 ]));
         return tuple(this[0 .. first], this.init, this[first .. length]);
     }
 
-// contains
-/**
-Returns $(D true) if and only if $(D value) can be found in $(D
-range), which is assumed to be sorted. Performs $(BIGOH log(r.length))
-evaluations of $(D pred). See also STL's $(WEB
-sgi.com/tech/stl/binary_search.html, binary_search).
- */
-
+    /**
+     * Returns $(D true) if and only if $(D value) can be found in $(D
+     * range), which is assumed to be sorted. Performs $(BIGOH log(r.length))
+     * evaluations of $(D pred). See also STL's $(WEB
+     * sgi.com/tech/stl/binary_search.html, binary_search).
+     */
     bool contains(V)(V value)
     {
         size_t first = 0, count = _input.length;
@@ -7054,18 +6553,28 @@ sgi.com/tech/stl/binary_search.html, binary_search).
     }
 
     // Explicitly undocumented. It will be removed in November 2013.
-    deprecated("Please use contains instead.") alias contains canFind;
+    deprecated("Please use contains instead.")
+    alias contains canFind;
 }
 
-// Doc examples
+///
 unittest
 {
     auto a = [ 1, 2, 3, 42, 52, 64 ];
     auto r = assumeSorted(a);
-    assert(r.contains(3));
+    assert( r.contains(42));
+    swap(a[3], a[5]);               // illegal to break sortedness of original range
+    assert(!r.contains(42));        // passes although it shouldn't
+}
+
+unittest
+{
+    auto a = [ 1, 2, 3, 42, 52, 64 ];
+    auto r = assumeSorted(a);
+    assert( r.contains(3));
     assert(!r.contains(32));
     auto r1 = sort!"a > b"(a);
-    assert(r1.contains(3));
+    assert( r1.contains(3));
     assert(!r1.contains(32));
     assert(r1.release() == [ 64, 52, 42, 3, 2, 1 ]);
 }
@@ -7160,17 +6669,17 @@ unittest
 }
 
 /**
-Assumes $(D r) is sorted by predicate $(D pred) and returns the
-corresponding $(D SortedRange!(pred, R)) having $(D r) as support. To
-keep the checking costs low, the cost is $(BIGOH 1) in release mode
-(no checks for sortedness are performed). In debug mode, a few random
-elements of $(D r) are checked for sortedness. The size of the sample
-is proportional $(BIGOH log(r.length)). That way, checking has no
-effect on the complexity of subsequent operations specific to sorted
-ranges (such as binary search). The probability of an arbitrary
-unsorted range failing the test is very high (however, an
-almost-sorted range is likely to pass it). To check for sortedness at
-cost $(BIGOH n), use $(XREF algorithm,isSorted).
+ * Assumes $(D r) is sorted by predicate $(D pred) and returns the
+ * corresponding $(D SortedRange!(pred, R)) having $(D r) as support. To
+ * keep the checking costs low, the cost is $(BIGOH 1) in release mode
+ * (no checks for sortedness are performed). In debug mode, a few random
+ * elements of $(D r) are checked for sortedness. The size of the sample
+ * is proportional $(BIGOH log(r.length)). That way, checking has no
+ * effect on the complexity of subsequent operations specific to sorted
+ * ranges (such as binary search). The probability of an arbitrary
+ * unsorted range failing the test is very high (however, an
+ * almost-sorted range is likely to pass it). To check for sortedness at
+ * cost $(BIGOH n), use $(XREF algorithm,isSorted).
  */
 auto assumeSorted(alias pred = "a < b", R)(R r)
 if (isRandomAccessRange!(Unqual!R))
@@ -7250,19 +6759,19 @@ unittest
 }
 
 
-/++
-    Wrapper which effectively makes it possible to pass a range by reference.
-    Both the original range and the RefRange will always have the exact same
-    elements. Any operation done on one will affect the other. So, for instance,
-    if it's passed to a function which would implicitly copy the original range
-    if it were passed to it, the original range is $(I not) copied but is
-    consumed as if it were a reference type.
+/**
+ * Wrapper which effectively makes it possible to pass a range by reference.
+ * Both the original range and the RefRange will always have the exact same
+ * elements. Any operation done on one will affect the other. So, for instance,
+ * if it's passed to a function which would implicitly copy the original range
+ * if it were passed to it, the original range is $(I not) copied but is
+ * consumed as if it were a reference type.
+ *
+ * Note that $(D save) works as normal and operates on a new range, so if
+ * $(D save) is ever called on the RefRange, then no operations on the saved
+ * range will affect the original.
 
-    Note that $(D save) works as normal and operates on a new range, so if
-    $(D save) is ever called on the RefRange, then no operations on the saved
-    range will affect the original.
-
-    Examples:
+Examples:
 --------------------
 import std.algorithm;
 ubyte[] buffer = [1, 9, 45, 12, 22];
@@ -7287,9 +6796,9 @@ assert(str == " world");
 assert(wrappedStr.front == ' ');
 assert(*wrappedStr.ptr == " world");
 --------------------
-  +/
+ */
 struct RefRange(R)
-    if(isForwardRange!R)
+if (isForwardRange!R)
 {
 public:
 
