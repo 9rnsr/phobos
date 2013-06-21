@@ -32,7 +32,13 @@ version (DigitalMars)
     {
         // Specific to the way Digital Mars C does stdio
         version = DIGITAL_MARS_STDIO;
-        import std.c.stdio : __fhnd_info, FHND_WCHAR, FHND_TEXT;
+        //import std.c.stdio : __fhnd_info, FHND_WCHAR, FHND_TEXT;
+
+        extern (C)
+        {
+            // necessary because __fhnd_info in core.stdc.stdio is private
+            extern shared ubyte[_NFILE] __fhnd_info;
+        }
     }
     else version (Win64)
     {

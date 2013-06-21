@@ -20,7 +20,6 @@ module std.json;
 import std.ascii;
 import std.conv;
 import std.range;
-import std.uni : isControl;
 import std.utf;
 
 private
@@ -518,7 +517,8 @@ string toJSON(in JSONValue* root, in bool pretty = false)
 private void appendJSONChar(Appender!string* dst, dchar c,
                             scope void delegate(string) error)
 {
-    if(isControl(c))
+    import std.uni : isControl;
+    if (isControl(c))
         error("Illegal control character.");
     dst.put(c);
 }

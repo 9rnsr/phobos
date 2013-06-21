@@ -479,6 +479,8 @@ private Pid spawnProcessImpl(in char[] commandLine,
                              Config config)
     @trusted
 {
+    import core.exception;
+
     if (commandLine.empty) throw new RangeError("Command line is empty");
     auto commandz = toUTFz!(wchar*)(commandLine);
 

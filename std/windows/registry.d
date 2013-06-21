@@ -520,6 +520,8 @@ in
 }
 body
 {
+    import core.bitop;
+
     REG_VALUE_TYPE type;
 
     // See bugzilla 961 on this
@@ -631,6 +633,8 @@ in
 }
 body
 {
+    import core.bitop;
+
     REG_VALUE_TYPE type;
 
     DWORD cbData = value.sizeof;

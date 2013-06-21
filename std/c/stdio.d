@@ -13,6 +13,7 @@ module std.c.stdio;
 
 public import core.stdc.stdio;
 
+/+
 extern (C):
 
 version (Windows)
@@ -28,3 +29,4 @@ version (Windows)
         FHND_WCHAR      = 0x40,
     }
 }
++/
