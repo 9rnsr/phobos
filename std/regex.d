@@ -228,7 +228,7 @@ import std.array, std.algorithm, std.range,
        std.uni, std.utf, std.format, std.typecons, std.bitmanip,
        std.functional, std.exception;
 import core.bitop, core.stdc.string, core.stdc.stdlib;
-import ascii = std.ascii;
+/*static */import ascii = std.ascii;
 import std.string : representation;
 
 debug import std.stdio;
