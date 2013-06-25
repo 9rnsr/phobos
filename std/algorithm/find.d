@@ -2,6 +2,7 @@ module std.algorithm.find;
 
 import std.algorithm;
 import std.range, std.functional, std.traits, std.typetuple;
+import std.typecons : Tuple, tuple;
 
 version(unittest)
 {

@@ -2,6 +2,7 @@ module std.algorithm.group;
 
 import std.algorithm;
 import std.range, std.functional, std.traits;
+import std.typecons : Tuple, tuple;
 
 version(unittest)
 {

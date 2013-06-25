@@ -6,7 +6,7 @@ import std.typecons : tuple, Tuple;
 
 version(unittest)
 {
-    import std.complex : approxEqual;
+    import std.math : approxEqual;
     import std.math : sqrt;
 }
 

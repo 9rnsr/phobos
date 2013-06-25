@@ -2,6 +2,7 @@ module std.algorithm.sort;
 
 import std.algorithm;
 import std.range, std.functional, std.traits;
+import std.typecons : Tuple;
 
 version(unittest)
 {

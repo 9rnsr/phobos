@@ -2,6 +2,7 @@ module std.algorithm.move;
 
 import std.algorithm;
 import std.range, std.functional, std.traits;
+import std.typecons : Tuple, tuple;
 
 version(unittest)
 {
@@ -819,6 +820,7 @@ if (isNarrowString!(Char[]) &&
     !is(Char == const) && !is(Char == immutable))   // isMutable?
 {
     import std.string : representation;
+    import std.utf : stride;
 
     auto r = representation(s);
     for (size_t i = 0; i < s.length; )

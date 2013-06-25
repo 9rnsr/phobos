@@ -2,6 +2,7 @@ module std.algorithm.distance;
 
 import std.algorithm;
 import std.range, std.functional, std.traits;
+import std.typecons : Tuple, tuple;
 
 version(unittest)
 {
@@ -187,10 +188,12 @@ if (isForwardRange!Range1 && isForwardRange!Range2)
 ///
 unittest
 {
+    import std.uni : toUpper;
+
     assert(levenshteinDistance("cat", "rat") == 1);
     assert(levenshteinDistance("parks", "spark") == 2);
     assert(levenshteinDistance("kitten", "sitting") == 3);
-    assert(levenshteinDistance!("std.uni.toUpper(a) == std.uni.toUpper(b)")
+    assert(levenshteinDistance!((a, b) => std.uni.toUpper(a) == std.uni.toUpper(b))
         ("parks", "SPARK") == 2);
 }
 

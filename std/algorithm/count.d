@@ -2,6 +2,7 @@ module std.algorithm.count;
 
 import std.algorithm;
 import std.range, std.functional, std.traits;
+import std.typecons : Tuple;
 
 version(unittest)
 {
@@ -35,6 +36,8 @@ if (isInputRange!Range && !isInfinite!Range &&
 ///
 unittest
 {
+    import std.uni : toLower;
+
     // count elements in range
     int[] a = [ 1, 2, 4, 3, 2, 5, 3, 2, 4 ];
     assert(count(a, 2) == 3);
@@ -44,7 +47,7 @@ unittest
     assert(count("ababab", "abab") == 1);
     assert(count("ababab", "abx") == 0);
     // fuzzy count range in range
-    assert(count!"std.uni.toLower(a) == std.uni.toLower(b)"("AbcAdFaBf", "ab") == 2);
+    assert(count!((a, b) => std.uni.toLower(a) == std.uni.toLower(b))("AbcAdFaBf", "ab") == 2);
     // count predicate in range
     assert(count!("a > 1")(a) == 8);
 }
@@ -339,6 +342,8 @@ if (isInputRange!R &&
 ///
 unittest
 {
+    import std.uni, std.ascii;
+
     assert(countUntil!(std.uni.isWhite)("hello world") == 5);
     assert(countUntil!(std.ascii.isDigit)("hello world") == -1);
     assert(countUntil!"a > 20"([0, 7, 12, 22, 9]) == 3);

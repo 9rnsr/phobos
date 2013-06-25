@@ -2,6 +2,7 @@ module std.algorithm.compare;
 
 import std.algorithm;
 import std.range, std.functional, std.traits;
+import std.typecons : Tuple, tuple;
 
 version(unittest)
 {
@@ -75,6 +76,8 @@ if (isInputRange!Range1 &&
 
 unittest
 {
+    import std.math : approxEqual;
+
     int[] a = [ 1, 2, 4, 3 ];
     assert(!equal(a, a[1 .. $]));
     assert( equal(a, a));
@@ -93,6 +96,8 @@ unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+
+    import std.math : approxEqual;
 
     int[] a = [ 1, 2, 4, 3];
     assert(!equal(a, a[1..$]));
@@ -220,8 +225,9 @@ if (isSomeString!R1 && isSomeString!R2)
     {
         static if (typeof(r1[0]).sizeof == 1)
         {
+            import core.stdc.string;
             immutable len = min(r1.length, r2.length);
-            immutable result = std.c.string.memcmp(r1.ptr, r2.ptr, len);
+            immutable result = core.stdc.string.memcmp(r1.ptr, r2.ptr, len);
             if (result)
                 return result;
         }
@@ -239,6 +245,8 @@ if (isSomeString!R1 && isSomeString!R2)
     }
     else
     {
+        import std.utf;
+
         for (size_t i1, i2; ; )
         {
             if (i1 == r1.length)

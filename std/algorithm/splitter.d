@@ -594,6 +594,8 @@ unittest
 auto splitter(Range)(Range input)
 if (isSomeString!Range)
 {
+    import std.uni : isWhite;
+
     return splitter!(std.uni.isWhite)(input);
 }
 

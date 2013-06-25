@@ -1937,6 +1937,8 @@ unittest
 
 unittest
 {
+    import std.algorithm : filter;
+
     foreach(S; TypeTuple!(char[], const char[], string,
                           wchar[], const wchar[], wstring,
                           dchar[], const dchar[], dstring))
@@ -1947,7 +1949,7 @@ unittest
             assert(codeLength!C(to!S(`言語`)) == to!(C[])(`言語`).length);
             assert(codeLength!C(to!S(`ウェブサイト@La_Verité.com`)) ==
                    to!(C[])(`ウェブサイト@La_Verité.com`).length);
-			assert(codeLength!C(to!S(`ウェブサイト@La_Verité.com`).filter!(x => true)()) ==
+            assert(codeLength!C(to!S(`ウェブサイト@La_Verité.com`).filter!(x => true)()) ==
                    to!(C[])(`ウェブサイト@La_Verité.com`).length);
         }
     }

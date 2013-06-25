@@ -212,7 +212,7 @@ auto commonPrefix(R1, R2)(R1 r1, R2 r2)
 if (isNarrowString!R1 &&
     isNarrowString!R2)
 {
-    import std.utf : UTFException;
+    import std.utf : UTFException, stride;
 
     static if (ElementEncodingType!R1.sizeof == ElementEncodingType!R2.sizeof)
     {

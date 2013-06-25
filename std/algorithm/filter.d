@@ -17,6 +17,8 @@ version(unittest)
  */
 unittest
 {
+    import std.math : approxEqual;
+
     int[] arr = [ 1, 2, 3, 4, 5 ];
 
     // Sum all elements
