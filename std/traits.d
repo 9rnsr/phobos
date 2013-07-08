@@ -1678,6 +1678,44 @@ unittest
     }
 }
 
+/**
+ * Returns a tuple of overloaded function.
+ */
+template getOverloads(alias func)
+{
+    alias getOverloads =
+        TypeTuple!(__traits(getOverloads,
+                            __traits(parent, func),
+                            __traits(identifier, func)));
+}
+
+/// ditto
+template getOverloads(T, string memberName)
+{
+    alias getOverloads =
+        TypeTuple!(__traits(getOverloads, T, memberName));
+}
+
+///
+unittest
+{
+    struct S
+    {
+        void foo(int) {}
+        void foo(long) {}
+        void foo(string) {}
+    }
+    alias result =
+        TypeTuple!(FunctionTypeOf!(void function(int)),
+                   FunctionTypeOf!(void function(long)),
+                   FunctionTypeOf!(void function(string)));
+
+    alias foo = S.foo;
+    static assert(is(typeof(getOverloads!foo) == result));
+    static assert(is(typeof(getOverloads!(S.foo)) == result));
+    static assert(is(typeof(getOverloads!(S, "foo")) == result));
+}
+
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 // Aggregate Types
