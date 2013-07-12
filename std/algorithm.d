@@ -9113,14 +9113,16 @@ Returns: The initial range wrapped as a $(D SortedRange) with the
 predicate $(D (a, b) => binaryFun!less(transform(a),
 transform(b))).
  */
-SortedRange!(R, ((a, b) => binaryFun!less(unaryFun!transform(a),
-                                          unaryFun!transform(b))))
-schwartzSort(alias transform, alias less = "a < b",
-        SwapStrategy ss = SwapStrategy.unstable, R)(R r)
-    if (isRandomAccessRange!R && hasLength!R)
+auto schwartzSort
+(alias transform, alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable, R)
+(R r)
+if (isRandomAccessRange!R && hasLength!R)
 {
     import core.stdc.stdlib;
-    alias T = typeof(unaryFun!transform(r.front));
+    alias _less = binaryFun!less;
+    alias _transform = unaryFun!transform;
+    alias T = typeof(_transform(r.front));
+
     auto xform1 = (cast(T*) malloc(r.length * T.sizeof))[0 .. r.length];
     size_t length;
     scope(exit)
@@ -9133,7 +9135,7 @@ schwartzSort(alias transform, alias less = "a < b",
     }
     for (; length != r.length; ++length)
     {
-        emplace(xform1.ptr + length, unaryFun!transform(r[length]));
+        emplace(xform1.ptr + length, _transform(r[length]));
     }
     // Make sure we use ubyte[] and ushort[], not char[] and wchar[]
     // for the intermediate array, lest zip gets confused.
@@ -9145,8 +9147,11 @@ schwartzSort(alias transform, alias less = "a < b",
     {
         alias xform = xform1;
     }
-    zip(xform, r).sort!((a, b) => binaryFun!less(a[0], b[0]), ss)();
-    return typeof(return)(r);
+    zip(xform, r).sort!((a, b) => _less(a[0], b[0]), ss)();
+    int dummy;  // Workaround to make the lambda nested in this function
+    return SortedRange!(R, (a, b) => (dummy,
+                                      _less(_transform(a), _transform(b)))
+                       )(r);
 }
 
 unittest
@@ -9426,7 +9431,7 @@ assert(isSorted!
     (index2));
 ----
 */
-SortedRange!(RangeIndex, (a, b) => binaryFun!less(*a, *b))
+auto
 makeIndex(
     alias less = "a < b",
     SwapStrategy ss = SwapStrategy.unstable,
@@ -9437,13 +9442,15 @@ makeIndex(
             && is(ElementType!(RangeIndex) : ElementType!(Range)*))
 {
     // assume collection already ordered
+    alias _less = binaryFun!less;
     size_t i;
     for (; !r.empty; r.popFront(), ++i)
         index[i] = &(r.front);
     enforce(index.length == i);
     // sort the index
-    sort!((a, b) => binaryFun!less(*a, *b), ss)(index);
-    return typeof(return)(index);
+    sort!((a, b) => (dummy, _less(*a, *b)), ss)(index);
+    int dummy;
+    return SortedRange!(RangeIndex, (a, b) => (dummy, _less(*a, *b)))(index);
 }
 
 /// Ditto
