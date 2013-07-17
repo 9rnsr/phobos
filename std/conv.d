@@ -292,22 +292,30 @@ template to(T)
 // Tests for issue 6175
 @safe pure unittest
 {
+    assertCTFEable!(
+    {
     char[9] sarr = "blablabla";
     auto darr = to!(char[])(sarr);
     assert(sarr.ptr == darr.ptr);
     assert(sarr.length == darr.length);
+    });
 }
 
 // Tests for issue 7348
 @safe pure unittest
 {
+    assertCTFEable!(
+    {
     assert(to!string(null) == "null");
     assert(text(null) == "null");
+    });
 }
 
 // Tests for issue 8729: do NOT skip leading WS
 @safe pure unittest
 {
+    assertCTFEable!(
+    {
     foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
         assertThrown!ConvException(to!T(" 0"));
@@ -328,6 +336,7 @@ template to(T)
 
     alias AA = int[int];
     assertThrown!ConvException(to!AA(" [1:1]"));
+    });
 }
 
 /**
@@ -361,26 +370,35 @@ T toImpl(T, S)(S value)
 
 @safe pure unittest
 {
+    assertCTFEable!(
+    {
     enum E { a }  // Issue 9523 - Allow identity enum conversion
     auto e = to!E(E.a);
     assert(e == E.a);
+    });
 }
 
 @safe pure unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+
+    assertCTFEable!(
+    {
     int a = 42;
     auto b = to!long(a);
     assert(a == b);
+    });
 }
 
 // Tests for issue 6377
 @safe pure unittest
 {
+    assertCTFEable!(
+    {
     // Conversion between same size
     foreach (S; TypeTuple!(byte, short, int, long))
     {
-        alias Unsigned!S U;
+        alias U = Unsigned!S;
 
         foreach (Sint; TypeTuple!(S, const S, immutable S))
         foreach (Uint; TypeTuple!(U, const U, immutable U))
@@ -401,8 +419,8 @@ T toImpl(T, S)(S value)
     foreach (i, S1; TypeTuple!(byte, short, int, long))
     foreach (   S2; TypeTuple!(byte, short, int, long)[i+1..$])
     {
-        alias Unsigned!S1 U1;
-        alias Unsigned!S2 U2;
+        alias U1 = Unsigned!S1;
+        alias U2 = Unsigned!S2;
 
         static assert(U1.sizeof < S2.sizeof);
 
@@ -441,6 +459,7 @@ T toImpl(T, S)(S value)
             assertThrown!ConvOverflowException(to!Uint(sn));
         }
     }
+    });
 }
 
 /*
@@ -454,9 +473,12 @@ T toImpl(T, S)(ref S s)
 
 @safe pure unittest
 {
+    assertCTFEable!(
+    {
     char[4] test = ['a', 'b', 'c', 'd'];
     static assert(!isInputRange!(Unqual!(char[4])));
     assert(to!string(test) == test);
+    });
 }
 
 /**
@@ -472,6 +494,9 @@ T toImpl(T, S)(S value)
 @safe pure unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+
+    assertCTFEable!(
+    {
     class B
     {
         T opCast(T)() { return 43; }
@@ -479,13 +504,13 @@ T toImpl(T, S)(S value)
     auto b = new B;
     assert(to!int(b) == 43);
 
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     struct S
     {
         T opCast(T)() { return 43; }
     }
     auto s = S();
     assert(to!int(s) == 43);
+    });
 }
 
 /**
@@ -504,6 +529,9 @@ T toImpl(T, S)(S value)
 @safe pure unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+
+    assertCTFEable!(
+    {
     struct Int
     {
         int x;
@@ -528,11 +556,14 @@ T toImpl(T, S)(S value)
         }
     }
     Int3 i3 = to!Int3(1);
+    });
 }
 
 // Bugzilla 6808
 @safe pure unittest
 {
+    assertCTFEable!(
+    {
     static struct FakeBigInt
     {
         this(string s) @safe pure {}
@@ -540,6 +571,7 @@ T toImpl(T, S)(S value)
 
     string s = "101";
     auto i3 = to!FakeBigInt(s);
+    });
 }
 
 /// ditto
@@ -552,6 +584,8 @@ T toImpl(T, S)(S value)
 
 @safe pure unittest
 {
+    assertCTFEable!(
+    {
     static struct S
     {
         int x;
@@ -579,10 +613,13 @@ T toImpl(T, S)(S value)
 
     auto c2 = to!C(3);   // == new C(3)
     assert(c2.x == 3);
+    });
 }
 
 @safe pure unittest
 {
+    assertCTFEable!(
+    {
     struct S
     {
         class A
@@ -610,6 +647,7 @@ T toImpl(T, S)(S value)
     C a2 = to!C(oc);    // == new C(a)
                         // Construction conversion overrides down-casting conversion
     assert(a2 !is a);   //
+    });
 }
 
 /**
@@ -660,9 +698,9 @@ T toImpl(T, S)(S value)
     auto result = ()@trusted{ return cast(T) value; }();
     if (!result && value)
     {
-        throw new ConvException("Cannot convert object of static type "
-                ~S.classinfo.name~" and dynamic type "~value.classinfo.name
-                ~" to type "~T.classinfo.name);
+        throw new ConvException("Cannot convert object of static type "~S.stringof
+                ~(__ctfe ? "" : " and dynamic type "~value.classinfo.name)
+                ~" to type "~T.stringof);
     }
     return result;
 }
@@ -670,6 +708,9 @@ T toImpl(T, S)(S value)
 @safe pure unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+
+    assertCTFEable!(
+    {
     // Testing object conversions
     class A {}
     class B : A {}
@@ -678,6 +719,7 @@ T toImpl(T, S)(S value)
     assert(to!B(a2) is a2);
     assert(to!C(a3) is a3);
     assertThrown!ConvException(to!B(a3));
+    });
 }
 
 // Unittest for 6288
@@ -697,6 +739,8 @@ T toImpl(T, S)(S value)
         else static if (n == 4) alias toImmutable    AddModifier;
     }
 
+    //assertCTFEable!(
+    //{
     interface I {}
     interface J {}
 
@@ -744,6 +788,7 @@ T toImpl(T, S)(S value)
             static assert(!is(typeof(to!(tgtmod!J)(srcmod!I.init))));   // I to J
         }
     }
+    //});
 }
 
 /**
@@ -828,16 +873,17 @@ T toImpl(T, S)(S value)
     // string to string conversion
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
 
-    alias TypeTuple!(char, wchar, dchar) Chars;
+    assertCTFEable!(
+    {
+    alias Chars = TypeTuple!(char, wchar, dchar);
     foreach (LhsC; Chars)
     {
-        alias TypeTuple!(LhsC[], const(LhsC)[], immutable(LhsC)[]) LhStrings;
+        alias LhStrings = TypeTuple!(LhsC[], const(LhsC)[], immutable(LhsC)[]);
         foreach (Lhs; LhStrings)
         {
             foreach (RhsC; Chars)
             {
-                alias TypeTuple!(RhsC[], const(RhsC)[], immutable(RhsC)[])
-                    RhStrings;
+                alias RhStrings = TypeTuple!(RhsC[], const(RhsC)[], immutable(RhsC)[]);
                 foreach (Rhs; RhStrings)
                 {
                     Lhs s1 = to!Lhs("wyda");
@@ -862,6 +908,7 @@ T toImpl(T, S)(S value)
             assert(s1 == to!(T[])(s4));
         }
     }
+    });
 }
 
 @safe pure unittest
@@ -869,12 +916,15 @@ T toImpl(T, S)(S value)
     // Conversion reinterpreting void array to string
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
 
+    //assertCTFEable!(
+    //{
     auto a = "abcx"w;
     const(void)[] b = a;
     assert(b.length == 8);
 
     auto c = to!(wchar[])(b);
     assert(c == "abcx");
+    //});
 }
 
 /*@safe pure */unittest
@@ -883,8 +933,11 @@ T toImpl(T, S)(S value)
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(conv) printf("string.to!string(char*).unittest\n");
 
+    //assertCTFEable!(
+    //{
     assert(to!string(cast(char*) null) == "");
     assert(to!string("foo\0".ptr) == "foo");
+    //});
 }
 
 @safe pure unittest
@@ -892,10 +945,13 @@ T toImpl(T, S)(S value)
     // Conversion representing bool value with string
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
 
+    assertCTFEable!(
+    {
     bool b;
     assert(to!string(b) == "false");
     b = true;
     assert(to!string(b) == "true");
+    });
 }
 
 @safe pure unittest
@@ -903,10 +959,12 @@ T toImpl(T, S)(S value)
     // Conversion representing character value with string
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
 
-    alias TypeTuple!(
+    assertCTFEable!(
+    {
+    alias AllChars = TypeTuple!(
          char, const( char), immutable( char),
         wchar, const(wchar), immutable(wchar),
-        dchar, const(dchar), immutable(dchar)) AllChars;
+        dchar, const(dchar), immutable(dchar));
     foreach (Char1; AllChars)
     {
         foreach (Char2; AllChars)
@@ -926,6 +984,7 @@ T toImpl(T, S)(S value)
     }
     //printf("%.*s", s2);
     assert(s2 == "foo");
+    });
 }
 
 @safe pure unittest
@@ -937,9 +996,12 @@ T toImpl(T, S)(S value)
         debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
         debug(conv) printf("string.to!string(%.*s).unittest\n", Int.stringof.length, Int.stringof.ptr);
 
+        assertCTFEable!(
+        {
         assert(to!string(to!Int(0)) == "0");
         assert(to!string(to!Int(9)) == "9");
         assert(to!string(to!Int(123)) == "123");
+        });
     }
 
     foreach (Int; TypeTuple!(byte, short, int, long))
@@ -947,6 +1009,8 @@ T toImpl(T, S)(S value)
         debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
         debug(conv) printf("string.to!string(%.*s).unittest\n", Int.stringof.length, Int.stringof.ptr);
 
+        assertCTFEable!(
+        {
         assert(to!string(to!Int(0)) == "0");
         assert(to!string(to!Int(9)) == "9");
         assert(to!string(to!Int(123)) == "123");
@@ -954,18 +1018,19 @@ T toImpl(T, S)(S value)
         assert(to!string(to!Int(-9)) == "-9");
         assert(to!string(to!Int(-123)) == "-123");
         assert(to!string(to!(const Int)(6)) == "6");
+        });
     }
 
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    assertCTFEable!(
+    {
     assert(wtext(int.max) == "2147483647"w);
     assert(wtext(int.min) == "-2147483648"w);
     assert(to!string(0L) == "0");
 
-    assertCTFEable!(
-    {
-        assert(to!string(1uL << 62) == "4611686018427387904");
-        assert(to!string(0x100000000) == "4294967296");
-        assert(to!string(-138L) == "-138");
+    assert(to!string(1uL << 62) == "4611686018427387904");
+    assert(to!string(0x100000000) == "4294967296");
+    assert(to!string(-138L) == "-138");
     });
 }
 
@@ -974,21 +1039,30 @@ T toImpl(T, S)(S value)
     // Conversion representing dynamic/static array with string
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
 
+    assertCTFEable!(
+    {
     long[] b = [ 1, 3, 5 ];
     auto s = to!string(b);
     assert(to!string(b) == "[1, 3, 5]", s);
+    });
 }
 /*@safe pure */unittest // sprintf issue
 {
+    //assertCTFEable!(
+    //{
     double[2] a = [ 1.5, 2.5 ];
     assert(to!string(a) == "[1.5, 2.5]");
+    //});
 }
 
 /*@safe pure */unittest
 {
+    assertCTFEable!(
+    {
     // Conversion representing associative array with string
     int[string] a = ["0":1, "1":2];
     assert(to!string(a) == `["0":1, "1":2]`);
+    });
 }
 
 unittest
@@ -996,6 +1070,8 @@ unittest
     // Conversion representing class object with string
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
 
+    assertCTFEable!(
+    {
     class A
     {
         override string toString() const { return "an A"; }
@@ -1010,6 +1086,7 @@ unittest
     struct S { C c; alias c this; }
     S s; s.c = new C();
     assert(to!string(s) == "C");
+    });
 }
 
 unittest
@@ -1017,12 +1094,17 @@ unittest
     // Conversion representing struct object with string
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
 
+    assertCTFEable!(
+    {
     struct S1
     {
         string toString() { return "wyda"; }
     }
     assert(to!string(S1()) == "wyda");
+    });
 
+    //assertCTFEable!(
+    //{
     struct S2
     {
         int a = 42;
@@ -1030,7 +1112,10 @@ unittest
     }
     S2 s2;
     assert(to!string(s2) == "S2(42, 43.5)");
+    //});
 
+    assertCTFEable!(
+    {
     // Test for issue 8080
     struct S8080
     {
@@ -1040,6 +1125,7 @@ unittest
     }
     S8080 s8080;
     assert(to!string(s8080) == "<S>");
+    });
 }
 
 unittest
@@ -1047,6 +1133,8 @@ unittest
     // Conversion representing enum value with string
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
 
+    assertCTFEable!(
+    {
     enum EB : bool { a = true }
     enum EU : uint { a = 0, b = 1, c = 2 }  // base type is unsigned
     enum EI : int { a = -1, b = 0, c = 1 }  // base type is signed (bug 7909)
@@ -1066,6 +1154,7 @@ unittest
     assert(to! string(o) == "cast(EU)5"c);
     assert(to!wstring(o) == "cast(EU)5"w);
     assert(to!dstring(o) == "cast(EU)5"d);
+    });
 }
 
 /// ditto
@@ -1112,10 +1201,13 @@ body
         debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
         debug(conv) printf("string.to!string(%.*s, uint).unittest\n", Int.stringof.length, Int.stringof.ptr);
 
+        assertCTFEable!(
+        {
         assert(to!string(to!Int(16), 16) == "10");
         assert(to!string(to!Int(15), 2u) == "1111");
         assert(to!string(to!Int(1), 2u) == "1");
         assert(to!string(to!Int(0x1234AF), 16u) == "1234AF");
+        });
     }
 
     foreach (Int; TypeTuple!(int, long))
@@ -1123,7 +1215,10 @@ body
         debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
         debug(conv) printf("string.to!string(%.*s, uint).unittest\n", Int.stringof.length, Int.stringof.ptr);
 
+        assertCTFEable!(
+        {
         assert(to!string(to!Int(-10), 10u) == "-10");
+        });
     }
 }
 
