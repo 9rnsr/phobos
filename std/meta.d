@@ -1650,7 +1650,7 @@ unittest
     static assert(SeqDiv!(77, 11)[0] == 7);
 
     alias compose!(q{ [ args ] }, reverse) arrayRev;
-//  static assert(arrayRev!(1,2,3) == [ 3,2,1 ]);   // @@@BUG3276@@@
+    static assert(arrayRev!(1,2,3) == [ 3,2,1 ]);
 
     // More compositions
     alias compose!(q{ a * 11 }, q{ a + 7 }, q{ -a }) mul11add7neg;
@@ -2467,11 +2467,9 @@ unittest
                        1,2,3,4,5,6) doubled;
     static assert([ doubled ] == [ 2,4,6,8,10,12 ]);
 
-/+  @@@BUG3276@@@
     alias segmentWith!(reverse, 2,
                        1,2,3,4,5,6,7,8,9) rev2;
     static assert([ rev2 ] == [ 2,1,4,3,6,5,8,7,9 ]);
-+/
 }
 
 unittest
@@ -2659,14 +2657,12 @@ unittest
 {
     static struct MyPack(int n, T);
 
-/+  @@@BUG3276@@@
     alias zipWith!(compose!(MyPack, reverse),
                    pack!(int, double, string),
                    pack!(  1,      2,      3)) revzip;
     static assert(is(revzip[0] == MyPack!(1,    int)));
     static assert(is(revzip[1] == MyPack!(2, double)));
     static assert(is(revzip[2] == MyPack!(3, string)));
-+/
 
     alias zipWith!(q{ A[B] },
                    pack!(  int, double, string),
