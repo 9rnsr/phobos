@@ -1002,7 +1002,7 @@ private template variadicTGen(string expr)
 
     private template _variadicT(args...)
     {
-        mixin _parameters!(+args.length);   // @@@BUG4886@@@ workaround '+'
+        mixin _parameters!(args.length);
         mixin _installLambdaExpr!expr;
     }
 
@@ -1044,7 +1044,7 @@ unittest
     static assert(is(Make2D!(double, 30, 10) == double[30][10]));
 
     // args
-    alias variadicT!q{ +args.length } lengthof;
+    alias variadicT!q{ args.length } lengthof;
     static assert(lengthof!(1,2,3,4,5,6,7,8,9) == 9);
 }
 
