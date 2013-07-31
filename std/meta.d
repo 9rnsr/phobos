@@ -813,7 +813,7 @@ static assert(is(Types[2] == string));
  */
 template unaryT(string expr)
 {
-    alias unaryTGen!expr.unaryT unaryT;
+    alias _unaryTGen!expr._unaryT unaryT;
 }
 
 template unaryT(alias templat)
@@ -822,12 +822,12 @@ template unaryT(alias templat)
 }
 
 
-private template unaryTGen(string expr)
+private template _unaryTGen(string expr)
 {
-    template unaryT(alias a) { alias _unaryT!a._ unaryT; }
-    template unaryT(      A) { alias _unaryT!A._ unaryT; }
+    template _unaryT(alias a) { alias _unaryTImpl!a._ _unaryT; }
+    template _unaryT(      A) { alias _unaryTImpl!A._ _unaryT; }
 
-    private template _unaryT(args...)
+    private template _unaryTImpl(args...)
     {
         alias Id!(args[0]) a, A;
         mixin _installLambdaExpr!expr;
@@ -841,6 +841,10 @@ unittest
     alias unaryT!q{ A* } Pointify;
     static assert(increment!10 == 11);
     static assert(is(Pointify!int == int*));
+
+    // nested
+    alias unaryT!q{ apply!(unaryT!q{ a*2 }, a) * 2 } quadruple;
+    static assert(quadruple!10 == 40);
 }
 
 unittest    // Test for sequence return
@@ -898,7 +902,7 @@ static assert(n3 == 4 + 8 + 2);
  */
 template binaryT(string expr)
 {
-    alias binaryTGen!expr.binaryT binaryT;
+    alias _binaryTGen!expr._binaryT binaryT;
 }
 
 template binaryT(alias templat)
@@ -907,14 +911,14 @@ template binaryT(alias templat)
 }
 
 
-private template binaryTGen(string expr)
+private template _binaryTGen(string expr)
 {
-    template binaryT(AB...) if (AB.length == 2)
+    template _binaryT(AB...) if (AB.length == 2)
     {
-        alias _binaryT!AB._ binaryT;
+        alias _binaryTImpl!AB._ _binaryT;
     }
 
-    private template _binaryT(args...)
+    private template _binaryTImpl(args...)
     {
         alias Id!(args[0]) a, A;
         alias Id!(args[1]) b, B;
@@ -933,6 +937,10 @@ unittest
     static assert(is(ArrayA!(int, 10) == int[10]));
     static assert(is(ArrayB!(10, int) == int[10]));
     static assert(div!(28, -7) == -4);
+
+    // nested
+    alias binaryT!q{ apply!(binaryT!q{ a / b }, a+b, 2) } Ave;
+    static assert(Ave!(10, 20) == 15);
 }
 
 unittest    // Test for sequence return
@@ -987,7 +995,7 @@ static assert([ rotate1!(1, 2, 3, 4) ] == [ 2, 3, 4, 1 ]);
  */
 template variadicT(string expr)
 {
-    alias variadicTGen!expr.variadicT variadicT;
+    alias _variadicTGen!expr._variadicT variadicT;
 }
 
 template variadicT(alias templat)
@@ -996,11 +1004,11 @@ template variadicT(alias templat)
 }
 
 
-private template variadicTGen(string expr)
+private template _variadicTGen(string expr)
 {
-    template variadicT(args...) { alias _variadicT!args._ variadicT; }
+    template _variadicT(args...) { alias _variadicTImpl!args._ _variadicT; }
 
-    private template _variadicT(args...)
+    private template _variadicTImpl(args...)
     {
         mixin _parameters!(args.length);
         mixin _installLambdaExpr!expr;
@@ -1046,6 +1054,10 @@ unittest
     // args
     alias variadicT!q{ args.length } lengthof;
     static assert(lengthof!(1,2,3,4,5,6,7,8,9) == 9);
+
+    // nested
+    alias variadicT!q{ apply!(variadicT!q{ pack!args }, args.length, args) } argcv;
+    static assert(isSame!(argcv!(1, 2), pack!(2u, 1,2)));
 }
 
 unittest    // Test for sequence return
