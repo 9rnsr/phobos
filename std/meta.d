@@ -22,12 +22,74 @@ module std.meta;
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 
-// Introduce the symbols visible to user for unaryT etc.
-import meta = std.meta;
-
 // Introduce the symbols visible to use from string lambda templates.
 import std.traits;
 import std.typetuple;
+
+
+//----------------------------------------------------------------------------//
+// 'meta' namespace
+//----------------------------------------------------------------------------//
+
+/**
+ Provides a pseudo namespace 'meta' to access proper template names.
+
+ Some meta algorithm templates in $(D std.meta) named with suffix 'T' to avoid
+ name conflicition with other Phobos modules (especially $(D std.algorithm) and
+ $(D std.range)), but someone don't like such names. If using proper name is needed,
+ accessing templates via 'meta' namespace would be helpful.
+ */
+struct meta
+{
+    mixin mixinAll!(
+        .mapT!(
+            q{ "alias "~a[0..$-1]~" = ."~a~";" },
+            .filterT!(
+                q{ a[$-1] == 'T' },
+                __traits(allMembers, std.meta)))
+    );
+    mixin mixinAll!(
+        .mapT!(
+            q{ "alias "~a~" = ."~a~";" },
+            .filterT!(
+                q{ a[$-1] != 'T' },
+                __traits(allMembers, std.meta)))
+    );
+}
+
+/**
+ */
+unittest
+{
+    import std.meta;
+    alias types1 =     mapT!(q{ const A }, int, string, double[]);
+    alias types2 = meta.map!(q{ const A }, int, string, double[]);
+    static assert(is(types1 == types2));    // same result
+}
+
+
+/* undocumented (internal use) */
+template mixinAll(mixins...)
+{
+    static if (mixins.length == 1)
+    {
+        static if (is(typeof(mixins[0]) == string))
+        {
+            mixin(mixins[0]);
+        }
+        else
+        {
+            alias mixins[0] it;
+            mixin it;
+        }
+    }
+    else static if (mixins.length >= 2)
+    {
+        mixin mixinAll!(mixins[ 0 .. $/2]);
+        mixin mixinAll!(mixins[$/2 .. $ ]);
+    }
+}
+
 
 
 //----------------------------------------------------------------------------//
@@ -745,10 +807,10 @@ template unaryT(alias templat)
  */
 unittest
 {
-    alias Constify = meta.unaryT!q{ const A };
+    alias Constify = unaryT!q{ const A };
     static assert(is(Constify!int == const int));
 
-    alias lengthof = meta.unaryT!q{ a.length };
+    alias lengthof = unaryT!q{ a.length };
     static assert(lengthof!([ 1,2,3,4,5 ]) == 5);
 }
 
@@ -762,7 +824,7 @@ unittest
     import std.typecons;
 
     // Extracts the Types property of a Tuple instance.
-    alias expand = meta.unaryT!q{ A.Types };
+    alias expand = unaryT!q{ A.Types };
 
     alias Types = expand!(Tuple!(int, double, string));
     static assert(is(Types[0] == int));
@@ -778,7 +840,7 @@ unittest
     static assert(is(Pointify!int == int*));
 
     // nested
-    alias quadruple = unaryT!q{ apply!(unaryT!q{ a*2 }, a) * 2 };
+    alias quadruple = unaryT!q{ applyT!(unaryT!q{ a*2 }, a) * 2 };
     static assert(quadruple!10 == 40);
 }
 
@@ -841,7 +903,7 @@ template binaryT(alias templat)
  */
 unittest
 {
-    alias accumSize = meta.binaryT!q{ a + B.sizeof };
+    alias accumSize = binaryT!q{ a + B.sizeof };
 
     enum n1 = accumSize!( 0,    int);
     enum n2 = accumSize!(n1, double);
@@ -861,7 +923,7 @@ unittest
     static assert(div!(28, -7) == -4);
 
     // nested
-    alias Ave = binaryT!q{ apply!(binaryT!q{ a / b }, a+b, 2) };
+    alias Ave = binaryT!q{ applyT!(binaryT!q{ a / b }, a+b, 2) };
     static assert(Ave!(10, 20) == 15);
 }
 
@@ -886,7 +948,7 @@ unittest    // bug 4431
 Transforms a string representing an expression into a variadic template.
 The expression can read variadic arguments via $(D args).
 
-The expression can also use named parameters as $(D meta.unaryT), but
+The expression can also use named parameters as $(D unaryT), but
 the number of implicitly-named parameters is limited up to eight:
 $(D a, b, c, d, e, f, g) and $(D h) (plus capitalized ones) depending
 on the number of arguments.
@@ -930,7 +992,7 @@ template variadicT(alias templat)
  */
 unittest
 {
-    alias rotate1 = meta.variadicT!q{ meta.Seq!(args[1 .. $], A) };
+    alias rotate1 = variadicT!q{ meta.Seq!(args[1 .. $], A) };
 
     static assert([ rotate1!(1, 2, 3, 4) ] == [ 2, 3, 4, 1 ]);
 }
@@ -965,7 +1027,7 @@ unittest
     static assert(lengthof!(1,2,3,4,5,6,7,8,9) == 9);
 
     // nested
-    alias argcv = variadicT!q{ apply!(variadicT!q{ pack!args }, args.length, args) };
+    alias argcv = variadicT!q{ applyT!(variadicT!q{ pack!args }, args.length, args) };
     static assert(isSame!(argcv!(1, 2), pack!(2u, 1,2)));
 }
 
@@ -982,16 +1044,16 @@ Binds $(D args) to the leftmost parameters of a template $(D templat).
 
 Params:
  templat = Template or string that can be tranformed to a variadic template
-           using $(D meta.variadicT).
-    args = Zero or more template instantiation arguments to _bind.
+           using $(D variadicT).
+    args = Zero or more template instantiation arguments to bind.
 
 Returns:
  Template that instantiates $(D templat) with the bound arguments and
  additional ones as $(D templat!(args, ...)).
  */
-template bind(alias templat, args...)
+template bindT(alias templat, args...)
 {
-    alias bind(rest...) = apply!(variadicT!templat, args, rest);
+    alias bindT(rest...) = applyT!(variadicT!templat, args, rest);
 }
 
 /**
@@ -1008,9 +1070,9 @@ unittest
 
 unittest
 {
-    alias Assoc      = bind!(q{ A[B] });
-    alias ShortAssoc = bind!(q{ A[B] }, short);
-    alias IntDouble  = bind!(q{ A[B] }, int, double);
+    alias Assoc      = bindT!(q{ A[B] });
+    alias ShortAssoc = bindT!(q{ A[B] }, short);
+    alias IntDouble  = bindT!(q{ A[B] }, int, double);
     static assert(is(Assoc!(uint, void*) == uint[void*]));
     static assert(is(ShortAssoc!string == short[string]));
     static assert(is(IntDouble!() == int[double]));
@@ -1019,21 +1081,21 @@ unittest
 
 
 /**
-Same as $(D meta.bind) except that $(D meta.rbind) binds arguments to
+Same as $(D meta.bind) except that $(D meta.rbindT) binds arguments to
 rightmost parameters.
 
 Params:
  templat = Template or string that can be tranformed to a variadic template
-           using $(D meta.variadicT).
-    args = Zero or more template instantiation arguments to bind.
+           using $(D variadicT).
+    args = Zero or more template instantiation arguments to bindT.
 
 Returns:
  Template that instantiates $(D templat) with the bound arguments and
  additional ones as $(D templat!(..., args)).
  */
-template rbind(alias templat, args...)
+template rbindT(alias templat, args...)
 {
-    alias rbind(rest...) = apply!(variadicT!templat, rest, args);
+    alias rbindT(rest...) = applyT!(variadicT!templat, rest, args);
 }
 
 /**
@@ -1050,9 +1112,9 @@ unittest
 
 unittest
 {
-    alias Assoc      = rbind!(q{ A[B] });
-    alias AssocShort = rbind!(q{ A[B] }, short);
-    alias IntDouble  = rbind!(q{ A[B] }, int, double);
+    alias Assoc      = rbindT!(q{ A[B] });
+    alias AssocShort = rbindT!(q{ A[B] }, short);
+    alias IntDouble  = rbindT!(q{ A[B] }, int, double);
     static assert(is(Assoc!(uint, void*) == uint[void*]));
     static assert(is(AssocShort!string == string[short]));
     static assert(is(IntDouble!() == int[double]));
@@ -1072,9 +1134,9 @@ Returns:
  Variadic template that constantly returns $(D templat!args) regardless of
  its arguments.
  */
-template delay(alias templat, args...)
+template delayT(alias templat, args...)
 {
-    alias delay(_...) = apply!(variadicT!templat, args);
+    alias delayT(_...) = applyT!(variadicT!templat, args);
 }
 
 /**
@@ -1101,12 +1163,12 @@ unittest
 
 unittest
 {
-    alias empty = delay!(Seq);
+    alias empty = delayT!(Seq);
     static assert(empty!().length == 0);
     static assert(empty!(int).length == 0);
     static assert(empty!(int, double).length == 0);
 
-    alias sum30 = delay!(q{ a + b }, 10, 20);
+    alias sum30 = delayT!(q{ a + b }, 10, 20);
     static assert(sum30!() == 30);
     static assert(sum30!(40) == 30);
 }
@@ -1122,21 +1184,21 @@ Params:
 Returns:
  Variadic template that ignores its arguments and just returns $(D E).
  */
-template constant(E)
+template constantT(E)
 {
-    alias constant(_...) = E;
+    alias constantT(_...) = E;
 }
 
 /// ditto
-template constant(alias E)
+template constantT(alias E)
 {
-    alias constant(_...) = E;
+    alias constantT(_...) = E;
 }
 
 /// ditto
-template constant()
+template constantT()
 {
-    alias constant(_...) = Seq!();
+    alias constantT(_...) = Seq!();
 }
 
 /**
@@ -1150,17 +1212,17 @@ unittest
 
 unittest
 {
-    alias String = constant!string;
+    alias String = constantT!string;
     static assert(is(String!() == string));
     static assert(is(String!(1,2,3) == string));
     static assert(is(String!(double, bool) == string));
 
-    alias number = constant!512;
+    alias number = constantT!512;
     static assert(number!() == 512);
     static assert(number!(1,2,3) == 512);
     static assert(number!(double, bool) == 512);
 
-    alias empty = constant!();
+    alias empty = constantT!();
     static assert(empty!().length == 0);
     static assert(empty!(1,2,3).length == 0);
     static assert(empty!(double, bool).length == 0);
@@ -1178,9 +1240,9 @@ Params:
 Returns:
  Template that evaluates $(D pred) and returns an inverted result.
  */
-template not(alias pred)
+template notT(alias pred)
 {
-    enum not(args...) = !apply!(variadicT!pred, args);
+    enum notT(args...) = !applyT!(variadicT!pred, args);
 }
 
 /**
@@ -1202,13 +1264,13 @@ unittest
 
 unittest
 {
-    alias notInt = not!(isSame!int);
+    alias notInt = notT!(isSame!int);
     static assert( notInt!double);
     static assert( notInt!"none");
     static assert(!notInt!int   );
 
     // double invert
-    alias isInt = not!notInt;
+    alias isInt = notT!notInt;
     static assert(!isInt!double);
     static assert(!isInt!"none");
     static assert( isInt!int   );
@@ -1216,12 +1278,12 @@ unittest
 
 unittest
 {
-    alias notFive = not!"a == 5";
+    alias notFive = notT!"a == 5";
     static assert( notFive!4);
     static assert( notFive!6);
     static assert(!notFive!5);
 
-    alias isFive = not!notFive;
+    alias isFive = notT!notFive;
     static assert(!isFive!4);
     static assert(!isFive!6);
     static assert( isFive!5);
@@ -1246,9 +1308,9 @@ Returns:
  Composition predicate template that tests if its arguments satisfy all the
  predicates $(D preds).
  */
-template and(preds...)
+template andT(preds...)
 {
-    alias and = reduce!(.and, preds);
+    alias andT = reduceT!(.andT, preds);
 }
 
 /**
@@ -1263,15 +1325,15 @@ unittest
     static assert(!isSignedInt!"wrong");    // stops at the first predicate
 }
 
-template and(alias pred1 = constant!true,
-             alias pred2 = constant!true)
+template andT(alias pred1 = constantT!true,
+              alias pred2 = constantT!true)
 {
-    template and(args...)
+    template andT(args...)
     {
-        static if (apply!(pred1, args) && apply!(pred2, args))
-            enum and = true;
+        static if (applyT!(pred1, args) && applyT!(pred2, args))
+            enum andT = true;
         else
-            enum and = false;
+            enum andT = false;
     }
 }
 
@@ -1280,21 +1342,21 @@ unittest
     enum isConst(T) = is(T == const);
 
     // Compose nothing
-    alias yes = and!();
+    alias yes = andT!();
     static assert(yes!());
     static assert(yes!(1, 2, 3));
 
     // No actual composition
-    alias isConst2 = and!isConst;
+    alias isConst2 = andT!isConst;
     static assert( isConst2!(const int));
     static assert(!isConst2!(      int));
 
-    alias isNeg = and!q{ a < 0 };
+    alias isNeg = andT!q{ a < 0 };
     static assert( isNeg!(-1));
     static assert(!isNeg!( 0));
 
-    // Compose template and string
-    alias isTinyConst = and!(isConst, q{ A.sizeof < 4 });
+    // Compose template andT string
+    alias isTinyConst = andT!(isConst, q{ A.sizeof < 4 });
     static assert( isTinyConst!(const short));
     static assert(!isTinyConst!(      short));
     static assert(!isTinyConst!(const   int));
@@ -1312,7 +1374,7 @@ satisfied, $(D meta.or) immediately returns $(D true) without evaluating
 remaining predicates.
 
 Params:
- preds = Zero _or more predicate templates to compose.  This argument can be
+ preds = Zero or more predicate templates to compose.  This argument can be
          empty; in that case, the resulting template constantly evaluates to
          $(D false).
 
@@ -1320,9 +1382,9 @@ Returns:
  Composition predicate template that tests if its arguments satisfy at least
  one of the predicates $(D preds).
  */
-template or(preds...)
+template orT(preds...)
 {
-    alias or = reduce!(.or, preds);
+    alias orT = reduceT!(.orT, preds);
 }
 
 /**
@@ -1335,15 +1397,15 @@ unittest
     static assert(is(R == TypeSeq!(bool, ushort, int)));
 }
 
-template or(alias pred1 = constant!false,
-            alias pred2 = constant!false)
+template orT(alias pred1 = constantT!false,
+             alias pred2 = constantT!false)
 {
-    template or(args...)
+    template orT(args...)
     {
-        static if (apply!(pred1, args) || apply!(pred2, args))
-            enum or = true;
+        static if (applyT!(pred1, args) || applyT!(pred2, args))
+            enum orT = true;
         else
-            enum or = false;
+            enum orT = false;
     }
 }
 
@@ -1352,20 +1414,20 @@ unittest
     enum isConst(T) = is(T == const);
 
     // Compose nothing
-    alias no = or!();
+    alias no = orT!();
     static assert(!no!());
 
     // No actual composition
-    alias isConst2 = or!isConst;
+    alias isConst2 = orT!isConst;
     static assert( isConst2!(const int));
     static assert(!isConst2!(      int));
 
-    alias isNeg = or!q{ a < 0 };
+    alias isNeg = orT!q{ a < 0 };
     static assert( isNeg!(-1));
     static assert(!isNeg!( 0));
 
     // Compose template and string
-    alias isTinyOrConst = or!(isConst, q{ A.sizeof < 4 });
+    alias isTinyOrConst = orT!(isConst, q{ A.sizeof < 4 });
     static assert( isTinyOrConst!(const short));
     static assert( isTinyOrConst!(      short));
     static assert( isTinyOrConst!(const   int));
@@ -1378,23 +1440,23 @@ unittest
 $(D meta.compose!(t1, t2, ..., tn)) returns a variadic template that in
 turn instantiates the passed in templates in a chaining way:
 ----------
-template composition(args...)
+template compositionT(args...)
 {
-    alias composition = t1!(t2!( ... tn!(args) ... ));
+    alias compositionT = t1!(t2!( ... tn!(args) ... ));
 }
 ----------
 
 Params:
  templates = One or more templates making up the chain.  Each template
              can be a template or a string; strings are transformed to
-             varadic templates using $(D meta.variadicT).
+             varadic templates using $(D variadicT).
 
 Returns:
  New template that instantiates the chain of $(D templates).
  */
-template compose(templates...)
+template composeT(templates...)
 {
-    alias compose = reduce!(.compose, templates);
+    alias composeT = reduceT!(.composeT, templates);
 }
 
 /**
@@ -1406,10 +1468,10 @@ unittest
     static assert(is(ConstArray!int == const(int)[]));
 }
 
-template compose(alias template1 = Seq,
-                 alias template2 = Seq)
+template composeT(alias template1 = Seq,
+                  alias template2 = Seq)
 {
-    alias compose(args...) = apply!(template1, apply!(template2, args));
+    alias composeT(args...) = applyT!(template1, applyT!(template2, args));
 }
 
 unittest
@@ -1418,24 +1480,24 @@ unittest
     alias Array(T) = T[];
 
     // No actual composition
-    alias Const1 = compose!Const;
-    alias mul1   = compose!q{ a * 7 };
+    alias Const1 = composeT!Const;
+    alias mul1   = composeT!q{ a * 7 };
     static assert(is(Const1!int == const int));
     static assert(mul1!11 == 77);
 
     // Two templates
-    alias ArrayConst = compose!(Array, Const);
+    alias ArrayConst = composeT!(Array, Const);
     static assert(is(ArrayConst!int == const(int)[]));
 
-    alias SeqDiv = compose!(Seq, q{ a / b });
+    alias SeqDiv = composeT!(Seq, q{ a / b });
     static assert(SeqDiv!(77, 11).length == 1);
     static assert(SeqDiv!(77, 11)[0] == 7);
 
-    alias arrayRev = compose!(q{ [ args ] }, reverse);
+    alias arrayRev = composeT!(q{ [ args ] }, reverseT);
     static assert(arrayRev!(1,2,3) == [ 3,2,1 ]);
 
     // More compositions
-    alias mul11add7neg = compose!(q{ a * 11 }, q{ a + 7 }, q{ -a });
+    alias mul11add7neg = composeT!(q{ a * 11 }, q{ a + 7 }, q{ -a });
     static assert(mul11add7neg!(-6) == (6 + 7) * 11);
 }
 
@@ -1464,16 +1526,16 @@ template trial(args...)
 Params:
  templates = Templates to try instantiation.  Each template can be a real
              template or a string that can be transformed to a template
-             using $(D meta.variadicT).
+             using $(D variadicT).
 
 Returns:
  Variadic template that instantiates the first compilable template among
  $(D templates).  The last template is not guarded; if all the templates
  failed, the generated template will fail due to the last one.
  */
-template guard(templates...) if (templates.length > 0)
+template guardT(templates...) if (templates.length > 0)
 {
-    alias guard = reduce!(.guard, templates);
+    alias guardT = reduceT!(.guardT, templates);
 }
 
 /**
@@ -1486,24 +1548,24 @@ unittest
     static assert(!hasNegativeMin!void);    // void.min is not defined!
 }
 
-template guard(alias template1, alias template2)
+template guardT(alias template1, alias template2)
 {
-    template guard(args...)
+    template guardT(args...)
     {
-        static if (__traits(compiles, apply!(template1, args)))
+        static if (__traits(compiles, applyT!(template1, args)))
         {
-            alias guard = apply!(template1, args);
+            alias guardT = applyT!(template1, args);
         }
         else
         {
-            alias guard = apply!(template2, args);
+            alias guardT = applyT!(template2, args);
         }
     }
 }
 
-template guard(alias templat)
+template guardT(alias templat)
 {
-    alias guard(args...) = apply!(templat, args);
+    alias guardT(args...) = applyT!(templat, args);
 }
 
 unittest
@@ -1511,25 +1573,25 @@ unittest
     alias Const(T) = const(T);
 
     // No actual guard
-    alias JustConst = guard!Const;
+    alias JustConst = guardT!Const;
     static assert(is(JustConst!int == const int));
     static assert(!__traits(compiles, JustConst!10));
 
-    alias increment = guard!q{ a + 1 };
+    alias increment = guardT!q{ a + 1 };
     static assert(increment!13 == 14);
     static assert(!__traits(compiles, increment!double));
 
     // Double trial
-    alias MaybeConst = guard!(Const, Id);
+    alias MaybeConst = guardT!(Const, Id);
     static assert(is(MaybeConst!int == const int));
     static assert(MaybeConst!"string" == "string");
 
-    alias valueof = guard!(q{ +a }, q{ A.init });
+    alias valueof = guardT!(q{ +a }, q{ A.init });
     static assert(valueof!1.0 == 1.0);
     static assert(valueof!int == 0);
 
     // Triple trial
-    alias makeArray = guard!(q{ [a] }, q{ [A.min]  }, q{ [A.init] });
+    alias makeArray = guardT!(q{ [a] }, q{ [A.min]  }, q{ [A.init] });
     static assert(makeArray!1.0 == [ 1.0 ]);
     static assert(makeArray!int == [ int.min ]);
     static assert(makeArray!string == [ "" ]);
@@ -1551,21 +1613,21 @@ Returns:
  arguments satisfy $(D pred), or instantiates $(D otherwise) with the same
  arguments if not.
  */
-template conditional(alias pred, alias then, alias otherwise = meta.Id)
+template conditionalT(alias pred, alias then, alias otherwise = meta.Id)
 {
     alias _pred      = variadicT!pred;
     alias _then      = variadicT!then;
     alias _otherwise = variadicT!otherwise;
 
-    template conditional(args...)
+    template conditionalT(args...)
     {
         static if (_pred!args)
         {
-            alias conditional = _then!args;
+            alias conditionalT = _then!args;
         }
         else
         {
-            alias conditional = _otherwise!args;
+            alias conditionalT = _otherwise!args;
         }
     }
 }
@@ -1585,17 +1647,17 @@ unittest
 
 unittest
 {
-    alias Const = conditional!(q{  true }, q{ const A }, q{ immutable A });
-    alias Imm   = conditional!(q{ false }, q{ const A }, q{ immutable A });
+    alias Const = conditionalT!(q{  true }, q{ const A }, q{ immutable A });
+    alias Imm   = conditionalT!(q{ false }, q{ const A }, q{ immutable A });
     static assert(is(Const!double ==     const double));
     static assert(is(  Imm!double == immutable double));
 
-    alias LooseTypeof = conditional!(isType, q{ A }, q{ typeof(a) });
+    alias LooseTypeof = conditionalT!(isType, q{ A }, q{ typeof(a) });
     static assert(is(LooseTypeof!int == int));
     static assert(is(LooseTypeof!"abc" == string));
 
     // Using default 'otherwise'
-    alias ImmArray = conditional!(q{ is(A == immutable) }, q{ A[] });
+    alias ImmArray = conditionalT!(q{ is(A == immutable) }, q{ A[] });
     static assert(is(ImmArray!int == int));
     static assert(is(ImmArray!string == string));
     static assert(is(ImmArray!(immutable int) == immutable(int)[]));
@@ -1606,7 +1668,7 @@ unittest
 /* undocumented (for internal use) */
 template compiles(templates...)
 {
-    enum compiles(args...) = __traits(compiles, map!(applier!args, templates));
+    enum compiles(args...) = __traits(compiles, mapT!(applierT!args, templates));
 }
 
 
@@ -1617,7 +1679,7 @@ Instantiates $(D templat) with the specified arguments.
 Params:
  templat = Template to instantiate.  The argument can be a pure template or
            a string that can be transformed into a pure template using
-           $(D meta.variadicT).
+           $(D variadicT).
     args = The instantiation arguments to pass to $(D templat).
 
 Returns:
@@ -1638,29 +1700,29 @@ template Example(Arg)
 }
 ----------
  */
-template apply(alias templat, args...)
+template applyT(alias templat, args...)
 {
     alias _templat = variadicT!templat;
 
-    alias apply = _templat!args;
+    alias applyT = _templat!args;
 }
 
 
 
 /* undocumented (for internal use) */
-template applier(args...)
+template applierT(args...)
 {
-    alias applier(alias templat) = apply!(templat, args);
+    alias applierT(alias templat) = applyT!(templat, args);
 }
 
 
 unittest
 {
-    alias empty = applier!();
+    alias empty = applierT!();
     static assert(isSame!( pack!(empty!Seq ), pack!( Seq!()) ));
     static assert(isSame!( pack!(empty!pack), pack!(pack!()) ));
 
-    alias int100 = applier!(int, 100);
+    alias int100 = applierT!(int, 100);
     static assert(isSame!( int100!q{ A[b] }, int[100] ));
 }
 
@@ -1672,27 +1734,27 @@ unittest
 
 
 /* undocumented (internal use) */
-template recurrence(size_t n, alias fun, Seed...)
+template recurrenceT(size_t n, alias fun, Seed...)
 {
     static if (n < 2)
     {
-        alias recurrence = Seed[0 .. n * $];
+        alias recurrenceT = Seed[0 .. n * $];
     }
     else
     {
-        alias recurrence = Seq!(Seed, recurrence!(n - 1, fun, apply!(fun, Seed)));
+        alias recurrenceT = Seq!(Seed, recurrenceT!(n - 1, fun, applyT!(fun, Seed)));
     }
 }
 
 
 unittest
 {
-    static assert([ recurrence!(0, q{ a*5 }, 1) ] == [ ]);
-    static assert([ recurrence!(1, q{ a*5 }, 1) ] == [ 1 ]);
-    static assert([ recurrence!(2, q{ a*5 }, 1) ] == [ 1,5 ]);
-    static assert([ recurrence!(5, q{ a*5 }, 1) ] == [ 1,5,25,125,625 ]);
+    static assert([ recurrenceT!(0, q{ a*5 }, 1) ] == [ ]);
+    static assert([ recurrenceT!(1, q{ a*5 }, 1) ] == [ 1 ]);
+    static assert([ recurrenceT!(2, q{ a*5 }, 1) ] == [ 1,5 ]);
+    static assert([ recurrenceT!(5, q{ a*5 }, 1) ] == [ 1,5,25,125,625 ]);
 
-    alias VI = recurrence!(3, q{ Seq!(args, void) }, int);
+    alias VI = recurrenceT!(3, q{ Seq!(args, void) }, int);
     static assert(is(VI == TypeSeq!(int, int, void, int, void, void)));
 }
 
@@ -1718,7 +1780,7 @@ Returns:
  increasing/decreasing by $(D step).  The generated sequence is empty if
  $(D beg) is ahead of $(D end) in terms of the $(D step)'s direction.
  */
-template iota(alias beg, alias end, alias step) if (step != 0)
+template iotaT(alias beg, alias end, alias step) if (step != 0)
 {
     static if ((end - beg) / step >= 0)
     {
@@ -1733,24 +1795,24 @@ template iota(alias beg, alias end, alias step) if (step != 0)
 
         template increment(alias cur) { enum T increment = cur + step; }
 
-        alias iota = recurrence!(count, increment, beg);
+        alias iotaT = recurrenceT!(count, increment, beg);
     }
     else
     {
-        alias iota = Seq!();
+        alias iotaT = Seq!();
     }
 }
 
 /// ditto
-template iota(alias beg, alias end)
+template iotaT(alias beg, alias end)
 {
-    alias iota = iota!(beg, end, cast(typeof(beg)) 1);
+    alias iotaT = iotaT!(beg, end, cast(typeof(beg)) 1);
 }
 
 /// ditto
-template iota(alias end)
+template iotaT(alias end)
 {
-    alias iota = iota!(cast(typeof(end)) 0, end);
+    alias iotaT = iotaT!(cast(typeof(end)) 0, end);
 }
 
 /**
@@ -1771,24 +1833,24 @@ unittest
 
 unittest
 {
-    static assert([ iota!0 ] == []);
-    static assert([ iota!1 ] == [ 0 ]);
-    static assert([ iota!2 ] == [ 0,1 ]);
-    static assert([ iota!3 ] == [ 0,1,2 ]);
-    static assert([ iota!(-1) ] == []);
-    static assert([ iota!(-2) ] == []);
+    static assert([ iotaT!0 ] == []);
+    static assert([ iotaT!1 ] == [ 0 ]);
+    static assert([ iotaT!2 ] == [ 0,1 ]);
+    static assert([ iotaT!3 ] == [ 0,1,2 ]);
+    static assert([ iotaT!(-1) ] == []);
+    static assert([ iotaT!(-2) ] == []);
 
-    static assert([ iota!(-5,  5) ] == [ -5,-4,-3,-2,-1,0,1,2,3,4 ]);
-    static assert([ iota!( 5, -5) ] == []);
-    static assert([ iota!(-5, -5) ] == []);
+    static assert([ iotaT!(-5,  5) ] == [ -5,-4,-3,-2,-1,0,1,2,3,4 ]);
+    static assert([ iotaT!( 5, -5) ] == []);
+    static assert([ iotaT!(-5, -5) ] == []);
 
-    static assert([ iota!( 3,  20, +4) ] == [  3, 7, 11, 15, 19 ]);
-    static assert([ iota!(-3, -20, -4) ] == [ -3,-7,-11,-15,-19 ]);
-    static assert([ iota!(1, 5, +9) ] == [ 1 ]);
-    static assert([ iota!(5, 1, -9) ] == [ 5 ]);
-    static assert([ iota!(3, 5, -1) ] == []);
-    static assert([ iota!(5, 3, +1) ] == []);
-    static assert([ iota!(3, 3, -1) ] == []);
+    static assert([ iotaT!( 3,  20, +4) ] == [  3, 7, 11, 15, 19 ]);
+    static assert([ iotaT!(-3, -20, -4) ] == [ -3,-7,-11,-15,-19 ]);
+    static assert([ iotaT!(1, 5, +9) ] == [ 1 ]);
+    static assert([ iotaT!(5, 1, -9) ] == [ 5 ]);
+    static assert([ iotaT!(3, 5, -1) ] == []);
+    static assert([ iotaT!(5, 3, +1) ] == []);
+    static assert([ iotaT!(3, 3, -1) ] == []);
 }
 
 
@@ -1798,22 +1860,22 @@ Creates a sequence in which $(D seq) repeats $(D n) times.
 
 Params:
    n = The number of repetition.  May be zero.
- seq = Sequence to _repeat.
+ seq = Sequence to repeat.
 
 Returns:
  Sequence composed of $(D n) $(D seq)s.  The empty sequence is returned
  if $(D n) is zero or $(D seq) is empty.
  */
-template repeat(size_t n, seq...)
+template repeatT(size_t n, seq...)
 {
     static if (n < 2 || seq.length == 0)
     {
-        alias repeat = seq[0 .. n*$];
+        alias repeatT = seq[0 .. n*$];
     }
     else
     {
-        alias repeat = Seq!(repeat!(   n    / 2, seq),
-                            repeat!((n + 1) / 2, seq));
+        alias repeatT = Seq!(repeatT!(   n    / 2, seq),
+                             repeatT!((n + 1) / 2, seq));
     }
 }
 
@@ -1833,37 +1895,37 @@ unittest
 unittest
 {
     // degeneracy
-    static assert(is(repeat!(0) == Seq!()));
-    static assert(is(repeat!(1) == Seq!()));
-    static assert(is(repeat!(9) == Seq!()));
-    static assert(is(repeat!(0, int        ) == Seq!()));
-    static assert(is(repeat!(0, int, double) == Seq!()));
+    static assert(is(repeatT!(0) == Seq!()));
+    static assert(is(repeatT!(1) == Seq!()));
+    static assert(is(repeatT!(9) == Seq!()));
+    static assert(is(repeatT!(0, int        ) == Seq!()));
+    static assert(is(repeatT!(0, int, double) == Seq!()));
 
     // basic
-    static assert(is(repeat!( 1, int, double) == Seq!(int, double)));
-    static assert(is(repeat!( 2, int, double) == Seq!(int, double,
-                                                      int, double)));
-    static assert(is(repeat!( 3, int, double) == Seq!(int, double,
-                                                      int, double,
-                                                      int, double)));
-    static assert(is(repeat!( 9, int) == Seq!(int, int, int, int,
-                                              int, int, int, int, int)));
-    static assert(is(repeat!(10, int) == Seq!(int, int, int, int, int,
-                                              int, int, int, int, int)));
+    static assert(is(repeatT!( 1, int, double) == Seq!(int, double)));
+    static assert(is(repeatT!( 2, int, double) == Seq!(int, double,
+                                                       int, double)));
+    static assert(is(repeatT!( 3, int, double) == Seq!(int, double,
+                                                       int, double,
+                                                       int, double)));
+    static assert(is(repeatT!( 9, int) == Seq!(int, int, int, int,
+                                               int, int, int, int, int)));
+    static assert(is(repeatT!(10, int) == Seq!(int, int, int, int, int,
+                                               int, int, int, int, int)));
 
     // expressions
-    static assert([0, repeat!(0, 8,7), 0] == [0,                  0]);
-    static assert([0, repeat!(1, 8,7), 0] == [0, 8,7,             0]);
-    static assert([0, repeat!(3, 8,7), 0] == [0, 8,7,8,7,8,7,     0]);
-    static assert([0, repeat!(4, 8,7), 0] == [0, 8,7,8,7,8,7,8,7, 0]);
+    static assert([0, repeatT!(0, 8,7), 0] == [0,                  0]);
+    static assert([0, repeatT!(1, 8,7), 0] == [0, 8,7,             0]);
+    static assert([0, repeatT!(3, 8,7), 0] == [0, 8,7,8,7,8,7,     0]);
+    static assert([0, repeatT!(4, 8,7), 0] == [0, 8,7,8,7,8,7,8,7, 0]);
 }
 
 
 
 /* undocumented (used by stride) */
-template frontof(seq...)
+template frontofT(seq...)
 {
-    alias frontof = Id!(seq[0]);
+    alias frontofT = Id!(seq[0]);
 }
 
 
@@ -1877,21 +1939,21 @@ template frontof(seq...)
 Reverses the sequence $(D seq).
 
 Params:
- seq = Sequence to _reverse.
+ seq = Sequence to reverse.
 
 Returns:
- $(D seq) in the _reverse order.
+ $(D seq) in the reverse order.
  */
-template reverse(seq...)
+template reverseT(seq...)
 {
     static if (seq.length < 2)
     {
-        alias reverse = seq;
+        alias reverseT = seq;
     }
     else
     {
-        alias reverse = Seq!(reverse!(seq[$/2 ..  $ ]),
-                             reverse!(seq[ 0  .. $/2]));
+        alias reverseT = Seq!(reverseT!(seq[$/2 ..  $ ]),
+                              reverseT!(seq[ 0  .. $/2]));
     }
 }
 
@@ -1905,22 +1967,22 @@ unittest
 
 unittest
 {
-    static assert(is(reverse!() == Seq!()));
+    static assert(is(reverseT!() == Seq!()));
 
     // basic
-    static assert(is(reverse!(int) == Seq!(int)));
-    static assert(is(reverse!(int, double) == Seq!(double, int)));
-    static assert(is(reverse!(int, double, string) ==
-                         Seq!(string, double, int)));
-    static assert(is(reverse!(int, double, string, bool) ==
-                         Seq!(bool, string, double, int)));
+    static assert(is(reverseT!(int) == Seq!(int)));
+    static assert(is(reverseT!(int, double) == Seq!(double, int)));
+    static assert(is(reverseT!(int, double, string) ==
+                          Seq!(string, double, int)));
+    static assert(is(reverseT!(int, double, string, bool) ==
+                          Seq!(bool, string, double, int)));
 
     // expressions
-    static assert([0, reverse!(),        0] == [0,          0]);
-    static assert([0, reverse!(1),       0] == [0, 1,       0]);
-    static assert([0, reverse!(1,2),     0] == [0, 2,1,     0]);
-    static assert([0, reverse!(1,2,3),   0] == [0, 3,2,1,   0]);
-    static assert([0, reverse!(1,2,3,4), 0] == [0, 4,3,2,1, 0]);
+    static assert([0, reverseT!(),        0] == [0,          0]);
+    static assert([0, reverseT!(1),       0] == [0, 1,       0]);
+    static assert([0, reverseT!(1,2),     0] == [0, 2,1,     0]);
+    static assert([0, reverseT!(1,2,3),   0] == [0, 3,2,1,   0]);
+    static assert([0, reverseT!(1,2,3,4), 0] == [0, 4,3,2,1, 0]);
 }
 
 
@@ -1933,26 +1995,26 @@ Params:
    n = The amount of rotation.  The sign determines the direction:
        positive for left rotation and negative for right rotation.
        This argument can be zero or larger than $(D seq.length).
- seq = Sequence to _rotate.
+ seq = Sequence to rotate.
 
 Returns:
  Sequence $(D seq) rotated by $(D n).
  */
-template rotate(sizediff_t n, seq...)
+template rotateT(sizediff_t n, seq...)
 {
     static if (seq.length < 2)
     {
-        alias rotate = seq;
+        alias rotateT = seq;
     }
     else
     {
         static if (n < 0)
         {
-            alias rotate = rotate!(seq.length + n, seq);
+            alias rotateT = rotateT!(seq.length + n, seq);
         }
         else
         {
-            alias rotate = Seq!(seq[n % $ .. $], seq[0 .. n % $]);
+            alias rotateT = Seq!(seq[n % $ .. $], seq[0 .. n % $]);
         }
     }
 }
@@ -1970,23 +2032,23 @@ unittest
 
 unittest
 {
-    alias empty0  = rotate!(0);
-    alias single0 = rotate!(0, int);
-    alias triple0 = rotate!(0, int, double, string);
+    alias empty0  = rotateT!(0);
+    alias single0 = rotateT!(0, int);
+    alias triple0 = rotateT!(0, int, double, string);
     static assert(is( empty0 == Seq!()));
     static assert(is(single0 == Seq!(int)));
     static assert(is(triple0 == Seq!(int, double, string)));
 
-    alias empty2  = rotate!(+2);
-    alias single2 = rotate!(+2, int);
-    alias triple2 = rotate!(+2, int, double, string);
+    alias empty2  = rotateT!(+2);
+    alias single2 = rotateT!(+2, int);
+    alias triple2 = rotateT!(+2, int, double, string);
     static assert(is( empty2 == Seq!()));
     static assert(is(single2 == Seq!(int)));
     static assert(is(triple2 == Seq!(string, int, double)));
 
-    alias empty2rev  = rotate!(-2);
-    alias single2rev = rotate!(-2, int);
-    alias triple2rev = rotate!(-2, int, double, string);
+    alias empty2rev  = rotateT!(-2);
+    alias single2rev = rotateT!(-2, int);
+    alias triple2rev = rotateT!(-2, int, double, string);
     static assert(is( empty2rev == Seq!()));
     static assert(is(single2rev == Seq!(int)));
     static assert(is(triple2rev == Seq!(double, string, int)));
@@ -1995,20 +2057,20 @@ unittest
 
 
 /**
-Gets the elements of sequence with _stride $(D n).
+Gets the elements of sequence with stride $(D n).
 
 Params:
    n = Stride width.  $(D n) must not be zero.
- seq = Sequence to _stride.
+ seq = Sequence to stride.
 
 Returns:
  Sequence of $(D 0,n,2n,...)-th elements of the given sequence:
  $(D (seq[0], seq[n], seq[2*n], ...)).  The empty sequence is returned if the
  given sequence $(D seq) is empty.
  */
-template stride(size_t n, seq...) if (n > 0)
+template strideT(size_t n, seq...) if (n > 0)
 {
-    alias stride = segmentWith!(frontof, n, seq);
+    alias strideT = segmentWithT!(frontofT, n, seq);
 }
 
 /**
@@ -2026,16 +2088,16 @@ unittest
 
 unittest
 {
-    static assert(is(stride!(1) == Seq!()));
-    static assert(is(stride!(2) == Seq!()));
-    static assert(is(stride!(5) == Seq!()));
+    static assert(is(strideT!(1) == Seq!()));
+    static assert(is(strideT!(2) == Seq!()));
+    static assert(is(strideT!(5) == Seq!()));
 
-    alias AsIs = stride!(1, int, double, string);
+    alias AsIs = strideT!(1, int, double, string);
     static assert(is(AsIs == TypeSeq!(int, double, string)));
 
-    static assert([ stride!(2, 1,2,3,4,5) ] == [ 1,3,5 ]);
-    static assert([ stride!(3, 1,2,3,4,5) ] == [ 1,4 ]);
-    static assert([ stride!(5, 1,2,3,4,5) ] == [ 1 ]);
+    static assert([ strideT!(2, 1,2,3,4,5) ] == [ 1,3,5 ]);
+    static assert([ strideT!(3, 1,2,3,4,5) ] == [ 1,4 ]);
+    static assert([ strideT!(5, 1,2,3,4,5) ] == [ 1 ]);
 }
 
 
@@ -2044,20 +2106,20 @@ unittest
 Splits sequence $(D seq) into segments of the same length $(D n).
 
 Params:
-   n = The size of each _segment.  $(D n) must not be zero.
+   n = The size of each segment.  $(D n) must not be zero.
  seq = Sequence to split.  The sequence can have arbitrary length.
 
 Returns:
- Sequence of packed segments of length $(D n).  Each _segment is packed using
+ Sequence of packed segments of length $(D n).  Each segment is packed using
  $(D meta.pack); use the $(D expand) property to yield the contents.
 
- The last _segment can be shorter than $(D n) if $(D seq.length) is not an
+ The last segment can be shorter than $(D n) if $(D seq.length) is not an
  exact multiple of $(D n).  The empty sequence is returned if $(D seq) is
  empty.
  */
-template segment(size_t n, seq...) if (n > 0)
+template segmentT(size_t n, seq...) if (n > 0)
 {
-    alias segment = segmentWith!(pack, n, seq);
+    alias segmentT = segmentWithT!(pack, n, seq);
 }
 
 /**
@@ -2076,14 +2138,14 @@ unittest
 
 unittest
 {
-    alias empty1 = segment!(1);
-    alias empty9 = segment!(9);
+    alias empty1 = segmentT!(1);
+    alias empty9 = segmentT!(9);
     static assert(empty1.length == 0);
     static assert(empty9.length == 0);
 
-    alias seg1 = segment!(1, 1,2,3,4);
-    alias seg2 = segment!(2, 1,2,3,4);
-    alias seg3 = segment!(3, 1,2,3,4);
+    alias seg1 = segmentT!(1, 1,2,3,4);
+    alias seg2 = segmentT!(2, 1,2,3,4);
+    alias seg3 = segmentT!(3, 1,2,3,4);
     static assert(isSame!( pack!seg1, pack!(pack!(1), pack!(2), pack!(3), pack!(4)) ));
     static assert(isSame!( pack!seg2, pack!(pack!(1,2), pack!(3,4)) ));
     static assert(isSame!( pack!seg3, pack!(pack!(1,2,3), pack!4) ));
@@ -2092,46 +2154,46 @@ unittest
 
 
 /* undocumented (for internal use) */
-template segmentWith(string fun, size_t n, seq...)
+template segmentWithT(string fun, size_t n, seq...)
 {
-    alias segmentWith = segmentWith!(variadicT!fun, n, seq);
+    alias segmentWithT = segmentWithT!(variadicT!fun, n, seq);
 }
 
-template segmentWith(alias fun, size_t n, seq...) if (n > 0)
+template segmentWithT(alias fun, size_t n, seq...) if (n > 0)
 {
-    template segment()
+    template segmentT()
     {
-        alias segment = Seq!();
+        alias segmentT = Seq!();
     }
-    template segment(seq...)
+    template segmentT(seq...)
     {
         static if (seq.length <= n)
         {
-            alias segment = Seq!(fun!seq);
+            alias segmentT = Seq!(fun!seq);
         }
         else
         {
-            alias segment = Seq!(fun!(seq[0 .. n]), segment!(seq[n .. $]));
+            alias segmentT = Seq!(fun!(seq[0 .. n]), segmentT!(seq[n .. $]));
         }
     }
 
-    alias segmentWith = segment!seq;
+    alias segmentWithT = segmentT!seq;
 }
 
 
 unittest
 {
-    alias empty1 = segmentWith!(pack, 1);
-    alias empty5 = segmentWith!(pack, 5);
+    alias empty1 = segmentWithT!(pack, 1);
+    alias empty5 = segmentWithT!(pack, 5);
     static assert(empty1.length == 0);
     static assert(empty5.length == 0);
 
-    alias doubled = segmentWith!(q{ a*2 }, 1,
-                                 1,2,3,4,5,6);
+    alias doubled = segmentWithT!(q{ a*2 }, 1,
+                                  1,2,3,4,5,6);
     static assert([ doubled ] == [ 2,4,6,8,10,12 ]);
 
-    alias rev2 = segmentWith!(reverse, 2,
-                              1,2,3,4,5,6,7,8,9);
+    alias rev2 = segmentWithT!(reverseT, 2,
+                               1,2,3,4,5,6,7,8,9);
     static assert([ rev2 ] == [ 2,1,4,3,6,5,8,7,9 ]);
 }
 
@@ -2146,9 +2208,9 @@ unittest
 
 
 /* undocumented (for internal use) */
-template transverse(size_t i, seqs...) if (isTransversable!(i, seqs))
+template transverseT(size_t i, seqs...) if (isTransversable!(i, seqs))
 {
-    alias transverse = map!(unpackAt!i, seqs);
+    alias transverseT = mapT!(unpackAt!i, seqs);
 }
 
 private
@@ -2160,28 +2222,28 @@ private
 
     template isTransversable(size_t i, seqs...)
     {
-        enum isTransversable = all!(compiles!(unpackAt!i), seqs);
+        enum isTransversable = allT!(compiles!(unpackAt!i), seqs);
     }
 }
 
 
 unittest
 {
-    alias empty0 = transverse!0;
-    alias empty9 = transverse!9;
+    alias empty0 = transverseT!0;
+    alias empty9 = transverseT!9;
     static assert(empty0.length == 0);
     static assert(empty9.length == 0);
 
-    alias single0 = transverse!(0, pack!(int, double, string));
-    alias single2 = transverse!(2, pack!(int, double, string));
+    alias single0 = transverseT!(0, pack!(int, double, string));
+    alias single2 = transverseT!(2, pack!(int, double, string));
     static assert(is(single0 == Seq!int));
     static assert(is(single2 == Seq!string));
 
-    alias jagged = transverse!(1, pack!(1,2), pack!(3,4,5), pack!(6,7));
+    alias jagged = transverseT!(1, pack!(1,2), pack!(3,4,5), pack!(6,7));
     static assert([ jagged ] == [ 2,4,7 ]);
 
-    static assert(!__traits(compiles, transverse!(0, 1,2,3) ));
-    static assert(!__traits(compiles, transverse!(0, pack!1, pack!()) ));
+    static assert(!__traits(compiles, transverseT!(0, 1,2,3) ));
+    static assert(!__traits(compiles, transverseT!(0, pack!1, pack!()) ));
 }
 
 unittest
@@ -2208,9 +2270,9 @@ Returns:
  empty sequence is returned if $(D seqs) is empty or any of the sequences
  is empty.
  */
-template zip(seqs...) if (isZippable!seqs)
+template zipT(seqs...) if (isZippable!seqs)
 {
-    alias zip = zipWith!(pack, seqs);
+    alias zipT = zipWithT!(pack, seqs);
 }
 
 /**
@@ -2240,7 +2302,7 @@ private
             enum _minLength = 0;
         else
         {
-            alias shortest = most!(q{ a.length < b.length }, seqs);
+            alias shortest = mostT!(q{ a.length < b.length }, seqs);
 
             enum _minLength = shortest.length;
         }
@@ -2250,23 +2312,23 @@ private
 
 unittest
 {
-    alias empty = zip!();
+    alias empty = zipT!();
     static assert(empty.length == 0);
 
-    alias zip3 = zip!(pack!(int, double, bool), pack!(4, 8, 1));
+    alias zip3 = zipT!(pack!(int, double, bool), pack!(4, 8, 1));
     static assert(zip3.length == 3);
     static assert(isSame!(zip3[0], pack!(   int, 4)));
     static assert(isSame!(zip3[1], pack!(double, 8)));
     static assert(isSame!(zip3[2], pack!(  bool, 1)));
 
-    alias jagged = zip!(pack!(int, double, string),
-                        pack!("i", "x"),
-                        pack!(5, 1.5, "moinmoin"));
+    alias jagged = zipT!(pack!(int, double, string),
+                         pack!("i", "x"),
+                         pack!(5, 1.5, "moinmoin"));
     static assert(jagged.length == 2);
     static assert(isSame!(jagged[0], pack!(   int, "i",   5)));
     static assert(isSame!(jagged[1], pack!(double, "x", 1.5)));
 
-    alias degen = zip!(pack!int, pack!(), pack!(double, string));
+    alias degen = zipT!(pack!int, pack!(), pack!(double, string));
     static assert(degen.length == 0);
 }
 
@@ -2283,13 +2345,13 @@ Params:
 Returns:
  Sequence of the results of $(D fun) applied to each transversal of $(D seqs).
  */
-template zipWith(alias fun, seqs...) if (isZippable!seqs)
+template zipWithT(alias fun, seqs...) if (isZippable!seqs)
 {
     alias _fun = variadicT!fun;
 
-    alias transverser(size_t i) = _fun!(transverse!(i, seqs));
+    alias transverser(size_t i) = _fun!(transverseT!(i, seqs));
 
-    alias zipWith = map!(transverser, iota!(_minLength!seqs));
+    alias zipWithT = mapT!(transverser, iotaT!(_minLength!seqs));
 }
 
 /**
@@ -2309,16 +2371,16 @@ unittest
 {
     static struct MyPack(int n, T);
 
-    alias revzip = zipWith!(compose!(MyPack, reverse),
-                            pack!(int, double, string),
-                            pack!(  1,      2,      3));
+    alias revzip = zipWithT!(composeT!(MyPack, reverseT),
+                             pack!(int, double, string),
+                             pack!(  1,      2,      3));
     static assert(is(revzip[0] == MyPack!(1,    int)));
     static assert(is(revzip[1] == MyPack!(2, double)));
     static assert(is(revzip[2] == MyPack!(3, string)));
 
-    alias assoc = zipWith!(q{ A[B] },
-                           pack!(  int, double, string),
-                           pack!(dchar, string,    int));
+    alias assoc = zipWithT!(q{ A[B] },
+                            pack!(  int, double, string),
+                            pack!(dchar, string,    int));
     static assert(is(assoc[0] ==    int[ dchar]));
     static assert(is(assoc[1] == double[string]));
     static assert(is(assoc[2] == string[   int]));
@@ -2343,22 +2405,22 @@ Returns:
  Sequence of the results of $(D fun) applied to each element of $(D seq) in
  turn.
  */
-template map(alias fun, seq...)
+template mapT(alias fun, seq...)
 {
     alias _fun = unaryT!fun;
 
     static if (seq.length == 0)
     {
-        alias map = Seq!();
+        alias mapT = Seq!();
     }
     else static if (seq.length == 1)
     {
-        alias map = Seq!(_fun!(seq[0]));
+        alias mapT = Seq!(_fun!(seq[0]));
     }
     else
     {
-        alias map = Seq!(map!(_fun, seq[ 0  .. $/2]),
-                         map!(_fun, seq[$/2 ..  $ ]));
+        alias mapT = Seq!(mapT!(_fun, seq[ 0  .. $/2]),
+                          mapT!(_fun, seq[$/2 ..  $ ]));
     }
 }
 
@@ -2375,33 +2437,33 @@ unittest
 
 unittest
 {
-    static assert(map!(Id).length == 0);
-    static assert(map!(q{ a }).length == 0);
+    static assert(mapT!(Id).length == 0);
+    static assert(mapT!(q{ a }).length == 0);
 
-    alias single = map!(Id, int);
+    alias single = mapT!(Id, int);
     static assert(is(single == Seq!int));
 
-    alias const1 = map!(q{ const A }, int);
+    alias const1 = mapT!(q{ const A }, int);
     static assert(is(const1 == Seq!(const int)));
 
-    alias double5 = map!(q{ 2*a }, 1,2,3,4,5);
+    alias double5 = mapT!(q{ 2*a }, 1,2,3,4,5);
     static assert([ double5 ] == [ 2,4,6,8,10 ]);
 }
 
 
 
-/* Recursive map, used by uniqBy */
-template mapRec(string fun, seq...)
+/* Recursive mapT, used by uniqByT */
+template mapRecT(string fun, seq...)
 {
-    alias mapRec = mapRec!(variadicT!fun, seq);
+    alias mapRecT = mapRecT!(variadicT!fun, seq);
 }
 
-template mapRec(alias fun, seq...)
+template mapRecT(alias fun, seq...)
 {
     alias _impl()       = Seq!();
     alias _impl(seq...) = fun!(seq[0], _impl!(seq[1 .. $]));
 
-    alias mapRec = _impl!seq;
+    alias mapRecT = _impl!seq;
 }
 
 
@@ -2412,15 +2474,15 @@ Creates a sequence only containing elements of $(D seq) satisfying $(D pred).
 Params:
  pred = Unary predicate template that decides whether or not to include an
         element in the resulting sequence.
-  seq = Sequence to _filter.
+  seq = Sequence to filterT.
 
 Returns:
  Sequence only containing elements of $(D seq) for each of which $(D pred)
  evaluates to $(D true).
  */
-template filter(alias pred, seq...)
+template filterT(alias pred, seq...)
 {
-    alias filter = map!(conditional!(pred, Id, constant!()), seq);
+    alias filterT = mapT!(conditionalT!(pred, Id, constantT!()), seq);
 }
 
 /**
@@ -2433,18 +2495,18 @@ unittest
 
 unittest
 {
-    alias empty = filter!(isType);
+    alias empty = filterT!(isType);
     static assert(empty.length == 0);
 
-    alias none = filter!(isType, 1,2,3);
-    alias all = filter!(isValue, 1,2,3);
+    alias none = filterT!(isType, 1,2,3);
+    alias all = filterT!(isValue, 1,2,3);
     static assert([ none ] == []);
     static assert([ all ] == [ 1,2,3 ]);
 
-    alias someT = filter!(isType, int, "x", double, "y");
+    alias someT = filterT!(isType, int, "x", double, "y");
     static assert(is(someT == Seq!(int, double)));
 
-    alias someV = filter!(q{ a < 0 }, 4, -3, 2, -1, 0);
+    alias someV = filterT!(q{ a < 0 }, 4, -3, 2, -1, 0);
     static assert([ someV ] == [ -3, -1 ]);
 }
 
@@ -2455,21 +2517,21 @@ Removes all occurrences of $(D E) in $(D seq) if any.  Each occurrence is
 tested in terms of $(D meta.isSame).
 
 Params:
-   E = Compile-time entity to _remove.
+   E = Compile-time entity to remove.
  seq = Target sequence.
 
 Returns:
  Sequence $(D seq) in which any occurrence of $(D E) is erased.
  */
-template remove(E, seq...)
+template removeT(E, seq...)
 {
-    alias remove = filter!(not!(isSame!E), seq);
+    alias removeT = filterT!(notT!(isSame!E), seq);
 }
 
 /// ditto
-template remove(alias E, seq...)
+template removeT(alias E, seq...)
 {
-    alias remove = filter!(not!(isSame!E), seq);
+    alias removeT = filterT!(notT!(isSame!E), seq);
 }
 
 /**
@@ -2482,16 +2544,16 @@ unittest
 
 unittest
 {
-    alias empty1 = remove!(void);
-    alias empty2 = remove!(1024);
+    alias empty1 = removeT!(void);
+    alias empty2 = removeT!(1024);
     static assert(empty1.length == 0);
     static assert(empty2.length == 0);
 
-    static assert([ remove!(void, 1,2,3,2,1) ] == [ 1,2,3,2,1 ]);
-    static assert([ remove!(   2, 1,2,3,2,1) ] == [ 1,  3,  1 ]);
+    static assert([ removeT!(void, 1,2,3,2,1) ] == [ 1,2,3,2,1 ]);
+    static assert([ removeT!(   2, 1,2,3,2,1) ] == [ 1,  3,  1 ]);
 
-    alias NoVoid = remove!(void, int,void,string,void,double);
-    alias No2    = remove!(   2, int,void,string,void,double);
+    alias NoVoid = removeT!(void, int,void,string,void,double);
+    alias No2    = removeT!(   2, int,void,string,void,double);
     static assert(is(NoVoid == Seq!(int,     string,     double)));
     static assert(is(No2    == Seq!(int,void,string,void,double)));
 }
@@ -2510,15 +2572,15 @@ Returns:
  Sequence $(D seq) in which every occurrence of $(D From) (if any) is
  replaced by $(D To).
  */
-template replace(From, To, seq...)
+template replaceT(From, To, seq...)
 {
-    alias replace = map!(conditional!(isSame!From, constant!To), seq);
+    alias replaceT = mapT!(conditionalT!(isSame!From, constantT!To), seq);
 }
 
 /// ditto
-template replace(alias From, alias To, seq...)
+template replaceT(alias From, alias To, seq...)
 {
-    alias replace = map!(conditional!(isSame!From, constant!To), seq);
+    alias replaceT = mapT!(conditionalT!(isSame!From, constantT!To), seq);
 }
 
 /**
@@ -2550,24 +2612,24 @@ unittest
 
 unittest
 {
-    alias empty = replace!(void, int);
+    alias empty = replaceT!(void, int);
     static assert(empty.length == 0);
 
-    alias NoMatch = replace!(void, int, Seq!(int, string, double));
+    alias NoMatch = replaceT!(void, int, Seq!(int, string, double));
     static assert(is(NoMatch == TypeSeq!(int, string, double)));
 
     // Test for the specializations
-    alias TT = replace!(void, int, Seq!(void, double, void, string));
+    alias TT = replaceT!(void, int, Seq!(void, double, void, string));
     static assert(is(TT == TypeSeq!(int, double, int, string)));
 
-    alias vv = replace!(null, "", Seq!(null, "abc", null, "def"));
+    alias vv = replaceT!(null, "", Seq!(null, "abc", null, "def"));
     static assert([ vv ] == [ "", "abc", "", "def" ]);
 
     // Test for ambiguity problem with user-defined types due to @@@BUG4431@@@
     struct S;
-    alias amb1 = replace!(  S, int, S, S, S);
-    alias amb2 = replace!(int,   S, S, S, S);
-    alias amb3 = replace!(  S,   S, S, S, S);
+    alias amb1 = replaceT!(  S, int, S, S, S);
+    alias amb2 = replaceT!(int,   S, S, S, S);
+    alias amb3 = replaceT!(  S,   S, S, S, S);
 }
 
 
@@ -2579,26 +2641,26 @@ Params:
  comp = Binary comparison predicate that compares elements of $(D seq).
         It typically works as the $(D <) operator to arrange the result in
         ascending order.
-  seq = Sequence to _sort.
+  seq = Sequence to sort.
 
 Returns:
  Sequence $(D seq) sorted according to the predicate $(D comp).  The relative
  order of equivalent elements will be preserved (i.e. stable).
  */
-template sort(alias comp, seq...)
+template sortT(alias comp, seq...)
 {
     template _impl(alias comp)
     {
-        template sort(seq...)
+        template sortT(seq...)
         {
             static if (seq.length < 2)
             {
-                alias sort = seq;
+                alias sortT = seq;
             }
             else
             {
-                alias sort = Merge!(sort!(seq[ 0  .. $/2]))
-                             .With!(sort!(seq[$/2 ..  $ ]));
+                alias sortT = Merge!(sortT!(seq[ 0  .. $/2]))
+                              .With!(sortT!(seq[$/2 ..  $ ]));
             }
         }
 
@@ -2632,7 +2694,7 @@ template sort(alias comp, seq...)
         }
     }
 
-    alias sort = _impl!(binaryT!comp).sort!seq;
+    alias sortT = _impl!(binaryT!comp).sortT!seq;
 }
 
 /**
@@ -2654,25 +2716,25 @@ unittest
     enum sizeLess(A, B) = (A.sizeof < B.sizeof);
 
     // Trivial cases
-    alias Empty  = sort!(sizeLess);
-    alias Single = sort!(sizeLess, int);
+    alias Empty  = sortT!(sizeLess);
+    alias Single = sortT!(sizeLess, int);
     static assert(is(Empty == Seq!()));
     static assert(is(Single == Seq!(int)));
 
     //
-    alias Double = sort!(sizeLess, int, short);
+    alias Double = sortT!(sizeLess, int, short);
     static assert(is(Double == Seq!(short, int)));
 
-    alias Sorted1 = sort!(sizeLess, long, int, short, byte);
-    alias Sorted2 = sort!(sizeLess, short, int, byte, long);
+    alias Sorted1 = sortT!(sizeLess, long, int, short, byte);
+    alias Sorted2 = sortT!(sizeLess, short, int, byte, long);
     static assert(is(Sorted1 == Seq!(byte, short, int, long)));
     static assert(is(Sorted2 == Seq!(byte, short, int, long)));
 
-    static assert([ sort!(q{ a < b }, 3,5,1,4,2) ] == [ 1,2,3,4,5 ]);
-    static assert([ sort!(q{ a > b }, 3,5,1,4,2) ] == [ 5,4,3,2,1 ]);
+    static assert([ sortT!(q{ a < b }, 3,5,1,4,2) ] == [ 1,2,3,4,5 ]);
+    static assert([ sortT!(q{ a > b }, 3,5,1,4,2) ] == [ 5,4,3,2,1 ]);
 
     // Test for stability
-    alias Equiv = sort!(sizeLess, uint, short, ushort, int);
+    alias Equiv = sortT!(sizeLess, uint, short, ushort, int);
     static assert(is(Equiv == Seq!(short, ushort, uint, int)));
 }
 
@@ -2688,9 +2750,9 @@ Params:
 Returns:
  $(D seq) without any consecutive duplicate elements.
  */
-template uniq(seq...)
+template uniqT(seq...)
 {
-    alias uniq = uniqBy!(isSame, seq);
+    alias uniqT = uniqByT!(isSame, seq);
 }
 
 /**
@@ -2703,19 +2765,19 @@ unittest
 
 unittest
 {
-    alias empty = uniq!();
+    alias empty = uniqT!();
     static assert(empty.length == 0);
 
-    alias Single = uniq!(int);
+    alias Single = uniqT!(int);
     static assert(is(Single == Seq!(int)));
 
-    alias Nodup = uniq!(int, double, string);
+    alias Nodup = uniqT!(int, double, string);
     static assert(is(Nodup == Seq!(int, double, string)));
 
-    alias Dup = uniq!(int, int, double, string, string, string);
+    alias Dup = uniqT!(int, int, double, string, string, string);
     static assert(is(Dup == Seq!(int, double, string)));
 
-    alias noConsec = uniq!("abc", "123", "abc", "123");
+    alias noConsec = uniqT!("abc", "123", "abc", "123");
     static assert([ noConsec ] == [ "abc", "123", "abc", "123" ]);
 }
 
@@ -2734,7 +2796,7 @@ Returns:
  Sequence $(D seq) in which any consecutive group of duplicate elements are
  squeezed into the fist one of each group.
  */
-template uniqBy(alias eq, seq...)
+template uniqByT(alias eq, seq...)
 {
     template _impl(alias eq)
     {
@@ -2763,7 +2825,7 @@ template uniqBy(alias eq, seq...)
         }
     }
 
-    alias uniqBy = mapRec!(_impl!(binaryT!eq).uniqCons, seq);
+    alias uniqByT = mapRecT!(_impl!(binaryT!eq).uniqCons, seq);
 }
 
 /**
@@ -2777,13 +2839,13 @@ unittest
 
 unittest
 {
-    alias empty = uniqBy!(q{ a == b });
+    alias empty = uniqByT!(q{ a == b });
     static assert(empty.length == 0);
 
-    alias nodup = uniqBy!(q{ a == b }, 1,2,3,4,5);
+    alias nodup = uniqByT!(q{ a == b }, 1,2,3,4,5);
     static assert([ nodup ] == [ 1,2,3,4,5 ]);
 
-    alias noinc = uniqBy!(q{ a < b }, 1,2,3,0,8,7,6,5);
+    alias noinc = uniqByT!(q{ a < b }, 1,2,3,0,8,7,6,5);
     static assert([ noinc ] == [ 1,0,7,6,5 ]);
 }
 
@@ -2799,9 +2861,9 @@ Params:
 Returns:
  Sequence $(D seq) without any duplicate elements.
  */
-template removeDuplicates(seq...)
+template removeDuplicatesT(seq...)
 {
-    alias removeDuplicates = removeDuplicatesBy!(isSame, seq);
+    alias removeDuplicatesT = removeDuplicatesByT!(isSame, seq);
 }
 
 /**
@@ -2814,16 +2876,16 @@ unittest
 
 unittest
 {
-    alias empty = removeDuplicates!();
+    alias empty = removeDuplicatesT!();
     static assert(empty.length == 0);
 
-    alias Single = removeDuplicates!(int);
+    alias Single = removeDuplicatesT!(int);
     static assert(is(Single == Seq!(int)));
 
-    alias Dup = removeDuplicates!(int, double, string, int, double);
+    alias Dup = removeDuplicatesT!(int, double, string, int, double);
     static assert(is(Dup == Seq!(int, double, string)));
 
-    alias values = removeDuplicates!("fun", "gun", "fun", "hun");
+    alias values = removeDuplicatesT!("fun", "gun", "fun", "hun");
     static assert([ values ] == [ "fun", "gun", "hun" ]);
 }
 
@@ -2842,18 +2904,18 @@ Returns:
  Sequence $(D seq) in which any group of duplicate elements are eliminated
  except the fist one of each group.
  */
-template removeDuplicatesBy(alias eq, seq...)
+template removeDuplicatesByT(alias eq, seq...)
 {
     static if (seq.length < 2)
     {
-        alias removeDuplicatesBy = seq;
+        alias removeDuplicatesByT = seq;
     }
     else
     {
-        alias removeDuplicatesBy =
+        alias removeDuplicatesByT =
               Seq!(seq[0],
-                   removeDuplicatesBy!(
-                       eq, filter!(bind!(not!eq, seq[0]), seq[1 .. $])));
+                   removeDuplicatesByT!(
+                       eq, filterT!(bindT!(notT!eq, seq[0]), seq[1 .. $])));
     }
 }
 
@@ -2868,13 +2930,13 @@ unittest
 
 unittest
 {
-    alias empty = removeDuplicatesBy!(q{ a == b });
+    alias empty = removeDuplicatesByT!(q{ a == b });
     static assert(empty.length == 0);
 
-    alias nodup = removeDuplicatesBy!(q{ a == b }, 1,2,3,4,5);
+    alias nodup = removeDuplicatesByT!(q{ a == b }, 1,2,3,4,5);
     static assert([ nodup ] == [ 1,2,3,4,5 ]);
 
-    alias decrease = removeDuplicatesBy!(q{ a < b }, 9,6,7,8,3,4,5,0);
+    alias decrease = removeDuplicatesByT!(q{ a < b }, 9,6,7,8,3,4,5,0);
     static assert([ decrease ] == [ 9,6,3,0 ]);
 }
 
@@ -2895,23 +2957,23 @@ fun!( ... fun!(fun!(Seed, seq[0]), seq[1]) ..., seq[$ - 1])
 Params:
   fun = Binary template or string.
  Seed = The initial state.
-  seq = Sequence of zero or more compile-time entities to _reduce.
+  seq = Sequence of zero or more compile-time entities to reduce.
 
 Returns:
  The last result of $(D fun), or $(D Seed) if $(D seq) is empty.
 
 See_Also:
- $(D meta.scan): reduce with history.
+ $(D meta.scan): reduceT with history.
  */
-template reduce(alias fun, Seed, seq...)
+template reduceT(alias fun, Seed, seq...)
 {
-    alias reduce = _reduce!(binaryT!fun)._impl!(Seed, seq);
+    alias reduceT = _reduceT!(binaryT!fun)._impl!(Seed, seq);
 }
 
 /// ditto
-template reduce(alias fun, alias Seed, seq...)
+template reduceT(alias fun, alias Seed, seq...)
 {
-    alias reduce = _reduce!(binaryT!fun)._impl!(Seed, seq);
+    alias reduceT = _reduceT!(binaryT!fun)._impl!(Seed, seq);
 }
 
 /**
@@ -2927,7 +2989,7 @@ unittest
 }
 
 
-private template _reduce(alias fun)
+private template _reduceT(alias fun)
 {
     template _impl(      Seed) { alias _impl = Seed; }
     template _impl(alias Seed) { alias _impl = Seed; }
@@ -2951,21 +3013,21 @@ private template _reduce(alias fun)
 
 unittest
 {
-    static assert(is(reduce!(q{ A[B] }, int) == int));
-    static assert(reduce!(q{ a ~ b }, "abc") == "abc");
+    static assert(is(reduceT!(q{ A[B] }, int) == int));
+    static assert(reduceT!(q{ a ~ b }, "abc") == "abc");
 
-    alias Assoc = reduce!(q{ A[B] }, int, double, string);
+    alias Assoc = reduceT!(q{ A[B] }, int, double, string);
     static assert(is(Assoc == int[double][string]));
 
-    enum concat = reduce!(q{ a ~ b }, "abc", "123", "xyz", "987");
+    enum concat = reduceT!(q{ a ~ b }, "abc", "123", "xyz", "987");
     static assert(concat == "abc123xyz987");
 
     // Test for ambiguity on matching string/alias parameters
     struct S {}
-    alias K1 = reduce!(        q{ A[B] }, S);
-    alias K2 = reduce!(binaryT!q{ A[B] }, S);
-    enum s1 = reduce!(        q{ a ~ b }, "");
-    enum s2 = reduce!(binaryT!q{ a ~ b }, "");
+    alias K1 = reduceT!(        q{ A[B] }, S);
+    alias K2 = reduceT!(binaryT!q{ A[B] }, S);
+    enum s1 = reduceT!(        q{ a ~ b }, "");
+    enum s2 = reduceT!(binaryT!q{ a ~ b }, "");
 }
 
 
@@ -2984,20 +3046,20 @@ Note that $(D scan[i]) is equal to $(D meta.reduce!(fun, Seed, seq[0 .. i])).
 Params:
   fun = Binary template or string.
  Seed = The initial state.
-  seq = Sequence of zero or more compile-time entities to _scan.
+  seq = Sequence of zero or more compile-time entities to scan.
 
 Returns:
  Sequence of the results of $(D fun) preceded by $(D Seed).
  */
-template scan(alias fun, Seed, seq...)
+template scanT(alias fun, Seed, seq...)
 {
-    alias scan = _scan!(binaryT!fun).scan!(Seed, seq);
+    alias scanT = _scanT!(binaryT!fun).scanT!(Seed, seq);
 }
 
 /// ditto
-template scan(alias fun, alias Seed, seq...)
+template scanT(alias fun, alias Seed, seq...)
 {
-    alias scan = _scan!(binaryT!fun).scan!(Seed, seq);
+    alias scanT = _scanT!(binaryT!fun).scanT!(Seed, seq);
 }
 
 /**
@@ -3019,20 +3081,20 @@ unittest
                                 0+4+8+2+1+4 ]);
 }
 
-private template _scan(alias fun)
+private template _scanT(alias fun)
 {
-    template scan(      Seed, seq...) { mixin(_scanBody); }
-    template scan(alias Seed, seq...) { mixin(_scanBody); }
+    template scanT(      Seed, seq...) { mixin(_scanBody); }
+    template scanT(alias Seed, seq...) { mixin(_scanBody); }
 
     enum _scanBody =
     q{
         static if (seq.length == 0)
         {
-            alias scan = Seq!(Seed);
+            alias scanT = Seq!(Seed);
         }
         else
         {
-            alias scan = Seq!(Seed, scan!(fun!(Seed, seq[0]), seq[1 .. $]));
+            alias scanT = Seq!(Seed, scanT!(fun!(Seed, seq[0]), seq[1 .. $]));
         }
     };
 }
@@ -3040,13 +3102,13 @@ private template _scan(alias fun)
 
 unittest
 {
-    alias Assocs = scan!(q{ A[B] }, int, double, string);
+    alias Assocs = scanT!(q{ A[B] }, int, double, string);
     static assert(Assocs.length == 3);
     static assert(is(Assocs[0] == int));
     static assert(is(Assocs[1] == int[double]));
     static assert(is(Assocs[2] == int[double][string]));
 
-    alias concats = scan!(q{ a ~ b }, "abc", "123", "xyz", "987");
+    alias concats = scanT!(q{ a ~ b }, "abc", "123", "xyz", "987");
     static assert(concats.length == 4);
     static assert(concats[0] == "abc");
     static assert(concats[1] == "abc123");
@@ -3055,10 +3117,10 @@ unittest
 
     // Test for non-ambiguity
     struct S {}
-    alias K1 = scan!(        q{ A[B] }, S);
-    alias K2 = scan!(binaryT!q{ A[B] }, S);
-    enum s1 = scan!(        q{ a ~ b }, "");
-    enum s2 = scan!(binaryT!q{ a ~ b }, "");
+    alias K1 = scanT!(        q{ A[B] }, S);
+    alias K2 = scanT!(binaryT!q{ A[B] }, S);
+    enum s1 = scanT!(        q{ a ~ b }, "");
+    enum s2 = scanT!(binaryT!q{ a ~ b }, "");
 }
 
 
@@ -3072,7 +3134,7 @@ Params:
  comp = Binary template that compares items in the sequence.
   seq = One or more compile-time entities.
  */
-template most(alias comp, seq...) if (seq.length > 0)
+template mostT(alias comp, seq...) if (seq.length > 0)
 {
     template more(alias comp)
     {
@@ -3090,7 +3152,7 @@ template most(alias comp, seq...) if (seq.length > 0)
         }
     }
 
-    alias most = reduce!(more!(binaryT!comp), seq);
+    alias mostT = reduceT!(more!(binaryT!comp), seq);
 }
 
 /**
@@ -3108,13 +3170,13 @@ unittest
 
 unittest
 {
-    static assert(most!(q{ a < b }, 5) == 5);
-    static assert(most!(q{ a < b }, 5, 5, 5) == 5);
-    static assert(most!(q{ a < b }, 5, 1, -3, 2, 4) == -3);
+    static assert(mostT!(q{ a < b }, 5) == 5);
+    static assert(mostT!(q{ a < b }, 5, 5, 5) == 5);
+    static assert(mostT!(q{ a < b }, 5, 1, -3, 2, 4) == -3);
 
     // stability
-    alias Min = most!(q{ A.sizeof < B.sizeof }, short, byte, float, ubyte, uint);
-    alias Max = most!(q{ A.sizeof > B.sizeof }, short, byte, float, ubyte, uint);
+    alias Min = mostT!(q{ A.sizeof < B.sizeof }, short, byte, float, ubyte, uint);
+    alias Max = mostT!(q{ A.sizeof > B.sizeof }, short, byte, float, ubyte, uint);
     static assert(is(Min ==  byte));
     static assert(is(Max == float));
 }
@@ -3130,7 +3192,7 @@ Params:
  pred = m-ary predicate template.
     m = Size of chunk to find.
  */
-template _findChunk(alias pred, size_t m)
+template _findChunkT(alias pred, size_t m)
 {
     template index(seq...) if (seq.length < m)
     {
@@ -3178,15 +3240,15 @@ Returns:
  Subsequence of $(D seq) after $(D E) (inclusive).  The empty sequence
  is returned if $(D E) is not found.
  */
-template find(E, seq...)
+template findT(E, seq...)
 {
-    alias find = findIf!(isSame!E, seq);
+    alias findT = findIfT!(isSame!E, seq);
 }
 
 /// ditto
-template find(alias E, seq...)
+template findT(alias E, seq...)
 {
-    alias find = findIf!(isSame!E, seq);
+    alias findT = findIfT!(isSame!E, seq);
 }
 
 /**
@@ -3201,16 +3263,16 @@ unittest
 
 unittest
 {
-    static assert(find!(void).length == 0);
-    static assert(find!(   0).length == 0);
+    static assert(findT!(void).length == 0);
+    static assert(findT!(   0).length == 0);
 
-    static assert(find!(void, int, string).length == 0);
-    static assert(find!(   0, int, string).length == 0);
+    static assert(findT!(void, int, string).length == 0);
+    static assert(findT!(   0, int, string).length == 0);
 
-    alias Void = find!(void, int, string, void, void, double);
+    alias Void = findT!(void, int, string, void, void, double);
     static assert(is(Void == Seq!(void, void, double)));
 
-    alias opAss = find!("opAssign", "toString", "opAssign", "empty");
+    alias opAss = findT!("opAssign", "toString", "opAssign", "empty");
     static assert([ opAss ] == [ "opAssign", "empty" ]);
 }
 
@@ -3236,9 +3298,9 @@ Returns:
  Subsequence of $(D seq) after the found element, if any, inclusive.
  The empty sequence is returned if not found.
  */
-template findIf(alias pred, seq...)
+template findIfT(alias pred, seq...)
 {
-    alias findIf = seq[_findChunk!(unaryT!pred, 1).index!seq .. $];
+    alias findIfT = seq[_findChunkT!(unaryT!pred, 1).index!seq .. $];
 }
 
 /**
@@ -3252,16 +3314,16 @@ unittest
 
 unittest
 {
-    static assert(findIf!(q{ true }).length == 0);
+    static assert(findIfT!(q{ true }).length == 0);
 
-    static assert([ findIf!(q{ a < 0 }, 5,4,3,2,1,0) ] == []);
-    static assert([ findIf!(q{ a < 0 }, 2,1,0,-1,-2) ] == [ -1,-2 ]);
+    static assert([ findIfT!(q{ a < 0 }, 5,4,3,2,1,0) ] == []);
+    static assert([ findIfT!(q{ a < 0 }, 2,1,0,-1,-2) ] == [ -1,-2 ]);
 }
 
 
 
 /**
-Finds the _index of the first occurrence of $(D E) in a sequence.
+Finds the index of the first occurrence of $(D E) in a sequence.
 
 Params:
    E = Compile-time entity to look for.
@@ -3271,15 +3333,15 @@ Returns:
  Index of the first element, if any, that is same as $(D E).  $(D -1) is
  returned if not found.  The type of the result is $(D sizediff_t).
  */
-template index(E, seq...)
+template indexT(E, seq...)
 {
-    enum index = indexIf!(isSame!E, seq);
+    enum indexT = indexIfT!(isSame!E, seq);
 }
 
 /// ditto
-template index(alias E, seq...)
+template indexT(alias E, seq...)
 {
-    enum index = indexIf!(isSame!E, seq);
+    enum indexT = indexIfT!(isSame!E, seq);
 }
 
 /**
@@ -3294,23 +3356,23 @@ unittest
 
 unittest
 {
-    static assert(index!(int) == -1);
-    static assert(index!( 16) == -1);
+    static assert(indexT!(int) == -1);
+    static assert(indexT!( 16) == -1);
 
-    static assert(index!(int, string, double, bool) == -1);
-    static assert(index!( 16, string, double, bool) == -1);
+    static assert(indexT!(int, string, double, bool) == -1);
+    static assert(indexT!( 16, string, double, bool) == -1);
 
-    static assert(index!(string, string, double, int) == 0);
-    static assert(index!(double, string, double, int) == 1);
-    static assert(index!(   int, string, double, int) == 2);
+    static assert(indexT!(string, string, double, int) == 0);
+    static assert(indexT!(double, string, double, int) == 1);
+    static assert(indexT!(   int, string, double, int) == 2);
 
-    static assert(index!( 4, 4, 8, 16) == 0);
-    static assert(index!( 8, 4, 8, 16) == 1);
-    static assert(index!(16, 4, 8, 16) == 2);
+    static assert(indexT!( 4, 4, 8, 16) == 0);
+    static assert(indexT!( 8, 4, 8, 16) == 1);
+    static assert(indexT!(16, 4, 8, 16) == 2);
 
     // Type check
-    static assert(is(typeof(index!(int, int, double)) == sizediff_t));
-    static assert(is(typeof(index!( 16, int, double)) == sizediff_t));
+    static assert(is(typeof(indexT!(int, int, double)) == sizediff_t));
+    static assert(is(typeof(indexT!( 16, int, double)) == sizediff_t));
 }
 
 
@@ -3326,15 +3388,15 @@ Returns:
  Index of the first element, if any, satisfying the predicate $(D pred).
  $(D -1) is returned if not found.  The type of the result is $(D sizediff_t).
  */
-template indexIf(alias pred, seq...)
+template indexIfT(alias pred, seq...)
 {
-    static if (_findChunk!(unaryT!pred, 1).index!seq == seq.length)
+    static if (_findChunkT!(unaryT!pred, 1).index!seq == seq.length)
     {
-        enum sizediff_t indexIf = -1;
+        enum sizediff_t indexIfT = -1;
     }
     else
     {
-        enum sizediff_t indexIf = _findChunk!(unaryT!pred, 1).index!seq;
+        enum sizediff_t indexIfT = _findChunkT!(unaryT!pred, 1).index!seq;
     }
 }
 
@@ -3350,16 +3412,16 @@ unittest
 
 unittest
 {
-    static assert(indexIf!(q{  true }) == -1);
-    static assert(indexIf!(q{ false }, string, double, bool) == -1);
+    static assert(indexIfT!(q{  true }) == -1);
+    static assert(indexIfT!(q{ false }, string, double, bool) == -1);
 
-    static assert(indexIf!(q{ a % 2 == 0 }, 2, 6, 8) == 0);
-    static assert(indexIf!(q{ a % 3 == 0 }, 2, 6, 8) == 1);
-    static assert(indexIf!(q{ a % 4 == 0 }, 2, 6, 8) == 2);
+    static assert(indexIfT!(q{ a % 2 == 0 }, 2, 6, 8) == 0);
+    static assert(indexIfT!(q{ a % 3 == 0 }, 2, 6, 8) == 1);
+    static assert(indexIfT!(q{ a % 4 == 0 }, 2, 6, 8) == 2);
 
     // Type check
-    static assert(is(typeof(indexIf!(q{  true }, int, double)) == sizediff_t));
-    static assert(is(typeof(indexIf!(q{ false }, int, double)) == sizediff_t));
+    static assert(is(typeof(indexIfT!(q{  true }, int, double)) == sizediff_t));
+    static assert(is(typeof(indexIfT!(q{ false }, int, double)) == sizediff_t));
 }
 
 
@@ -3374,15 +3436,15 @@ Params:
 Returns:
  The number of elements in $(D seq) satisfying $(D isSame!E).
  */
-template count(E, seq...)
+template countT(E, seq...)
 {
-    enum count = countIf!(isSame!E, seq);
+    enum countT = countIfT!(isSame!E, seq);
 }
 
 /// ditto
-template count(alias E, seq...)
+template countT(alias E, seq...)
 {
-    enum count = countIf!(isSame!E, seq);
+    enum countT = countIfT!(isSame!E, seq);
 }
 
 /**
@@ -3395,19 +3457,19 @@ unittest
 
 unittest
 {
-    static assert(count!(int) == 0);
-    static assert(count!( 16) == 0);
+    static assert(countT!(int) == 0);
+    static assert(countT!( 16) == 0);
 
-    static assert(count!(int, double, string, bool) == 0);
-    static assert(count!( 16, double, string, bool) == 0);
+    static assert(countT!(int, double, string, bool) == 0);
+    static assert(countT!( 16, double, string, bool) == 0);
 
-    static assert(count!(int, int, void, void) == 1);
-    static assert(count!(int, int,  int, void) == 2);
-    static assert(count!(int, int,  int,  int) == 3);
+    static assert(countT!(int, int, void, void) == 1);
+    static assert(countT!(int, int,  int, void) == 2);
+    static assert(countT!(int, int,  int,  int) == 3);
 
-    static assert(count!(16, 16,  8,  4) == 1);
-    static assert(count!(16, 16, 16,  4) == 2);
-    static assert(count!(16, 16, 16, 16) == 3);
+    static assert(countT!(16, 16,  8,  4) == 1);
+    static assert(countT!(16, 16, 16,  4) == 2);
+    static assert(countT!(16, 16, 16, 16) == 3);
 }
 
 
@@ -3422,7 +3484,7 @@ Params:
 Returns:
  The number of elements in $(D seq) satisfying the predicate $(D pred).
  */
-template countIf(alias pred, seq...)
+template countIfT(alias pred, seq...)
 {
     alias _pred = unaryT!pred;
 
@@ -3430,17 +3492,17 @@ template countIf(alias pred, seq...)
     {
         static if (seq.length == 0 || !_pred!(seq[0]))
         {
-            enum size_t countIf = 0;
+            enum size_t countIfT = 0;
         }
         else
         {
-            enum size_t countIf = 1;
+            enum size_t countIfT = 1;
         }
     }
     else
     {
-        enum countIf = countIf!(_pred, seq[ 0  .. $/2]) +
-                       countIf!(_pred, seq[$/2 ..  $ ]);
+        enum countIfT = countIfT!(_pred, seq[ 0  .. $/2]) +
+                        countIfT!(_pred, seq[$/2 ..  $ ]);
     }
 }
 
@@ -3454,18 +3516,18 @@ unittest
 
 unittest
 {
-    static assert(countIf!(q{  true }) == 0);
-    static assert(countIf!(q{ false }, int, double, string) == 0);
+    static assert(countIfT!(q{  true }) == 0);
+    static assert(countIfT!(q{ false }, int, double, string) == 0);
 
-    static assert(countIf!(q{ a % 6 == 0 }, 1,2,3,4,5,6) == 1);
-    static assert(countIf!(q{ a % 3 == 0 }, 1,2,3,4,5,6) == 2);
-    static assert(countIf!(q{ a % 2 == 0 }, 1,2,3,4,5,6) == 3);
+    static assert(countIfT!(q{ a % 6 == 0 }, 1,2,3,4,5,6) == 1);
+    static assert(countIfT!(q{ a % 3 == 0 }, 1,2,3,4,5,6) == 2);
+    static assert(countIfT!(q{ a % 2 == 0 }, 1,2,3,4,5,6) == 3);
 }
 
 
 
 /**
-Determines if, respectively, _all/_any/_none of the elements in a
+Determines if, respectively, all/any/none of the elements in a
 sequence $(D seq) satisfies the predicate $(D pred).  Specifically:
 ----------
  all =  pred!(seq[0]) &&  pred!(seq[1]) && ... ;
@@ -3478,13 +3540,13 @@ Params:
   seq = Zero or more compile-time entities to examine.
 
 Returns:
- $(D true) if _all/_any/_none of the elements of the sequence satisfies
+ $(D true) if all/any/none of the elements of the sequence satisfies
  the predicate.  For the empty sequence, $(D meta.all) and $(D meta.none)
  returns $(D true); and $(D meta.any) returns $(D false).
  */
-template all(alias pred, seq...)
+template allT(alias pred, seq...)
 {
-    enum all = (_findChunk!(not!pred, 1).index!seq == seq.length);
+    enum allT = (_findChunkT!(notT!pred, 1).index!seq == seq.length);
 }
 
 /**
@@ -3501,29 +3563,29 @@ unittest
 {
     enum isZero(int n) = (n == 0);
 
-    static assert( all!(isZero));
-    static assert( all!(isZero, 0));
-    static assert(!all!(isZero, 1));
-    static assert(!all!(isZero, 1, 2));
-    static assert(!all!(isZero, 0, 1, 2));
-    static assert( all!(isZero, 0, 0, 0));
+    static assert( allT!(isZero));
+    static assert( allT!(isZero, 0));
+    static assert(!allT!(isZero, 1));
+    static assert(!allT!(isZero, 1, 2));
+    static assert(!allT!(isZero, 0, 1, 2));
+    static assert( allT!(isZero, 0, 0, 0));
 
     // Laziness
-    static assert(!all!(isZero, 1, int));
-    static assert(!all!(isZero, 0, 1, int));
-    static assert(!all!(isZero, 0, 0, 1, int));
-    static assert(!all!(isZero, 0, 0, 0, 1, int));
+    static assert(!allT!(isZero, 1, int));
+    static assert(!allT!(isZero, 0, 1, int));
+    static assert(!allT!(isZero, 0, 0, 1, int));
+    static assert(!allT!(isZero, 0, 0, 0, 1, int));
 
     // String
-    static assert( all!(q{ is(A == const) }));
-    static assert( all!(q{ is(A == const) }, const int));
+    static assert( allT!(q{ is(A == const) }));
+    static assert( allT!(q{ is(A == const) }, const int));
 }
 
 
 /** ditto */
-template any(alias pred, seq...)
+template anyT(alias pred, seq...)
 {
-    enum any = (_findChunk!(unaryT!pred, 1).index!seq < seq.length);
+    enum anyT = (_findChunkT!(unaryT!pred, 1).index!seq < seq.length);
 }
 
 
@@ -3531,29 +3593,29 @@ unittest
 {
     enum isZero(int n) = (n == 0);
 
-    static assert(!any!(isZero));
-    static assert( any!(isZero, 0));
-    static assert(!any!(isZero, 1));
-    static assert(!any!(isZero, 1, 2));
-    static assert( any!(isZero, 0, 1, 2));
-    static assert( any!(isZero, 0, 0, 0));
+    static assert(!anyT!(isZero));
+    static assert( anyT!(isZero, 0));
+    static assert(!anyT!(isZero, 1));
+    static assert(!anyT!(isZero, 1, 2));
+    static assert( anyT!(isZero, 0, 1, 2));
+    static assert( anyT!(isZero, 0, 0, 0));
 
     // Laziness
-    static assert( any!(isZero, 0, int));
-    static assert( any!(isZero, 1, 0, int));
-    static assert( any!(isZero, 1, 2, 0, int));
-    static assert( any!(isZero, 1, 2, 3, 0, int));
+    static assert( anyT!(isZero, 0, int));
+    static assert( anyT!(isZero, 1, 0, int));
+    static assert( anyT!(isZero, 1, 2, 0, int));
+    static assert( anyT!(isZero, 1, 2, 3, 0, int));
 
     // String
-    static assert(!any!(q{ is(A == const) }));
-    static assert( any!(q{ is(A == const) }, const int));
+    static assert(!anyT!(q{ is(A == const) }));
+    static assert( anyT!(q{ is(A == const) }, const int));
 }
 
 
 /** ditto */
-template none(alias pred, seq...)
+template noneT(alias pred, seq...)
 {
-    enum none = (_findChunk!(unaryT!pred, 1).index!seq == seq.length);
+    enum noneT = (_findChunkT!(unaryT!pred, 1).index!seq == seq.length);
 }
 
 
@@ -3561,28 +3623,28 @@ unittest
 {
     enum isZero(int n) = (n == 0);
 
-    static assert( none!(isZero));
-    static assert(!none!(isZero, 0));
-    static assert( none!(isZero, 1));
-    static assert( none!(isZero, 1, 2));
-    static assert(!none!(isZero, 0, 1, 2));
-    static assert(!none!(isZero, 0, 0, 0));
+    static assert( noneT!(isZero));
+    static assert(!noneT!(isZero, 0));
+    static assert( noneT!(isZero, 1));
+    static assert( noneT!(isZero, 1, 2));
+    static assert(!noneT!(isZero, 0, 1, 2));
+    static assert(!noneT!(isZero, 0, 0, 0));
 
     // Laziness
-    static assert(!none!(isZero, 0, int));
-    static assert(!none!(isZero, 1, 0, int));
-    static assert(!none!(isZero, 1, 2, 0, int));
-    static assert(!none!(isZero, 1, 2, 3, 0, int));
+    static assert(!noneT!(isZero, 0, int));
+    static assert(!noneT!(isZero, 1, 0, int));
+    static assert(!noneT!(isZero, 1, 2, 0, int));
+    static assert(!noneT!(isZero, 1, 2, 3, 0, int));
 
     // String
-    static assert( none!(q{ is(A == const) }));
-    static assert(!none!(q{ is(A == const) }, const int));
+    static assert( noneT!(q{ is(A == const) }));
+    static assert(!noneT!(q{ is(A == const) }, const int));
 }
 
 
 
 /**
-Determines if _only one of the elements of $(D seq) satisfies the predicate
+Determines if only one of the elements of $(D seq) satisfies the predicate
 $(D pred).  The predicate is tested for all the elements.
 
 Params:
@@ -3590,12 +3652,12 @@ Params:
   seq = Zero or more compile-time entities to examine.
 
 Returns:
- $(D true) if $(D seq) is not empty and _only one of the elements satisfies
+ $(D true) if $(D seq) is not empty and only one of the elements satisfies
  the predicate.  Otherwise, $(D false) is returned.
  */
-template only(alias pred, seq...)
+template onlyT(alias pred, seq...)
 {
-    enum only = (countIf!(pred, seq) == 1);
+    enum onlyT = (countIfT!(pred, seq) == 1);
 }
 
 /**
@@ -3616,16 +3678,16 @@ unittest
 {
     enum isZero(int n) = (n == 0);
 
-    static assert(!only!(isZero));
-    static assert( only!(isZero, 0));
-    static assert(!only!(isZero, 1));
-    static assert(!only!(isZero, 1, 2));
-    static assert( only!(isZero, 0, 1, 2));
-    static assert(!only!(isZero, 0, 0, 0));
+    static assert(!onlyT!(isZero));
+    static assert( onlyT!(isZero, 0));
+    static assert(!onlyT!(isZero, 1));
+    static assert(!onlyT!(isZero, 1, 2));
+    static assert( onlyT!(isZero, 0, 1, 2));
+    static assert(!onlyT!(isZero, 0, 0, 0));
 
     // String
-    static assert(!only!(q{ is(A == const) }));
-    static assert( only!(q{ is(A == const) }, const int));
+    static assert(!onlyT!(q{ is(A == const) }));
+    static assert( onlyT!(q{ is(A == const) }, const int));
 }
 
 
@@ -3647,9 +3709,9 @@ Returns:
  Sequence $(D seq) rearranged in a uniform order.  Duplicate elements will
  be grouped into a continuous repetition of that entity.
  */
-template setify(seq...)
+template setifyT(seq...)
 {
-    alias setify = sort!(metaComp, seq);
+    alias setifyT = sortT!(metaComp, seq);
 }
 
 /**
@@ -3677,17 +3739,17 @@ Params:
 
          The number of duplicates, if any, is significant.  If there are
          $(D m) repetitions of an entity in $(D items), the template checks
-         if $(D sub) _contains $(D m) or more duplicates of that entity; and
+         if $(D sub) contains $(D m) or more duplicates of that entity; and
          returns $(D false) if not.
 
 Returns:
- $(D true) if the sequence $(D set.expand) _contains all the _items in
+ $(D true) if the sequence $(D set.expand) contains all the _items in
  $(D items) including duplicates, or $(D false) if not.  $(D true) is
  returned if $(D items) is empty.
  */
-template contains(alias set, items...)
+template containsT(alias set, items...)
 {
-    enum contains = (intersection!(set, pack!items).length == items.length);
+    enum containsT = (intersectionT!(set, pack!items).length == items.length);
 }
 
 /**
@@ -3703,24 +3765,24 @@ unittest
 
 unittest
 {
-    static assert( contains!(pack!()));
-    static assert(!contains!(pack!(), int));
-    static assert(!contains!(pack!(), int, "index"));
+    static assert( containsT!(pack!()));
+    static assert(!containsT!(pack!(), int));
+    static assert(!containsT!(pack!(), int, "index"));
 
     alias nums = pack!(1, 1, 1, 2, 2, 3);
-    static assert( contains!(nums));
-    static assert( contains!(nums, nums.expand));
+    static assert( containsT!(nums));
+    static assert( containsT!(nums, nums.expand));
 
-    static assert( contains!(nums, 3));
-    static assert( contains!(nums, 1, 2, 3));
-    static assert( contains!(nums, 3, 1, 2));
-    static assert( contains!(nums, 1, 1, 2, 2));
-    static assert( contains!(nums, 3, 1, 1, 1));
+    static assert( containsT!(nums, 3));
+    static assert( containsT!(nums, 1, 2, 3));
+    static assert( containsT!(nums, 3, 1, 2));
+    static assert( containsT!(nums, 1, 1, 2, 2));
+    static assert( containsT!(nums, 3, 1, 1, 1));
 
-    static assert(!contains!(nums, 0));
-    static assert(!contains!(nums, 0, 1, 2, 3));
-    static assert(!contains!(nums, 1, 1, 1, 1));
-    static assert(!contains!(nums, 3, 3));
+    static assert(!containsT!(nums, 0));
+    static assert(!containsT!(nums, 0, 1, 2, 3));
+    static assert(!containsT!(nums, 1, 1, 1, 1));
+    static assert(!containsT!(nums, 3, 3));
 }
 
 
@@ -3734,17 +3796,17 @@ Params:
 
          The number of duplicates, if any, is significant.  If there are
          $(D m) repetitions of an entity in $(D items), the template checks
-         if $(D set) _contains exactly $(D m) duplicates of that entity; and
+         if $(D set) contains exactly $(D m) duplicates of that entity; and
          returns $(D false) if not.
 
 Returns:
  $(D true) if the sequence $(D set.expand) is composed of exactly the same
  _items in $(D items) including duplicates, or $(D false) if not.
  */
-template isComposedOf(alias set, items...)
+template isComposedOfT(alias set, items...)
 {
-    enum isComposedOf = is(pack!(setify!(set.expand)).Tag ==
-                           pack!(setify!items).Tag);
+    enum isComposedOfT = is(pack!(setifyT!(set.expand)).Tag ==
+                            pack!(setifyT!items).Tag);
 }
 
 /**
@@ -3762,10 +3824,10 @@ unittest
 
 
 /**
-Takes the _intersection of zero or more sequences.
+Takes the intersection of zero or more sequences.
 
 Params:
- seqs = Sequence of sequences to take _intersection of.  Each sequence must
+ seqs = Sequence of sequences to take intersection of.  Each sequence must
         be packed into $(D meta.pack) or a compatible entity.
 
 Returns:
@@ -3774,20 +3836,20 @@ Returns:
  is empty.
 
  If the sequences contain $(D m1,m2,...) duplicates of the same entity
- respectively, the resulting _intersection will contain $(D min(m1,m2,...)),
+ respectively, the resulting intersection will contain $(D min(m1,m2,...)),
  or the least, duplicates of that entity.
 
  The order of elements in the returned sequence is normalized to the order
  defined by $(D meta.setify).
  */
-template intersection(seqs...)
+template intersectionT(seqs...)
 {
-    alias _impl(seqs...)          = reduce!(compose!(pack, .intersection), seqs).expand;
-    alias _impl(alias A, alias B) = intersectionBy!(metaComp, A, B);
-    alias _impl(alias A)          = setify!(A.expand);
+    alias _impl(seqs...)          = reduceT!(composeT!(pack, .intersectionT), seqs).expand;
+    alias _impl(alias A, alias B) = intersectionByT!(metaComp, A, B);
+    alias _impl(alias A)          = setifyT!(A.expand);
     alias _impl()                 = Seq!();
 
-    alias intersection = _impl!seqs;
+    alias intersectionT = _impl!seqs;
 }
 
 /**
@@ -3807,45 +3869,45 @@ unittest
     alias b = Seq!(0,1,2,4,4,7,8);
     alias c = Seq!(0,1,4,4,5,7,8);
 
-    alias aa = intersection!(pack!a, pack!a);
-    alias ab = intersection!(pack!a, pack!b);
-    alias bc = intersection!(pack!b, pack!c);
-    static assert(isComposedOf!(pack!aa, a));
-    static assert(isComposedOf!(pack!ab, 1,2,4,7));
-    static assert(isComposedOf!(pack!bc, 0,1,4,4,7,8));
+    alias aa = intersectionT!(pack!a, pack!a);
+    alias ab = intersectionT!(pack!a, pack!b);
+    alias bc = intersectionT!(pack!b, pack!c);
+    static assert(isComposedOfT!(pack!aa, a));
+    static assert(isComposedOfT!(pack!ab, 1,2,4,7));
+    static assert(isComposedOfT!(pack!bc, 0,1,4,4,7,8));
 
     // Test for types
     alias T = Seq!(int, int, double, string);
     alias U = Seq!(double, string, double, int);
     alias V = Seq!(double, void, int, double);
 
-    alias TT = intersection!(pack!T, pack!T);
-    alias TU = intersection!(pack!T, pack!U);
-    alias UV = intersection!(pack!U, pack!V);
-    static assert(isComposedOf!(pack!TT, T));
-    static assert(isComposedOf!(pack!TU, double, int, string));
-    static assert(isComposedOf!(pack!UV, double, double, int));
+    alias TT = intersectionT!(pack!T, pack!T);
+    alias TU = intersectionT!(pack!T, pack!U);
+    alias UV = intersectionT!(pack!U, pack!V);
+    static assert(isComposedOfT!(pack!TT, T));
+    static assert(isComposedOfT!(pack!TU, double, int, string));
+    static assert(isComposedOfT!(pack!UV, double, double, int));
 
     // Degeneration
     alias e = Seq!();
-    static assert(intersection!(pack!e, pack!e).length == 0);
-    static assert(intersection!(pack!e, pack!T).length == 0);
-    static assert(intersection!(pack!T, pack!a).length == 0);
+    static assert(intersectionT!(pack!e, pack!e).length == 0);
+    static assert(intersectionT!(pack!e, pack!T).length == 0);
+    static assert(intersectionT!(pack!T, pack!a).length == 0);
 }
 
 unittest
 {
-    static assert(intersection!().length == 0);
+    static assert(intersectionT!().length == 0);
 
-    alias Empty  = intersection!(pack!());
-    alias Single = intersection!(pack!(int, double, string));
+    alias Empty  = intersectionT!(pack!());
+    alias Single = intersectionT!(pack!(int, double, string));
     static assert(is(Empty == TypeSeq!()));
-    static assert(is(Single == setify!(int, double, string)));
+    static assert(is(Single == setifyT!(int, double, string)));
 }
 
 
 /* internal use */
-template intersectionBy(alias comp, alias A, alias B)
+template intersectionByT(alias comp, alias A, alias B)
 {
     template Intersect(A...)
     {
@@ -3876,8 +3938,8 @@ template intersectionBy(alias comp, alias A, alias B)
         template With(B...) { alias With = Seq!(); }
     }
 
-    alias intersectionBy = Intersect!(sort!(comp, A.expand))
-                               .With!(sort!(comp, B.expand));
+    alias intersectionByT = Intersect!(sortT!(comp, A.expand))
+                                .With!(sortT!(comp, B.expand));
 }
 
 
@@ -3891,23 +3953,23 @@ template intersectionBy(alias comp, alias A, alias B)
 The $(D switch) statement-like utility template.
 
 Params:
- cases = Sequence of zero or more $(D (_cond, then)) patterns optionally
-         followed by a $(D default) argument.  $(D _cond) is a compile-time
+ cases = Sequence of zero or more $(D (cond, then)) patterns optionally
+         followed by a $(D default) argument.  $(D cond) is a compile-time
          boolean value; $(D then) and $(D default) are any compile-time entities.
 
 Returns:
- The $(D then) argument associated with the first $(D _cond) that is $(D true).
- The $(D default) argument is returned if all the $(D _cond)s are $(D false).
+ The $(D then) argument associated with the first $(D cond) that is $(D true).
+ The $(D default) argument is returned if all the $(D cond)s are $(D false).
 
- Instantiation fails if no $(D _cond) is $(D true) and the $(D default) argument
- is not specified.  It also fails if there is a $(D _cond) that is not strictly
+ Instantiation fails if no $(D cond) is $(D true) and the $(D default) argument
+ is not specified.  It also fails if there is a $(D cond) that is not strictly
  typed as $(D bool).
  */
-template cond(cases...) if (cases.length > 0)
+template condT(cases...) if (cases.length > 0)
 {
-    template _matchCase(bool cond, then...)
+    template _matchCase(bool condT, then...)
     {
-        static if (cond)
+        static if (condT)
         {
             alias _matchCase = then;
         }
@@ -3922,12 +3984,12 @@ template cond(cases...) if (cases.length > 0)
 
     template _matchCase(spec...) if (spec.length > 1)
     {
-        static assert(0, "Malformed cond-then: "~ spec.stringof);
+        static assert(0, "Malformed condT-then: "~ spec.stringof);
     }
 
-    static if (segmentWith!(_matchCase, 2, cases).length)
+    static if (segmentWithT!(_matchCase, 2, cases).length)
     {
-        alias cond = frontof!(segmentWith!(_matchCase, 2, cases));
+        alias condT = frontofT!(segmentWithT!(_matchCase, 2, cases));
     }
     else static assert(0, "No match");
 }
@@ -3947,18 +4009,18 @@ unittest
 
 unittest
 {
-    static assert(is(cond!(true, int) == int));
-    static assert(is(cond!(true, int, void) == int));
-    static assert(is(cond!(false, int, void) == void));
+    static assert(is(condT!(true, int) == int));
+    static assert(is(condT!(true, int, void) == int));
+    static assert(is(condT!(false, int, void) == void));
 
-    static assert(is(cond!(true, int, true, double) == int));
-    static assert(is(cond!(false, int, true, double, void) == double));
-    static assert(is(cond!(false, int, false, double, void) == void));
+    static assert(is(condT!(true, int, true, double) == int));
+    static assert(is(condT!(false, int, true, double, void) == double));
+    static assert(is(condT!(false, int, false, double, void) == void));
 
     struct S;
-    static assert(!__traits(compiles, cond!(S, int)));
-    static assert(!__traits(compiles, cond!(-1, int)));
-    static assert(!__traits(compiles, cond!(true, int, 123, int)));
-    static assert(!__traits(compiles, cond!(false, int, false, int)));
+    static assert(!__traits(compiles, condT!(S, int)));
+    static assert(!__traits(compiles, condT!(-1, int)));
+    static assert(!__traits(compiles, condT!(true, int, 123, int)));
+    static assert(!__traits(compiles, condT!(false, int, false, int)));
 }
 
