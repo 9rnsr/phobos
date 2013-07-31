@@ -40,17 +40,6 @@ Makes an alias of $(D E).
 
 Params:
  E = A compile-time entity: type, compile-time value, or any symbol.
-
-Example:
- Literal values can't be aliased directly.  Use $(D meta.Id) as follows:
-----------
-template Front(seq...)
-{
-    alias meta.Id!(seq[0]) Front;
-}
-alias Front!(10, 20, 30) front;
-static assert(front == 10);
-----------
  */
 template Id(E)
 {
@@ -63,6 +52,18 @@ template Id(alias E)
     alias E Id;
 }
 
+/**
+ Literal values can't be aliased directly.  Use $(D meta.Id) as follows:
+ */
+unittest
+{
+    template Front(seq...)
+    {
+        alias meta.Id!(seq[0]) Front;
+    }
+    alias Front!(10, 20, 30) front;
+    static assert(front == 10);
+}
 
 unittest
 {
@@ -79,51 +80,19 @@ unittest
     assert(&s == &sym);
 }
 
-unittest    // doc example
-{
-    struct Scope
-    {
-        template Front(seq...)
-        {
-            alias meta.Id!(seq[0]) Front;
-        }
-    }
-    alias Scope.Front Front;
-
-    alias Front!(10, 20, 30) front;
-    static assert(front == 10);
-}
-
 
 
 /**
 Makes a sequence of compile-time entities.  The sequence is just an alias of
 the template variadic arguments: $(D seq).
-
-Examples:
-----------
-alias meta.Seq!(int, double, string) Types;
-
-static assert(is(Types[0] == int));
-static assert(is(Types[1] == double));
-static assert(is(Types[2] == string));
-----------
-
- The sequence may contain compile-time expressions.  The following example
- makes a sequence of constant integers $(D numbers) and embeds it into an
- array literal.
-----------
-alias meta.Seq!(10, 20, 30) numbers;
-int[] arr = [ 0, numbers, 100 ];
-assert(arr == [ 0, 10, 20, 30, 100 ]);
-----------
  */
 template Seq(seq...)
 {
     alias seq Seq;
 }
 
-
+/**
+ */
 unittest
 {
     alias meta.Seq!(int, double, string) Types;
@@ -133,6 +102,11 @@ unittest
     static assert(is(Types[2] == string));
 }
 
+/**
+The sequence may contain compile-time expressions.  The following example
+makes a sequence of constant integers $(D numbers) and embeds it into an
+array literal.
+ */
 unittest
 {
     alias meta.Seq!(10, 20, 30) numbers;
@@ -153,32 +127,15 @@ Params:
 
 Returns:
  Sequence of the given types.
-
-Examples:
- Comparing type sequences with the $(D is) expression.
-----------
-alias TypeSeq!(int, double, string) A;
-static assert( is(A == TypeSeq!(int, double, string)));
-static assert(!is(A == TypeSeq!(string, int, double)));
-static assert(!is(A == TypeSeq!()));
-----------
-
- Declaring a sequence of variables.  Note that it's different from a so-called
- tuple and can't be nested.
-----------
-TypeSeq!(int, double, TypeSeq!(bool, string)) vars;
-vars[0] = 10;
-vars[1] = 5.0;
-vars[2] = false;
-vars[3] = "Abcdef";
-----------
  */
 template TypeSeq(Types...)
 {
     alias Types TypeSeq;
 }
 
-
+/**
+ Comparing type sequences with the $(D is) expression.
+ */
 unittest
 {
     alias TypeSeq!(int, double, string) A;
@@ -187,6 +144,10 @@ unittest
     static assert(!is(A == TypeSeq!()));
 }
 
+/**
+Declaring a sequence of variables.  Note that it's different from a so-called
+tuple and can't be nested.
+ */
 unittest
 {
     TypeSeq!(int, double, TypeSeq!(bool, string)) vars;
@@ -204,17 +165,6 @@ passing multiple sequences to a template.
 
 Params:
  seq = Zero or more compile-time entities to _pack.
-
-Example:
- The following code passes three separate sequences to $(D meta.transverse)
- using $(D meta.pack):
-----------
-// Query the 0-th element of each sequence.
-alias meta.transverse!(0, meta.pack!(int, 32),
-                          meta.pack!(double, 5.0),
-                          meta.pack!(string, "hello.")) first;
-static assert(is(first == TypeSeq!(int, double, string)));
-----------
  */
 template pack(seq...)
 {
@@ -243,6 +193,18 @@ template pack(seq...)
     struct Tag;
 }
 
+/**
+ The following code passes three separate sequences to $(D meta.transverse)
+ using $(D meta.pack):
+ */
+unittest
+{
+    // Query the 0-th element of each sequence.
+    alias meta.transverse!(0, meta.pack!(int, 32),
+                              meta.pack!(double, 5.0),
+                              meta.pack!(string, "hello.")) first;
+    static assert(is(first == TypeSeq!(int, double, string)));
+}
 
 unittest
 {
@@ -260,14 +222,6 @@ unittest
     static assert(nested.length == 3);
 }
 
-unittest    // doc example
-{
-    alias meta.transverse!(0, meta.pack!(int, 32),
-                              meta.pack!(double, 5.0),
-                              meta.pack!(string, "hello.")) first;
-    static assert(is(first == TypeSeq!(int, double, string)));
-}
-
 
 
 /**
@@ -283,14 +237,6 @@ Returns:
  If $(D entity) is a sequence of several compile-time entities, the returned
  string is the concatenation of the mangled names of those entities.  The empty
  string is returned if $(D entity) is the empty sequence.
-
-Example:
-----------
-import std.math : cos;
-
-static assert(meta.mangle!cos == "S25_D3std4math3cosFNaNbNfeZe");
-static assert(meta.mangle!(real, int) == "TeTi");
-----------
  */
 template mangle(entity...)
 {
@@ -314,6 +260,15 @@ template mangle(entity...)
     enum mangle = _stripTag((pack!entity.Tag*).mangleof);
 }
 
+/**
+ */
+unittest
+{
+    import std.math : cos;
+
+    static assert(meta.mangle!cos == "S133std4math3cos");
+    static assert(meta.mangle!(real, int) == "TeTi");
+}
 
 unittest
 {
@@ -327,17 +282,6 @@ unittest
     static assert(mangle!(int, 512, mangle) == "TiVi512S163std4meta6mangle");
 }
 
-unittest
-{
-    struct Scope
-    {
-        import std.math : cos;
-
-        static assert(meta.mangle!cos == "S133std4math3cos");
-        static assert(meta.mangle!(real, int) == "TeTi");
-    }
-}
-
 
 
 /**
@@ -347,22 +291,6 @@ $(D B) coincide with each other.
 
 Returns:
  $(D true) if and only if $(D A) and $(D B) are the same entity.
-
-Example:
- Comparing various entities.
-----------
-struct MyType {}
-static assert( meta.isSame!(int, int));
-static assert(!meta.isSame!(MyType, double));
-
-enum str = "abc";
-static assert( meta.isSame!(str, "abc"));
-static assert(!meta.isSame!(10, 10u));      // int and uint
-
-void fun() {}
-static assert( meta.isSame!(fun, fun));
-static assert(!meta.isSame!(fun, std));     // function and package
-----------
  */
 template isSame(A, B)
 {
@@ -387,6 +315,23 @@ template isSame(alias A, alias B) if (!isType!A && !isType!B)
     enum isSame = is(pack!A.Tag == pack!B.Tag);
 }
 
+/**
+ Comparing various entities.
+ */
+unittest
+{
+    struct MyType {}
+    static assert( meta.isSame!(int, int));
+    static assert(!meta.isSame!(MyType, double));
+
+    enum str = "abc";
+    static assert( meta.isSame!(str, "abc"));
+    static assert(!meta.isSame!(10, 10u));      // int and uint
+
+    void fun() {}
+    static assert( meta.isSame!(fun, fun));
+    static assert(!meta.isSame!(fun, std));     // function and package
+}
 
 unittest    // type vs type
 {
@@ -456,34 +401,10 @@ unittest    // CTFE-able property is symbol
     static assert( meta.isSame!(S.property, S.property));
 }
 
-unittest    // doc example
-{
-    struct MyType {}
-    static assert( meta.isSame!(int, int));
-    static assert(!meta.isSame!(MyType, double));
-
-    enum str = "abc";
-    static assert( meta.isSame!(str, "abc"));
-    static assert(!meta.isSame!(10, 10u));
-
-    void fun() {}
-    static assert( meta.isSame!(fun, fun));
-    static assert(!meta.isSame!(fun, std));
-}
-
 
 
 /**
 These overloads serve partial application of $(D meta.isSame).
-
-Example:
-----------
-// Bind double as the first argument.
-alias meta.isSame!double isDouble;
-
-static assert( isDouble!double);    // meta.isSame!(double, double)
-static assert(!isDouble!int   );    // meta.isSame!(double, int)
-----------
  */
 template isSame(A)
 {
@@ -498,6 +419,16 @@ template isSame(alias A)
     template isSame(alias B) { alias .isSame!(A, B) isSame; }
 }
 
+/**
+ */
+unittest
+{
+    // Bind double as the first argument.
+    alias meta.isSame!double isDouble;
+
+    static assert( isDouble!double);    // meta.isSame!(double, double)
+    static assert(!isDouble!int   );    // meta.isSame!(double, int)
+}
 
 unittest
 {
@@ -517,28 +448,10 @@ unittest
     static assert( Sx!std);
 }
 
-unittest    // doc example
-{
-    alias meta.isSame!double isDouble;
-
-    static assert( isDouble!double);
-    static assert(!isDouble!int   );
-}
-
 
 
 /**
 Returns $(D true) if and only if $(D E) is a type.
-
-Example:
-----------
-alias meta.Seq!(int, "x",
-                double, "y",
-                string, "z") Mixed;
-
-alias meta.filter!(meta.isType, Mixed) Types;
-static assert(is(Types == TypeSeq!(int, double, string)));
-----------
  */
 template isType(E)
 {
@@ -551,6 +464,17 @@ template isType(alias E)
     enum isType = is(E);
 }
 
+/**
+ */
+unittest
+{
+    alias meta.Seq!(int, "x",
+                    double, "y",
+                    string, "z") Mixed;
+
+    alias meta.filter!(meta.isType, Mixed) Types;
+    static assert(is(Types == TypeSeq!(int, double, string)));
+}
 
 unittest
 {
@@ -569,31 +493,11 @@ unittest
     static assert(isType!Class);
 }
 
-unittest    // doc example
-{
-    alias meta.Seq!(int, "x",
-                    double, "y",
-                    string, "z") Mixed;
-
-    alias meta.filter!(meta.isType, Mixed) Types;
-    static assert(is(Types == TypeSeq!(int, double, string)));
-}
-
 
 
 /**
 Returns $(D true) if and only if $(D E) has a compile-time value.  Literals,
 constants and CTFE-able property functions would pass the test.
-
-Example:
-----------
-template increment(alias value) if (meta.isValue!value)
-{
-    enum increment = value + 1;
-}
-enum a = increment!10;
-enum b = increment!increment;   // Error: negates the constraint
-----------
  */
 template isValue(E)
 {
@@ -617,6 +521,17 @@ template isValue(alias E)
     }
 }
 
+/**
+ */
+unittest
+{
+    template increment(alias value) if (meta.isValue!value)
+    {
+        enum increment = value + 1;
+    }
+    static assert( __traits(compiles, increment!10));
+    static assert(!__traits(compiles, increment!increment));    // Error: negates the constraint
+}
 
 unittest
 {
@@ -656,35 +571,11 @@ unittest
     static assert(!isValue!(runtimeVar));
 }
 
-unittest
-{
-    struct Scope
-    {
-        template increment(alias value) if (meta.isValue!value)
-        {
-            enum increment = value + 1;
-        }
-    }
-    alias Scope.increment increment;
-    static assert( __traits(compiles, increment!10));
-    static assert(!__traits(compiles, increment!increment));
-}
-
 
 
 /**
 Returns $(D true) if and only if $(D E) has a compile-time value implicitly
 convertible to type $(D T).
-
-Example:
-----------
-template increment(alias value) if (meta.isValue!(long, value))
-{
-    enum increment = value + 1;
-}
-enum a = increment!10;
-enum b = increment!"me";    // Error: nonconvertible to long
-----------
  */
 template isValue(T, E)
 {
@@ -697,6 +588,17 @@ template isValue(T, alias E)
     enum isValue = is(typeof(E) : T) && isValue!E;
 }
 
+/**
+ */
+unittest
+{
+    template increment(alias value) if (meta.isValue!(long, value))
+    {
+        enum increment = value + 1;
+    }
+    static assert( __traits(compiles, increment!10));
+    static assert(!__traits(compiles, increment!"me")); // Error: nonconvertible to long
+}
 
 unittest
 {
@@ -707,20 +609,6 @@ unittest
     static assert(!isValue!(string, varstr));
     static assert(!isValue!(string, 65536));
     static assert(!isValue!(string, string));
-}
-
-unittest
-{
-    struct Scope
-    {
-        template increment(alias value) if (meta.isValue!(long, value))
-        {
-            enum increment = value + 1;
-        }
-    }
-    alias Scope.increment increment;
-    static assert( __traits(compiles, increment!10));
-    static assert(!__traits(compiles, increment!"me"));
 }
 
 
@@ -774,29 +662,6 @@ Params:
 
 Returns:
  Unary template that evaluates $(D expr).
-
-Examples:
-----------
-alias meta.unaryT!q{ const A } Constify;
-static assert(is(Constify!int == const int));
-
-alias meta.unaryT!q{ a.length } lengthof;
-static assert(lengthof!([ 1,2,3,4,5 ]) == 5);
-----------
-
- The generated template can return a sequence.
-----------
-import std.meta;
-import std.typecons;
-
-// Extracts the Types property of a Tuple instance.
-alias meta.unaryT!q{ A.Types } expand;
-
-alias expand!(Tuple!(int, double, string)) Types;
-static assert(is(Types[0] == int));
-static assert(is(Types[1] == double));
-static assert(is(Types[2] == string));
-----------
  */
 template unaryT(string expr)
 {
@@ -810,11 +675,40 @@ template unaryT(string expr)
     template unaryT(      A) { alias _impl!A._ unaryT; }
 }
 
+/// ditto
 template unaryT(alias templat)
 {
     alias templat unaryT;
 }
 
+/**
+ */
+unittest
+{
+    alias meta.unaryT!q{ const A } Constify;
+    static assert(is(Constify!int == const int));
+
+    alias meta.unaryT!q{ a.length } lengthof;
+    static assert(lengthof!([ 1,2,3,4,5 ]) == 5);
+}
+
+
+/**
+ The generated template can return a sequence.
+ */
+unittest
+{
+    import std.meta;
+    import std.typecons;
+
+    // Extracts the Types property of a Tuple instance.
+    alias meta.unaryT!q{ A.Types } expand;
+
+    alias expand!(Tuple!(int, double, string)) Types;
+    static assert(is(Types[0] == int));
+    static assert(is(Types[1] == double));
+    static assert(is(Types[2] == string));
+}
 
 unittest
 {
@@ -847,15 +741,6 @@ unittest    // Test for sequence return
     static assert(slice!([1,2,3]) == [1,2]);
 }
 
-unittest    // doc examples
-{
-    alias meta.unaryT!q{ const A } Constify;
-    static assert(is(Constify!int == const int));
-
-    alias meta.unaryT!q{ a.length } lengthof;
-    static assert(lengthof!([ 1,2,3,4,5 ]) == 5);
-}
-
 
 
 /**
@@ -868,18 +753,6 @@ Params:
 
 Returns:
  Binary template that evaluates $(D expr).
-
-Example:
- This example uses the first parameter $(D a) as a value and the second one
- $(D B) as a type, and returns a value.
-----------
-alias meta.binaryT!q{ a + B.sizeof } accumSize;
-
-enum n1 = accumSize!( 0,    int);
-enum n2 = accumSize!(n1, double);
-enum n3 = accumSize!(n2,  short);
-static assert(n3 == 4 + 8 + 2);
-----------
  */
 template binaryT(string expr)
 {
@@ -896,11 +769,25 @@ template binaryT(string expr)
     }
 }
 
+/// ditto
 template binaryT(alias templat)
 {
     alias templat binaryT;
 }
 
+/**
+ This example uses the first parameter $(D a) as a value and the second one
+ $(D B) as a type, and returns a value.
+ */
+unittest
+{
+    alias meta.binaryT!q{ a + B.sizeof } accumSize;
+
+    enum n1 = accumSize!( 0,    int);
+    enum n2 = accumSize!(n1, double);
+    enum n3 = accumSize!(n2,  short);
+    static assert(n3 == 4 + 8 + 2);
+}
 
 unittest
 {
@@ -922,15 +809,6 @@ unittest    // Test for sequence return
 {
     alias binaryT!q{ Seq!(a, b, 3) } ab3;
     static assert([ ab3!(10, 20) ] == [ 10, 20, 3 ]);
-}
-
-unittest    // doc example
-{
-    alias meta.binaryT!q{ a + B.sizeof } accumSize;
-    enum n1 = accumSize!( 0,    int);
-    enum n2 = accumSize!(n1, double);
-    enum n3 = accumSize!(n2,  short);
-    static assert(n3 == 4 + 8 + 2);
 }
 
 unittest    // bug 4431
@@ -960,13 +838,6 @@ Params:
 
 Returns:
  Variadic template that evaluates $(D fun).
-
-Example:
-----------
-alias meta.variadicT!q{ meta.Seq!(args[1 .. $], A) } rotate1;
-
-static assert([ rotate1!(1, 2, 3, 4) ] == [ 2, 3, 4, 1 ]);
-----------
  */
 template variadicT(string expr)
 {
@@ -989,11 +860,20 @@ template variadicT(string expr)
     template variadicT(args...) { alias _impl!args._ variadicT; }
 }
 
+/// ditto
 template variadicT(alias templat)
 {
     alias templat variadicT;
 }
 
+/**
+ */
+unittest
+{
+    alias meta.variadicT!q{ meta.Seq!(args[1 .. $], A) } rotate1;
+
+    static assert([ rotate1!(1, 2, 3, 4) ] == [ 2, 3, 4, 1 ]);
+}
 
 unittest
 {
@@ -1035,13 +915,6 @@ unittest    // Test for sequence return
     static assert([ halve!(1,2,3,4) ] == [ 1,2 ]);
 }
 
-unittest    // doc example
-{
-    alias meta.variadicT!q{ meta.Seq!(args[1 .. $], A) } rotate1;
-
-    static assert([ rotate1!(1, 2, 3, 4) ] == [ 2, 3, 4, 1 ]);
-}
-
 
 
 /**
@@ -1055,19 +928,6 @@ Params:
 Returns:
  Template that instantiates $(D templat) with the bound arguments and
  additional ones as $(D templat!(args, ...)).
-
-Example:
-----------
-template compareSize(T, U)
-{
-    enum compareSize = T.sizeof < U.sizeof;
-}
-
-// Get the types satisfying "int.sizeof < U.sizeof".
-alias meta.filter!(meta.bind!(compareSize, int),
-                   byte, double, short, int, long) Result;
-static assert(is(Result == TypeSeq!(double, long) ));
-----------
  */
 template bind(alias templat, args...)
 {
@@ -1077,6 +937,20 @@ template bind(alias templat, args...)
     }
 }
 
+/**
+ */
+unittest
+{
+    template compareSize(T, U)
+    {
+        enum compareSize = T.sizeof < U.sizeof;
+    }
+
+    // Get the types satisfying "int.sizeof < U.sizeof".
+    alias meta.filter!(meta.bind!(compareSize, int),
+                       byte, double, short, int, long) Result;
+    static assert(is(Result == TypeSeq!(double, long) ));
+}
 
 unittest
 {
@@ -1086,22 +960,6 @@ unittest
     static assert(is(Assoc!(uint, void*) == uint[void*]));
     static assert(is(ShortAssoc!string == short[string]));
     static assert(is(IntDouble!() == int[double]));
-}
-
-unittest    // doc example
-{
-    struct Scope
-    {
-        template compareSize(T, U)
-        {
-            enum compareSize = T.sizeof < U.sizeof;
-        }
-    }
-    alias Scope.compareSize compareSize;
-
-    alias meta.filter!(meta.bind!(compareSize, int),
-                       byte, double, short, int, long) Result;
-    static assert(is(Result == TypeSeq!(double, long) ));
 }
 
 
@@ -1118,19 +976,6 @@ Params:
 Returns:
  Template that instantiates $(D templat) with the bound arguments and
  additional ones as $(D templat!(..., args)).
-
-Example:
-----------
-template compareSize(T, U)
-{
-    enum compareSize = T.sizeof < U.sizeof;
-}
-
-// Get the types satisfying "T.sizeof < int.sizeof"
-alias meta.filter!(meta.rbind!(compareSize, int),
-                   byte, double, short, int, long) Result;
-static assert(is(Result == TypeSeq!(byte, short) ));
-----------
  */
 template rbind(alias templat, args...)
 {
@@ -1140,6 +985,20 @@ template rbind(alias templat, args...)
     }
 }
 
+/**
+ */
+unittest
+{
+    template compareSize(T, U)
+    {
+        enum compareSize = T.sizeof < U.sizeof;
+    }
+
+    // Get the types satisfying "T.sizeof < int.sizeof"
+    alias meta.filter!(meta.rbind!(compareSize, int),
+                       byte, double, short, int, long) Result;
+    static assert(is(Result == TypeSeq!(byte, short) ));
+}
 
 unittest
 {
@@ -1149,22 +1008,6 @@ unittest
     static assert(is(Assoc!(uint, void*) == uint[void*]));
     static assert(is(AssocShort!string == string[short]));
     static assert(is(IntDouble!() == int[double]));
-}
-
-unittest    // doc example
-{
-    struct Scope
-    {
-        template compareSize(T, U)
-        {
-            enum compareSize = T.sizeof < U.sizeof;
-        }
-    }
-    alias Scope.compareSize compareSize;
-
-    alias meta.filter!(meta.rbind!(compareSize, int),
-                       byte, double, short, int, long) Result;
-    static assert(is(Result == TypeSeq!(byte, short) ));
 }
 
 
@@ -1180,23 +1023,6 @@ Params:
 Returns:
  Variadic template that constantly returns $(D templat!args) regardless of
  its arguments.
-
-Example:
-----------
-alias meta.delay!(meta.Id, int) Int;
-static assert(is(Int!() == int));
-static assert(is(Int!(void) == int));
-static assert(is(Int!(1,2,3) == int));
-----------
-
- Using a delayed template for a fallback case of $(D meta.guard):
-----------
-struct Error;
-
-alias meta.guard!(q{ A[] }, meta.delay!(meta.Id, Error)) Array;
-static assert(is(Array!int == int[]));
-static assert(is(Array!100 == Error));
-----------
  */
 template delay(alias templat, args...)
 {
@@ -1206,6 +1032,27 @@ template delay(alias templat, args...)
     }
 }
 
+/**
+ */
+unittest
+{
+    alias meta.delay!(meta.Id, int) Int;
+    static assert(is(Int!() == int));
+    static assert(is(Int!(void) == int));
+    static assert(is(Int!(1,2,3) == int));
+}
+
+/**
+ Using a delayed template for a fallback case of $(D meta.guard):
+ */
+unittest
+{
+    struct Error;
+
+    alias meta.guard!(q{ A[] }, meta.delay!(meta.Id, Error)) Array;
+    static assert(is(Array!int == int[]));
+    static assert(is(Array!100 == Error));
+}
 
 unittest
 {
@@ -1219,23 +1066,6 @@ unittest
     static assert(sum30!(40) == 30);
 }
 
-unittest    // doc example (1)
-{
-    alias meta.delay!(meta.Id, int) Int;
-    static assert(is(Int!() == int));
-    static assert(is(Int!(void) == int));
-    static assert(is(Int!(1,2,3) == int));
-}
-
-unittest    // doc example (2)
-{
-    struct Error;
-
-    alias meta.guard!(q{ A[] }, meta.delay!(meta.Id, Error)) Array;
-    static assert(is(Array!int == int[]));
-    static assert(is(Array!100 == Error));
-}
-
 
 
 /**
@@ -1246,13 +1076,6 @@ Params:
 
 Returns:
  Variadic template that ignores its arguments and just returns $(D E).
-
-Example:
-----------
-alias meta.constant!int Int;
-static assert(is(Int!() == int));
-static assert(is(Int!(double, string) == int));
-----------
  */
 template constant(E)
 {
@@ -1271,6 +1094,14 @@ template constant()
     template constant(_...) { alias Seq!() constant; }
 }
 
+/**
+ */
+unittest
+{
+    alias meta.constant!int Int;
+    static assert(is(Int!() == int));
+    static assert(is(Int!(double, string) == int));
+}
 
 unittest
 {
@@ -1290,13 +1121,6 @@ unittest
     static assert(empty!(double, bool).length == 0);
 }
 
-unittest    // doc example
-{
-    alias meta.constant!int Int;
-    static assert(is(Int!() == int));
-    static assert(is(Int!(double, string) == int));
-}
-
 
 
 /**
@@ -1308,24 +1132,6 @@ Params:
 
 Returns:
  Template that evaluates $(D pred) and returns an inverted result.
-
-Example:
- Passing an inverted predicate to the $(D meta.countIf).
-----------
-template isStruct(T)
-{
-    enum isStruct = is(T == struct) || is(T == union);
-}
-
-struct S {}
-union  U {}
-class  C {}
-
-// Count non-struct types in the sequence.
-enum n = meta.countIf!(meta.not!isStruct,
-                       int, double, S, U, C);
-static assert(n == 3);
-----------
  */
 template not(alias pred)
 {
@@ -1335,6 +1141,25 @@ template not(alias pred)
     }
 }
 
+/**
+ Passing an inverted predicate to the $(D meta.countIf).
+ */
+unittest
+{
+    template isStruct(T)
+    {
+        enum isStruct = is(T == struct) || is(T == union);
+    }
+
+    struct S {}
+    union  U {}
+    class  C {}
+
+    // Count non-struct types in the sequence.
+    enum n = meta.countIf!(meta.not!isStruct,
+                           int, double, S, U, C);
+    static assert(n == 3);
+}
 
 unittest
 {
@@ -1363,26 +1188,6 @@ unittest
     static assert( isFive!5);
 }
 
-unittest    // doc example
-{
-    struct Scope
-    {
-        template isStruct(T)
-        {
-            enum isStruct = is(T == struct) || is(T == union);
-        }
-    }
-    alias Scope.isStruct isStruct;
-
-    struct S {}
-    union  U {}
-    class  C {}
-
-    enum n = meta.countIf!(meta.not!isStruct,
-                           int, double, S, U, C);
-    static assert(n == 3);
-}
-
 
 
 /**
@@ -1401,20 +1206,22 @@ Params:
 Returns:
  Composition predicate template that tests if its arguments satisfy all the
  predicates $(D preds).
-
-Example:
-----------
-alias meta.and!(meta.isType, q{ is(A : long) }, q{ A.min < 0 }) isSignedInt;
-static assert( isSignedInt!short);
-static assert( isSignedInt!int);
-static assert(!isSignedInt!uint);
-static assert(!isSignedInt!string);     // stops at the second predicate
-static assert(!isSignedInt!"wrong");    // stops at the first predicate
-----------
  */
 template and(preds...)
 {
     alias reduce!(.and, preds) and;
+}
+
+/**
+ */
+unittest
+{
+    alias meta.and!(meta.isType, q{ is(A : long) }, q{ A.min < 0 }) isSignedInt;
+    static assert( isSignedInt!short);
+    static assert( isSignedInt!int);
+    static assert(!isSignedInt!uint);
+    static assert(!isSignedInt!string);     // stops at the second predicate
+    static assert(!isSignedInt!"wrong");    // stops at the first predicate
 }
 
 template and(alias pred1 = constant!true,
@@ -1429,14 +1236,9 @@ template and(alias pred1 = constant!true,
     }
 }
 
-
 unittest
 {
-    struct Scope
-    {
-        template isConst(T) { enum isConst = is(T == const); }
-    }
-    alias Scope.isConst isConst;
+    template isConst(T) { enum isConst = is(T == const); }
 
     // Compose nothing
     alias and!() yes;
@@ -1460,16 +1262,6 @@ unittest
     static assert(!isTinyConst!(        int));
 }
 
-unittest    // doc example
-{
-    alias meta.and!(meta.isType, q{ is(A : long) }, q{ A.min < 0 }) isSignedInt;
-    static assert( isSignedInt!short);
-    static assert( isSignedInt!int);
-    static assert(!isSignedInt!uint);
-    static assert(!isSignedInt!string);
-    static assert(!isSignedInt!"wrong");
-}
-
 
 
 /**
@@ -1488,18 +1280,20 @@ Params:
 Returns:
  Composition predicate template that tests if its arguments satisfy at least
  one of the predicates $(D preds).
-
-Example:
-----------
-// Note that bool doesn't have the .min property.
-alias meta.filter!(meta.or!(q{ A.sizeof < 4 }, q{ A.min < 0 }),
-                   bool, ushort, int, uint) R;
-static assert(is(R == TypeSeq!(bool, ushort, int)));
-----------
  */
 template or(preds...)
 {
     alias reduce!(.or, preds) or;
+}
+
+/**
+ */
+unittest
+{
+    // Note that bool doesn't have the .min property.
+    alias meta.filter!(meta.or!(q{ A.sizeof < 4 }, q{ A.min < 0 }),
+                       bool, ushort, int, uint) R;
+    static assert(is(R == TypeSeq!(bool, ushort, int)));
 }
 
 template or(alias pred1 = constant!false,
@@ -1514,17 +1308,12 @@ template or(alias pred1 = constant!false,
     }
 }
 
-
 unittest
 {
-    struct Scope
+    template isConst(T)
     {
-        template isConst(T)
-        {
-            enum isConst = is(T == const);
-        }
+        enum isConst = is(T == const);
     }
-    alias Scope.isConst isConst;
 
     // Compose nothing
     alias or!() no;
@@ -1547,13 +1336,6 @@ unittest
     static assert(!isTinyOrConst!(        int));
 }
 
-unittest    // doc example
-{
-    alias meta.filter!(meta.or!(q{ A.sizeof < 4 }, q{ A.min < 0 }),
-                       bool, ushort, int, uint) R;
-    static assert(is(R == TypeSeq!(bool, ushort, int)));
-}
-
 
 
 /**
@@ -1573,17 +1355,19 @@ Params:
 
 Returns:
  New template that instantiates the chain of $(D templates).
-
-Example:
-----------
-alias meta.compose!(q{ A[] },
-                    q{ const A }) ConstArray;
-static assert(is(ConstArray!int == const(int)[]));
-----------
  */
 template compose(templates...)
 {
     alias reduce!(.compose, templates) compose;
+}
+
+/**
+ */
+unittest
+{
+    alias meta.compose!(q{ A[] },
+                        q{ const A }) ConstArray;
+    static assert(is(ConstArray!int == const(int)[]));
 }
 
 template compose(alias template1 = Seq,
@@ -1595,16 +1379,10 @@ template compose(alias template1 = Seq,
     }
 }
 
-
 unittest
 {
-    struct Scope
-    {
-        template Const(T) { alias const(T) Const; }
-        template Array(T) { alias T[] Array; }
-    }
-    alias Scope.Const Const;
-    alias Scope.Array Array;
+    template Const(T) { alias const(T) Const; }
+    template Array(T) { alias T[] Array; }
 
     // No actual composition
     alias compose!Const Const1;
@@ -1626,13 +1404,6 @@ unittest
     // More compositions
     alias compose!(q{ a * 11 }, q{ a + 7 }, q{ -a }) mul11add7neg;
     static assert(mul11add7neg!(-6) == (6 + 7) * 11);
-}
-
-unittest    // doc example
-{
-    alias meta.compose!(q{ A[] },
-                        q{ const A }) ConstArray;
-    static assert(is(ConstArray!int == const(int)[]));
 }
 
 
@@ -1666,18 +1437,20 @@ Returns:
  Variadic template that instantiates the first compilable template among
  $(D templates).  The last template is not guarded; if all the templates
  failed, the generated template will fail due to the last one.
-
-Example:
-----------
-alias meta.guard!(q{ A.min < 0 }, q{ false }) hasNegativeMin;
-static assert( hasNegativeMin!int);
-static assert(!hasNegativeMin!uint);
-static assert(!hasNegativeMin!void);    // void.min is not defined!
-----------
  */
 template guard(templates...) if (templates.length > 0)
 {
     alias reduce!(.guard, templates) guard;
+}
+
+/**
+ */
+unittest
+{
+    alias meta.guard!(q{ A.min < 0 }, q{ false }) hasNegativeMin;
+    static assert( hasNegativeMin!int);
+    static assert(!hasNegativeMin!double);
+    static assert(!hasNegativeMin!void);    // void.min is not defined!
 }
 
 template guard(alias template1, alias template2)
@@ -1703,14 +1476,9 @@ template guard(alias templat)
     }
 }
 
-
 unittest
 {
-    struct Scope
-    {
-        template Const(T) { alias const(T) Const; }
-    }
-    alias Scope.Const Const;
+    template Const(T) { alias const(T) Const; }
 
     // No actual guard
     alias guard!Const JustConst;
@@ -1737,14 +1505,6 @@ unittest
     static assert(makeArray!string == [ "" ]);
 }
 
-unittest     // doc example
-{
-    alias meta.guard!(q{ A.min < 0 }, q{ false }) hasNegativeMin;
-    static assert( hasNegativeMin!int);
-    static assert(!hasNegativeMin!double);
-    static assert(!hasNegativeMin!void);
-}
-
 
 
 /**
@@ -1760,17 +1520,6 @@ Returns:
  Variadic template that instantiates $(D then) with its arguments if the
  arguments satisfy $(D pred), or instantiates $(D otherwise) with the same
  arguments if not.
-
-Example:
-----------
-import std.meta, std.traits, std.typecons;
-
-alias meta.conditional!(q{ is(A == class) }, Rebindable, Unqual) NoTopConst;
-
-static assert(is( NoTopConst!(const Object) == Rebindable!(const Object) ));
-static assert(is( NoTopConst!(const int[]) == const(int)[] ));
-static assert(is( NoTopConst!(const int) == int ));
-----------
  */
 template conditional(alias pred, alias then, alias otherwise = meta.Id)
 {
@@ -1791,6 +1540,18 @@ template conditional(alias pred, alias then, alias otherwise = meta.Id)
     }
 }
 
+/**
+ */
+unittest
+{
+    import std.meta, std.traits, std.typecons;
+
+    alias meta.conditional!(q{ is(A == class) }, Rebindable, Unqual) NoTopConst;
+
+    static assert(is( NoTopConst!(const Object) == Rebindable!(const Object) ));
+    static assert(is( NoTopConst!(const int[]) == const(int)[] ));
+    static assert(is( NoTopConst!(const int) == int ));
+}
 
 unittest
 {
@@ -1808,18 +1569,6 @@ unittest
     static assert(is(ImmArray!int == int));
     static assert(is(ImmArray!string == string));
     static assert(is(ImmArray!(immutable int) == immutable(int)[]));
-}
-
-unittest    // doc example
-{
-    struct Unqual(T) {}
-    struct Rebindable(T) {}
-
-    alias meta.conditional!(q{ is(A == class) }, Rebindable, Unqual) NoHeadConst;
-
-    static assert(is( NoHeadConst!(const Object) == Rebindable!(const Object) ));
-    static assert(is( NoHeadConst!(const int[]) == Unqual!(const int[]) ));
-    static assert(is( NoHeadConst!(const int) == Unqual!(const int) ));
 }
 
 
@@ -1944,20 +1693,6 @@ Returns:
  Sequence of compile-time numbers starting from $(D beg) to $(D end),
  increasing/decreasing by $(D step).  The generated sequence is empty if
  $(D beg) is ahead of $(D end) in terms of the $(D step)'s direction.
-
-Examples:
- Filling array elements using $(D meta.iota):
-----------
-static Base64Chars = cast(immutable char[64])
-    [
-        meta.iota!('A', 'Z'+1),
-        meta.iota!('a', 'z'+1),
-        meta.iota!('0', '9'+1), '+', '/'
-    ];
-static assert(Base64Chars[16] == 'Q');
-static assert(Base64Chars[32] == 'g');
-static assert(Base64Chars[62] == '+');
-----------
  */
 template iota(alias beg, alias end, alias step) if (step != 0)
 {
@@ -1994,8 +1729,10 @@ template iota(alias end)
     alias iota!(cast(typeof(end)) 0, end) iota;
 }
 
-
-unittest    // doc example (array filling)
+/**
+ Filling array elements using $(D meta.iota):
+ */
+unittest
 {
     static Base64Chars = cast(immutable char[64])
         [
@@ -2007,7 +1744,6 @@ unittest    // doc example (array filling)
     static assert(Base64Chars[32] == 'g');
     static assert(Base64Chars[62] == '+');
 }
-
 
 unittest
 {
@@ -2043,17 +1779,6 @@ Params:
 Returns:
  Sequence composed of $(D n) $(D seq)s.  The empty sequence is returned
  if $(D n) is zero or $(D seq) is empty.
-
-Example:
-----------
-static immutable array =
-    [
-        meta.repeat!(3, 1,2,3),
-        meta.repeat!(3, 4,5,6),
-    ];
-static assert(array == [ 1,2,3, 1,2,3, 1,2,3,
-                         4,5,6, 4,5,6, 4,5,6 ]);
-----------
  */
 template repeat(size_t n, seq...)
 {
@@ -2068,6 +1793,18 @@ template repeat(size_t n, seq...)
     }
 }
 
+/**
+ */
+unittest
+{
+    static immutable array =
+        [
+            meta.repeat!(3, 1,2,3),
+            meta.repeat!(3, 4,5,6),
+        ];
+    static assert(array == [ 1,2,3, 1,2,3, 1,2,3,
+                             4,5,6, 4,5,6, 4,5,6 ]);
+}
 
 unittest
 {
@@ -2097,17 +1834,6 @@ unittest
     static assert([0, repeat!(4, 8,7), 0] == [0, 8,7,8,7,8,7,8,7, 0]);
 }
 
-unittest
-{
-    static immutable array =
-        [
-            meta.repeat!(3, 1,2,3),
-            meta.repeat!(3, 4,5,6),
-        ];
-    static assert(array == [ 1,2,3, 1,2,3, 1,2,3,
-                             4,5,6, 4,5,6, 4,5,6 ]);
-}
-
 
 
 /* undocumented (used by stride) */
@@ -2131,12 +1857,6 @@ Params:
 
 Returns:
  $(D seq) in the _reverse order.
-
-Example:
-----------
-alias meta.reverse!(int, double, string) Rev;
-static assert(is(Rev == TypeSeq!(string, double, int)));
-----------
  */
 template reverse(seq...)
 {
@@ -2151,6 +1871,13 @@ template reverse(seq...)
     }
 }
 
+/**
+ */
+unittest
+{
+    alias meta.reverse!(int, double, string) Rev;
+    static assert(is(Rev == TypeSeq!(string, double, int)));
+}
 
 unittest
 {
@@ -2172,12 +1899,6 @@ unittest
     static assert([0, reverse!(1,2,3,4), 0] == [0, 4,3,2,1, 0]);
 }
 
-unittest
-{
-    alias meta.reverse!(int, double, string) Rev;
-    static assert(is(Rev == TypeSeq!(string, double, int)));
-}
-
 
 
 /**
@@ -2192,15 +1913,6 @@ Params:
 
 Returns:
  Sequence $(D seq) rotated by $(D n).
-
-Example:
-----------
-alias meta.rotate!(+1, int, double, string) rotL;
-alias meta.rotate!(-1, int, double, string) rotR;
-
-static assert(is(rotL == TypeSeq!(double, string, int));
-static assert(is(rotR == TypeSeq!(string, int, double));
-----------
  */
 template rotate(sizediff_t n, seq...)
 {
@@ -2221,6 +1933,16 @@ template rotate(sizediff_t n, seq...)
     }
 }
 
+/**
+ */
+unittest
+{
+    alias meta.rotate!(+1, int, double, string) rotL;
+    alias meta.rotate!(-1, int, double, string) rotR;
+
+    static assert(is(rotL == TypeSeq!(double, string, int)));
+    static assert(is(rotR == TypeSeq!(string, int, double)));
+}
 
 unittest
 {
@@ -2246,14 +1968,6 @@ unittest
     static assert(is(triple2rev == Seq!(double, string, int)));
 }
 
-unittest
-{
-    alias meta.rotate!(+1, int, double, string) rotL;
-    alias meta.rotate!(-1, int, double, string) rotR;
-
-    static assert(is(rotL == TypeSeq!(double, string, int)));
-    static assert(is(rotR == TypeSeq!(string, int, double)));
-}
 
 
 /**
@@ -2267,23 +1981,24 @@ Returns:
  Sequence of $(D 0,n,2n,...)-th elements of the given sequence:
  $(D (seq[0], seq[n], seq[2*n], ...)).  The empty sequence is returned if the
  given sequence $(D seq) is empty.
-
-Example:
-----------
-alias meta.Seq!(int, "index", 10,
-                double, "number", 5.0) seq;
-alias meta.stride!(3, seq        ) Types;
-alias meta.stride!(3, seq[1 .. $]) names;
-
-static assert(meta.isSame!(meta.pack!Types, meta.pack!(int, double)));
-static assert(meta.isSame!(meta.pack!names, meta.pack!("index", "number")));
-----------
  */
 template stride(size_t n, seq...) if (n > 0)
 {
     alias segmentWith!(frontof, n, seq) stride;
 }
 
+/**
+ */
+unittest
+{
+    alias meta.Seq!(int, "index", 10,
+                    double, "number", 5.0) seq;
+    alias meta.stride!(3, seq        ) Types;
+    alias meta.stride!(3, seq[1 .. $]) names;
+
+    static assert(meta.isSame!(meta.pack!Types, meta.pack!(int, double)));
+    static assert(meta.isSame!(meta.pack!names, meta.pack!("index", "number")));
+}
 
 unittest
 {
@@ -2297,17 +2012,6 @@ unittest
     static assert([ stride!(2, 1,2,3,4,5) ] == [ 1,3,5 ]);
     static assert([ stride!(3, 1,2,3,4,5) ] == [ 1,4 ]);
     static assert([ stride!(5, 1,2,3,4,5) ] == [ 1 ]);
-}
-
-unittest
-{
-    alias meta.Seq!(int, "index", 10,
-                    double, "number", 5.0) seq;
-    alias meta.stride!(3, seq        ) Types;
-    alias meta.stride!(3, seq[1 .. $]) names;
-
-    static assert(meta.isSame!(meta.pack!Types, meta.pack!(int, double)));
-    static assert(meta.isSame!(meta.pack!names, meta.pack!("index", "number")));
 }
 
 
@@ -2326,24 +2030,25 @@ Returns:
  The last _segment can be shorter than $(D n) if $(D seq.length) is not an
  exact multiple of $(D n).  The empty sequence is returned if $(D seq) is
  empty.
-
-Example:
- $(D meta.segment) would be useful to scan simple patterns out of
- template parameters or other sequences.
-----------
-alias meta.Seq!(int, "index", 10,
-                double, "number", 5.0) seq;
-
-alias meta.segment!(3, seq) patterns;
-static assert(meta.isSame!(patterns[0], meta.pack!(int, "index", 10)));
-static assert(meta.isSame!(patterns[1], meta.pack!(double, "number", 5.0)));
-----------
  */
 template segment(size_t n, seq...) if (n > 0)
 {
     alias segmentWith!(pack, n, seq) segment;
 }
 
+/**
+ $(D meta.segment) would be useful to scan simple patterns out of
+ template parameters or other sequences.
+ */
+unittest
+{
+    alias meta.Seq!(int, "index", 10,
+                    double, "number", 5.0) seq;
+
+    alias meta.segment!(3, seq) patterns;
+    static assert(meta.isSame!(patterns[0], meta.pack!(int, "index", 10)));
+    static assert(meta.isSame!(patterns[1], meta.pack!(double, "number", 5.0)));
+}
 
 unittest
 {
@@ -2358,16 +2063,6 @@ unittest
     static assert(isSame!( pack!seg1, pack!(pack!(1), pack!(2), pack!(3), pack!(4)) ));
     static assert(isSame!( pack!seg2, pack!(pack!(1,2), pack!(3,4)) ));
     static assert(isSame!( pack!seg3, pack!(pack!(1,2,3), pack!4) ));
-}
-
-unittest
-{
-    alias meta.Seq!(int, "index", 10,
-                    double, "number", 5.0) seq;
-
-    alias meta.segment!(3, seq) patterns;
-    static assert(meta.isSame!(patterns[0], meta.pack!(int, "index", 10)));
-    static assert(meta.isSame!(patterns[1], meta.pack!(double, "number", 5.0)));
 }
 
 
@@ -2488,19 +2183,21 @@ Returns:
  packed sequence containing the $(D i)-th elements of given sequences.  The
  empty sequence is returned if $(D seqs) is empty or any of the sequences
  is empty.
-
-Example:
-----------
-alias meta.zip!(meta.pack!(int, 255),
-                meta.pack!(double, 7.5),
-                meta.pack!(string, "yo")) zipped;
-static assert(meta.isSame!(zipped[0], meta.pack!(int, double, string)));
-static assert(meta.isSame!(zipped[1], meta.pack!(255, 7.5, "yo")));
-----------
  */
 template zip(seqs...) if (isZippable!seqs)
 {
     alias zipWith!(pack, seqs) zip;
+}
+
+/**
+ */
+unittest
+{
+    alias meta.zip!(meta.pack!(int, 255),
+                    meta.pack!(double, 7.5),
+                    meta.pack!(string, "yo")) zipped;
+    static assert(meta.isSame!(zipped[0], meta.pack!(int, double, string)));
+    static assert(meta.isSame!(zipped[1], meta.pack!(255, 7.5, "yo")));
 }
 
 private
@@ -2549,15 +2246,6 @@ unittest
     static assert(degen.length == 0);
 }
 
-unittest
-{
-    alias meta.zip!(meta.pack!(int, 255),
-                    meta.pack!(double, 7.5),
-                    meta.pack!(string, "yo")) zipped;
-    static assert(meta.isSame!(zipped[0], meta.pack!(int, double, string)));
-    static assert(meta.isSame!(zipped[1], meta.pack!(255, 7.5, "yo")));
-}
-
 
 
 /**
@@ -2570,17 +2258,6 @@ Params:
 
 Returns:
  Sequence of the results of $(D fun) applied to each transversal of $(D seqs).
-
-Example:
-----------
-alias meta.pack!("int", "double", "string") types;
-alias meta.pack!(  "i",      "x",      "s") names;
-alias meta.zipWith!(q{ a~" "~b }, types, names) zipped;
-
-static assert(zipped[0] == "int i");
-static assert(zipped[1] == "double x");
-static assert(zipped[2] == "string s");
-----------
  */
 template zipWith(alias fun, seqs...) if (isZippable!seqs)
 {
@@ -2594,6 +2271,18 @@ template zipWith(alias fun, seqs...) if (isZippable!seqs)
     alias map!(transverser, iota!(_minLength!seqs)) zipWith;
 }
 
+/**
+ */
+unittest
+{
+    alias meta.pack!("int", "double", "string") types;
+    alias meta.pack!(  "i",      "x",      "s") names;
+    alias meta.zipWith!(q{ a~" "~b }, types, names) zipped;
+
+    static assert(zipped[0] == "int i");
+    static assert(zipped[1] == "double x");
+    static assert(zipped[2] == "string s");
+}
 
 unittest
 {
@@ -2614,17 +2303,6 @@ unittest
     static assert(is(assoc[2] == string[   int]));
 }
 
-unittest
-{
-    alias meta.pack!("int", "double", "string") types;
-    alias meta.pack!(  "i",      "x",      "s") names;
-    alias meta.zipWith!(q{ a~" "~b }, types, names) zipped;
-
-    static assert(zipped[0] == "int i");
-    static assert(zipped[1] == "double x");
-    static assert(zipped[2] == "string s");
-}
-
 
 
 //----------------------------------------------------------------------------//
@@ -2643,15 +2321,6 @@ Params:
 Returns:
  Sequence of the results of $(D fun) applied to each element of $(D seq) in
  turn.
-
-Example:
- Map types into pointers.
-----------
-alias meta.map!(q{ A* }, int, double, void*) PP;
-static assert(is(PP[0] ==    int*));
-static assert(is(PP[1] == double*));
-static assert(is(PP[2] ==  void**));
-----------
  */
 template map(alias fun, seq...)
 {
@@ -2672,6 +2341,16 @@ template map(alias fun, seq...)
     }
 }
 
+/**
+ Map types into pointers.
+ */
+unittest
+{
+    alias meta.map!(q{ A* }, int, double, void*) PP;
+    static assert(is(PP[0] ==    int*));
+    static assert(is(PP[1] == double*));
+    static assert(is(PP[2] ==  void**));
+}
 
 unittest
 {
@@ -2686,14 +2365,6 @@ unittest
 
     alias map!(q{ 2*a }, 1,2,3,4,5) double5;
     static assert([ double5 ] == [ 2,4,6,8,10 ]);
-}
-
-unittest
-{
-    alias meta.map!(q{ A* }, int, double, void*) PP;
-    static assert(is(PP[0] ==    int*));
-    static assert(is(PP[1] == double*));
-    static assert(is(PP[2] ==  void**));
 }
 
 
@@ -2732,18 +2403,19 @@ Params:
 Returns:
  Sequence only containing elements of $(D seq) for each of which $(D pred)
  evaluates to $(D true).
-
-Example:
-----------
-alias meta.filter!(q{ A.sizeof < 4 }, byte, short, int, long) SmallTypes;
-static assert(is(SmallTypes == TypeSeq!(byte, short)));
-----------
  */
 template filter(alias pred, seq...)
 {
     alias map!(conditional!(pred, Id, constant!()), seq) filter;
 }
 
+/**
+ */
+unittest
+{
+    alias meta.filter!(q{ A.sizeof < 4 }, byte, short, int, long) SmallTypes;
+    static assert(is(SmallTypes == TypeSeq!(byte, short)));
+}
 
 unittest
 {
@@ -2762,12 +2434,6 @@ unittest
     static assert([ someV ] == [ -3, -1 ]);
 }
 
-unittest
-{
-    alias meta.filter!(q{ A.sizeof < 4 }, byte, short, int, long) SmallTypes;
-    static assert(is(SmallTypes == TypeSeq!(byte, short)));
-}
-
 
 
 /**
@@ -2780,12 +2446,6 @@ Params:
 
 Returns:
  Sequence $(D seq) in which any occurrence of $(D E) is erased.
-
-Example:
-----------
-alias meta.remove!(void, int, void, double, void, string) Res;
-static assert(is(Res == TypeSeq!(int, double, string)));
-----------
  */
 template remove(E, seq...)
 {
@@ -2798,6 +2458,13 @@ template remove(alias E, seq...)
     alias filter!(not!(isSame!E), seq) remove;
 }
 
+/**
+ */
+unittest
+{
+    alias meta.remove!(void, int, void, double, void, string) Res;
+    static assert(is(Res == TypeSeq!(int, double, string)));
+}
 
 unittest
 {
@@ -2815,12 +2482,6 @@ unittest
     static assert(is(No2    == Seq!(int,void,string,void,double)));
 }
 
-unittest
-{
-    alias meta.remove!(void, int, void, double, void, string) Res;
-    static assert(is(Res == TypeSeq!(int, double, string)));
-}
-
 
 
 /**
@@ -2834,29 +2495,6 @@ Params:
 Returns:
  Sequence $(D seq) in which every occurrence of $(D From) (if any) is
  replaced by $(D To).
-
-Example:
-----------
-struct This;
-
-struct Example(Params...)
-{
-    // Resolve 'This'
-    alias meta.replace!(This, Example!Params, Params) Types;
-}
-alias Example!(int, double, This) Ex;
-static assert(is(Ex.Types[2] == Ex));
-----------
-
-Tip:
- You may want to use $(D meta.map) with $(D meta.conditional) to perform more
- complex replacements.  The following example replaces every const types in a
- type sequence with a $(D void).
-----------
-alias meta.map!(meta.conditional!(q{ is(A == const) }, meta.constant!void),
-                int, const double, string, const bool) Res;
-static assert(is(Res == TypeSeq!(int, void, string, void)));
-----------
  */
 template replace(From, To, seq...)
 {
@@ -2869,6 +2507,32 @@ template replace(alias From, alias To, seq...)
     alias map!(conditional!(isSame!From, constant!To), seq) replace;
 }
 
+/**
+ */
+unittest
+{
+    struct This;
+
+    struct Example(Params...)
+    {
+        // Resolve 'This'
+        alias meta.replace!(This, Example!Params, Params) Types;
+    }
+    alias Example!(int, double, This) Ex;
+    static assert(is(Ex.Types[2] == Ex));
+}
+
+/**
+ You may want to use $(D meta.map) with $(D meta.conditional) to perform more
+ complex replacements.  The following example replaces every const types in a
+ type sequence with a $(D void).
+ */
+unittest
+{
+    alias meta.map!(meta.conditional!(q{ is(A == const) }, meta.constant!void),
+                    int, const double, string, const bool) Res;
+    static assert(is(Res == TypeSeq!(int, void, string, void)));
+}
 
 unittest
 {
@@ -2892,25 +2556,6 @@ unittest
     alias replace!(  S,   S, S, S, S) amb3;
 }
 
-unittest    // doc example
-{
-    struct This;
-
-    struct Example(Params...)
-    {
-        alias meta.replace!(This, Example!Params, Params) Types;
-    }
-    alias Example!(int, double, This) Ex;
-    static assert(is(Ex.Types[2] == Ex));
-}
-
-unittest    // doc tip
-{
-    alias meta.map!(meta.conditional!(q{ is(A == const) }, meta.constant!void),
-                    int, const double, string, const bool) Res;
-    static assert(is(Res == TypeSeq!(int, void, string, void)));
-}
-
 
 
 /**
@@ -2925,18 +2570,6 @@ Params:
 Returns:
  Sequence $(D seq) sorted according to the predicate $(D comp).  The relative
  order of equivalent elements will be preserved (i.e. stable).
-
-Example:
-----------
-// Sort types in terms of the sizes.
-alias TypeSeq!(double, int, bool, uint, short) Types;
-
-alias meta.sort!(q{ A.sizeof < B.sizeof }, Types) Inc;
-alias meta.sort!(q{ A.sizeof > B.sizeof }, Types) Dec;
-
-static assert(is( Inc == TypeSeq!(bool, short, int, uint, double) ));
-static assert(is( Dec == TypeSeq!(double, int, uint, short, bool) ));
-----------
  */
 template sort(alias comp, seq...)
 {
@@ -2988,14 +2621,23 @@ template sort(alias comp, seq...)
     alias _impl!(binaryT!comp).sort!seq sort;
 }
 
+/**
+ */
+unittest
+{
+    // Sort types in terms of the sizes.
+    alias TypeSeq!(double, int, bool, uint, short) Types;
+
+    alias meta.sort!(q{ A.sizeof < B.sizeof }, Types) Inc;
+    alias meta.sort!(q{ A.sizeof > B.sizeof }, Types) Dec;
+
+    static assert(is( Inc == TypeSeq!(bool, short, int, uint, double) ));
+    static assert(is( Dec == TypeSeq!(double, int, uint, short, bool) ));
+}
 
 unittest
 {
-    struct Scope
-    {
-        template sizeLess(A, B) { enum sizeLess = (A.sizeof < B.sizeof); }
-    }
-    alias Scope.sizeLess sizeLess;
+    template sizeLess(A, B) { enum sizeLess = (A.sizeof < B.sizeof); }
 
     // Trivial cases
     alias sort!(sizeLess) Empty;
@@ -3020,17 +2662,6 @@ unittest
     static assert(is(Equiv == Seq!(short, ushort, uint, int)));
 }
 
-unittest    // doc example
-{
-    alias TypeSeq!(double, int, bool, uint, short) Types;
-
-    alias meta.sort!(q{ A.sizeof < B.sizeof }, Types) Inc;
-    alias meta.sort!(q{ A.sizeof > B.sizeof }, Types) Dec;
-
-    static assert(is( Inc == TypeSeq!(bool, short, int, uint, double) ));
-    static assert(is( Dec == TypeSeq!(double, int, uint, short, bool) ));
-}
-
 
 
 /**
@@ -3042,18 +2673,19 @@ Params:
 
 Returns:
  $(D seq) without any consecutive duplicate elements.
-
-Example:
-----------
-alias meta.uniq!(1, 2, 3, 3, 4, 4, 4, 2, 2) result;
-static assert([ result ] == [ 1, 2, 3, 4, 2 ]);
-----------
  */
 template uniq(seq...)
 {
     alias uniqBy!(isSame, seq) uniq;
 }
 
+/**
+ */
+unittest
+{
+    alias meta.uniq!(1, 2, 3, 3, 4, 4, 4, 2, 2) result;
+    static assert([ result ] == [ 1, 2, 3, 4, 2 ]);
+}
 
 unittest
 {
@@ -3073,12 +2705,6 @@ unittest
     static assert([ noConsec ] == [ "abc", "123", "abc", "123" ]);
 }
 
-unittest
-{
-    alias meta.uniq!(1, 2, 3, 3, 4, 4, 4, 2, 2) result;
-    static assert([ result ] == [ 1, 2, 3, 4, 2 ]);
-}
-
 
 
 /**
@@ -3093,13 +2719,6 @@ Params:
 Returns:
  Sequence $(D seq) in which any consecutive group of duplicate elements are
  squeezed into the fist one of each group.
-
-Example:
-----------
-alias meta.uniqBy!(q{ A.sizeof == B.sizeof },
-                   int, uint, short, ushort, uint) Res;
-static assert(is(Res == TypeSeq!(int, short, uint)));
-----------
  */
 template uniqBy(alias eq, seq...)
 {
@@ -3133,6 +2752,14 @@ template uniqBy(alias eq, seq...)
     alias mapRec!(_impl!(binaryT!eq).uniqCons, seq) uniqBy;
 }
 
+/**
+ */
+unittest
+{
+    alias meta.uniqBy!(q{ A.sizeof == B.sizeof },
+                       int, uint, short, ushort, uint) Res;
+    static assert(is(Res == TypeSeq!(int, short, uint)));
+}
 
 unittest
 {
@@ -3146,13 +2773,6 @@ unittest
     static assert([ noinc ] == [ 1,0,7,6,5 ]);
 }
 
-unittest
-{
-    alias meta.uniqBy!(q{ A.sizeof == B.sizeof },
-                       int, uint, short, ushort, uint) Res;
-    static assert(is(Res == TypeSeq!(int, short, uint)));
-}
-
 
 
 /**
@@ -3164,18 +2784,19 @@ Params:
 
 Returns:
  Sequence $(D seq) without any duplicate elements.
-
-Example:
-----------
-alias meta.removeDuplicates!(int, bool, bool, int, string) Res;
-static assert(is(Res == TypeSeq!(int, bool, string)));
-----------
  */
 template removeDuplicates(seq...)
 {
     alias removeDuplicatesBy!(isSame, seq) removeDuplicates;
 }
 
+/**
+ */
+unittest
+{
+    alias meta.removeDuplicates!(int, bool, bool, int, string) Res;
+    static assert(is(Res == TypeSeq!(int, bool, string)));
+}
 
 unittest
 {
@@ -3192,12 +2813,6 @@ unittest
     static assert([ values ] == [ "fun", "gun", "hun" ]);
 }
 
-unittest
-{
-    alias meta.removeDuplicates!(int, bool, bool, int, string) Res;
-    static assert(is(Res == TypeSeq!(int, bool, string)));
-}
-
 
 
 /**
@@ -3212,13 +2827,6 @@ Params:
 Returns:
  Sequence $(D seq) in which any group of duplicate elements are eliminated
  except the fist one of each group.
-
-Example:
-----------
-alias meta.removeDuplicatesBy!(q{ A.sizeof == B.sizeof },
-                               int, uint, short, ushort, uint) Res;
-static assert(is(Res == TypeSeq!(int, short)));
-----------
  */
 template removeDuplicatesBy(alias eq, seq...)
 {
@@ -3235,6 +2843,14 @@ template removeDuplicatesBy(alias eq, seq...)
     }
 }
 
+/**
+ */
+unittest
+{
+    alias meta.removeDuplicatesBy!(q{ A.sizeof == B.sizeof },
+                                   int, uint, short, ushort, uint) Res;
+    static assert(is(Res == TypeSeq!(int, short)));
+}
 
 unittest
 {
@@ -3246,13 +2862,6 @@ unittest
 
     alias removeDuplicatesBy!(q{ a < b }, 9,6,7,8,3,4,5,0) decrease;
     static assert([ decrease ] == [ 9,6,3,0 ]);
-}
-
-unittest
-{
-    alias meta.removeDuplicatesBy!(q{ A.sizeof == B.sizeof },
-                                   int, uint, short, ushort, uint) Res;
-    static assert(is(Res == TypeSeq!(int, short)));
 }
 
 
@@ -3277,16 +2886,6 @@ Params:
 Returns:
  The last result of $(D fun), or $(D Seed) if $(D seq) is empty.
 
-Example:
- Computing the net accumulation of the size of types.
-----------
-alias TypeSeq!(int, double, short, bool, dchar) Types;
-
-// Note: 'a' gets the "current sum" and 'B' gets a type in the sequence.
-enum size = meta.reduce!(q{ a + B.sizeof }, 0, Types);
-static assert(size == 4 + 8 + 2 + 1 + 4);
-----------
-
 See_Also:
  $(D meta.scan): reduce with history.
  */
@@ -3299,6 +2898,18 @@ template reduce(alias fun, Seed, seq...)
 template reduce(alias fun, alias Seed, seq...)
 {
     alias _reduce!(binaryT!fun)._impl!(Seed, seq) reduce;
+}
+
+/**
+ Computing the net accumulation of the size of types.
+ */
+unittest
+{
+    alias TypeSeq!(int, double, short, bool, dchar) Types;
+
+    // Note: 'a' gets the "current sum" and 'B' gets a type in the sequence.
+    enum size = meta.reduce!(q{ a + B.sizeof }, 0, Types);
+    static assert(size == 4 + 8 + 2 + 1 + 4);
 }
 
 
@@ -3343,14 +2954,6 @@ unittest
     enum s2 = reduce!(binaryT!q{ a ~ b }, "");
 }
 
-unittest    // doc example
-{
-    alias TypeSeq!(int, double, short, bool, dchar) Types;
-
-    enum size = meta.reduce!(q{ a + B.sizeof }, 0, Types);
-    static assert(size == 4 + 8 + 2 + 1 + 4);
-}
-
 
 
 /**
@@ -3371,22 +2974,6 @@ Params:
 
 Returns:
  Sequence of the results of $(D fun) preceded by $(D Seed).
-
-Example:
- Computing the sum of the size of types with history.
-----------
-alias TypeSeq!(int, double, short, bool, dchar) Types;
-
-alias meta.scan!(q{ a + B.sizeof }, 0, Types) sums;
-static assert([ sums ] == [ 0,
-                            0+4,
-                            0+4+8,
-                            0+4+8+2,
-                            0+4+8+2+1,
-                            0+4+8+2+1+4 ]);
-----------
- Note that $(D sums[5]), or $(D sums[Types.length]), equals the result
- of the corresponding example of $(D meta.reduce).
  */
 template scan(alias fun, Seed, seq...)
 {
@@ -3399,6 +2986,24 @@ template scan(alias fun, alias Seed, seq...)
     alias _scan!(binaryT!fun).scan!(Seed, seq) scan;
 }
 
+/**
+ Computing the sum of the size of types with history.
+
+ Note that $(D sums[5]), or $(D sums[Types.length]), equals the result
+ of the corresponding example of $(D meta.reduce).
+ */
+unittest
+{
+    alias TypeSeq!(int, double, short, bool, dchar) Types;
+
+    alias meta.scan!(q{ a + B.sizeof }, 0, Types) sums;
+    static assert([ sums ] == [ 0,
+                                0+4,
+                                0+4+8,
+                                0+4+8+2,
+                                0+4+8+2+1,
+                                0+4+8+2+1+4 ]);
+}
 
 private template _scan(alias fun)
 {
@@ -3442,19 +3047,6 @@ unittest
     enum s2 = scan!(binaryT!q{ a ~ b }, "");
 }
 
-unittest    // doc example
-{
-    alias TypeSeq!(int, double, short, bool, dchar) Types;
-
-    alias meta.scan!(q{ a + B.sizeof }, 0, Types) sums;
-    static assert([ sums ] == [ 0,
-                                0+4,
-                                0+4+8,
-                                0+4+8+2,
-                                0+4+8+2+1,
-                                0+4+8+2+1+4 ]);
-}
-
 
 
 /**
@@ -3465,17 +3057,6 @@ as $(D meta.sort!(comp, seq)[0]).
 Params:
  comp = Binary template that compares items in the sequence.
   seq = One or more compile-time entities.
-
-Example:
- To get the largest element in the sequence, specify a greater-than operator
- as the $(D comp) argument.
-----------
-alias TypeSeq!(int, bool, double, short) Types;
-
-// Take the largest type in the sequence: double.
-alias meta.most!(q{ A.sizeof > B.sizeof }, Types) Largest;
-static assert(is(Largest == double));
-----------
  */
 template most(alias comp, seq...) if (seq.length > 0)
 {
@@ -3498,6 +3079,18 @@ template most(alias comp, seq...) if (seq.length > 0)
     alias reduce!(more!(binaryT!comp), seq) most;
 }
 
+/**
+ To get the largest element in the sequence, specify a greater-than operator
+ as the $(D comp) argument.
+ */
+unittest
+{
+    alias TypeSeq!(int, bool, double, short) Types;
+
+    // Take the largest type in the sequence: double.
+    alias meta.most!(q{ A.sizeof > B.sizeof }, Types) Largest;
+    static assert(is(Largest == double));
+}
 
 unittest
 {
@@ -3510,14 +3103,6 @@ unittest
     alias most!(q{ A.sizeof > B.sizeof }, short, byte, float, ubyte, uint) Max;
     static assert(is(Min ==  byte));
     static assert(is(Max == float));
-}
-
-unittest    // doc example
-{
-    alias TypeSeq!(int, bool, double, short) Types;
-
-    alias meta.most!(q{ A.sizeof > B.sizeof }, Types) Largest;
-    static assert(is(Largest == double));
 }
 
 
@@ -3578,14 +3163,6 @@ Params:
 Returns:
  Subsequence of $(D seq) after $(D E) (inclusive).  The empty sequence
  is returned if $(D E) is not found.
-
-Examples:
-----------
-alias TypeSeq!(int, short, double, bool, string) Types;
-
-alias meta.find!(bool, Types) AfterBool;
-static assert(is(AfterBool == TypeSeq!(bool, string)));
-----------
  */
 template find(E, seq...)
 {
@@ -3598,6 +3175,15 @@ template find(alias E, seq...)
     alias findIf!(isSame!E, seq) find;
 }
 
+/**
+ */
+unittest
+{
+    alias TypeSeq!(int, short, double, bool, string) Types;
+
+    alias meta.find!(bool, Types) AfterBool;
+    static assert(is(AfterBool == TypeSeq!(bool, string)));
+}
 
 unittest
 {
@@ -3618,9 +3204,6 @@ unittest
 {
     alias TypeSeq!(int, short, double, bool, string) Types;
 
-    alias meta.find!(bool, Types) AfterBool;
-    static assert(is(AfterBool == TypeSeq!(bool, string)));
-
     alias meta.find!(meta.most!(q{ A.sizeof > B.sizeof }, Types),
                      Types) Sub;
     static assert(is(Sub == TypeSeq!(double, bool, string)));
@@ -3638,19 +3221,20 @@ Params:
 Returns:
  Subsequence of $(D seq) after the found element, if any, inclusive.
  The empty sequence is returned if not found.
-
-Example:
-----------
-alias meta.findIf!(q{ is(A == const) },
-                   int, double, const string, bool) Res;
-static assert(is(Res == TypeSeq!(const string, bool)));
-----------
  */
 template findIf(alias pred, seq...)
 {
     alias seq[_findChunk!(unaryT!pred, 1).index!seq .. $] findIf;
 }
 
+/**
+ */
+unittest
+{
+    alias meta.findIf!(q{ is(A == const) },
+                       int, double, const string, bool) Res;
+    static assert(is(Res == TypeSeq!(const string, bool)));
+}
 
 unittest
 {
@@ -3658,13 +3242,6 @@ unittest
 
     static assert([ findIf!(q{ a < 0 }, 5,4,3,2,1,0) ] == []);
     static assert([ findIf!(q{ a < 0 }, 2,1,0,-1,-2) ] == [ -1,-2 ]);
-}
-
-unittest
-{
-    alias meta.findIf!(q{ is(A == const) },
-                       int, double, const string, bool) Res;
-    static assert(is(Res == TypeSeq!(const string, bool)));
 }
 
 
@@ -3679,14 +3256,6 @@ Params:
 Returns:
  Index of the first element, if any, that is same as $(D E).  $(D -1) is
  returned if not found.  The type of the result is $(D sizediff_t).
-
-Example:
-----------
-alias TypeSeq!(int, double, bool, string) Types;
-
-static assert(meta.index!(bool, Types) ==  2);
-static assert(meta.index!(void, Types) == -1);
-----------
  */
 template index(E, seq...)
 {
@@ -3699,6 +3268,15 @@ template index(alias E, seq...)
     enum index = indexIf!(isSame!E, seq);
 }
 
+/**
+ */
+unittest
+{
+    alias TypeSeq!(int, double, bool, string) Types;
+
+    static assert(meta.index!(bool, Types) ==  2);
+    static assert(meta.index!(void, Types) == -1);
+}
 
 unittest
 {
@@ -3721,14 +3299,6 @@ unittest
     static assert(is(typeof(index!( 16, int, double)) == sizediff_t));
 }
 
-unittest
-{
-    alias TypeSeq!(int, double, bool, string) Types;
-
-    static assert(meta.index!(bool, Types) ==  2);
-    static assert(meta.index!(void, Types) == -1);
-}
-
 
 
 /**
@@ -3741,14 +3311,6 @@ Params:
 Returns:
  Index of the first element, if any, satisfying the predicate $(D pred).
  $(D -1) is returned if not found.  The type of the result is $(D sizediff_t).
-
-Example:
-----------
-alias TypeSeq!(int, double, short, string) Types;
-
-static assert(meta.indexIf!(q{ A.sizeof < 4 }, Types) ==  2);
-static assert(meta.indexIf!(q{ A.sizeof < 2 }, Types) == -1);
-----------
  */
 template indexIf(alias pred, seq...)
 {
@@ -3762,6 +3324,15 @@ template indexIf(alias pred, seq...)
     }
 }
 
+/**
+ */
+unittest
+{
+    alias TypeSeq!(int, double, short, string) Types;
+
+    static assert(meta.indexIf!(q{ A.sizeof < 4 }, Types) ==  2);
+    static assert(meta.indexIf!(q{ A.sizeof < 2 }, Types) == -1);
+}
 
 unittest
 {
@@ -3777,14 +3348,6 @@ unittest
     static assert(is(typeof(indexIf!(q{ false }, int, double)) == sizediff_t));
 }
 
-unittest
-{
-    alias TypeSeq!(int, double, short, string) Types;
-
-    static assert(meta.indexIf!(q{ A.sizeof < 4 }, Types) ==  2);
-    static assert(meta.indexIf!(q{ A.sizeof < 2 }, Types) == -1);
-}
-
 
 
 /**
@@ -3796,12 +3359,6 @@ Params:
 
 Returns:
  The number of elements in $(D seq) satisfying $(D isSame!E).
-
-Example:
-----------
-alias TypeSeq!(int, double, string, void) Types;
-static assert(meta.count!(void, Types) == 1);
-----------
  */
 template count(E, seq...)
 {
@@ -3814,6 +3371,13 @@ template count(alias E, seq...)
     enum count = countIf!(isSame!E, seq);
 }
 
+/**
+ */
+unittest
+{
+    alias TypeSeq!(int, double, string, void) Types;
+    static assert(meta.count!(void, Types) == 1);
+}
 
 unittest
 {
@@ -3832,12 +3396,6 @@ unittest
     static assert(count!(16, 16, 16, 16) == 3);
 }
 
-unittest
-{
-    alias TypeSeq!(int, double, string, void) Types;
-    static assert(meta.count!(void, Types) == 1);
-}
-
 
 
 /**
@@ -3849,12 +3407,6 @@ Params:
 
 Returns:
  The number of elements in $(D seq) satisfying the predicate $(D pred).
-
-Example:
-----------
-static assert(meta.countIf!(q{ a[0] == '_' },
-                            "__ctor", "__dtor", "foo", "bar") == 2);
-----------
  */
 template countIf(alias pred, seq...)
 {
@@ -3878,6 +3430,13 @@ template countIf(alias pred, seq...)
     }
 }
 
+/**
+ */
+unittest
+{
+    static assert(meta.countIf!(q{ a[0] == '_' },
+                                "__ctor", "__dtor", "foo", "bar") == 2);
+}
 
 unittest
 {
@@ -3887,12 +3446,6 @@ unittest
     static assert(countIf!(q{ a % 6 == 0 }, 1,2,3,4,5,6) == 1);
     static assert(countIf!(q{ a % 3 == 0 }, 1,2,3,4,5,6) == 2);
     static assert(countIf!(q{ a % 2 == 0 }, 1,2,3,4,5,6) == 3);
-}
-
-unittest
-{
-    static assert(meta.countIf!(q{ a[0] == '_' },
-                                "__ctor", "__dtor", "foo", "bar") == 2);
 }
 
 
@@ -3914,28 +3467,25 @@ Returns:
  $(D true) if _all/_any/_none of the elements of the sequence satisfies
  the predicate.  For the empty sequence, $(D meta.all) and $(D meta.none)
  returns $(D true); and $(D meta.any) returns $(D false).
-
-Example:
-----------
-import std.meta, std.range;
-
-static assert( meta.all!(isInputRange, int[], Retro!(double[]), dstring));
-static assert(!meta.all!(isInputRange, int[], Retro!(double[]),   dchar));
-----------
  */
 template all(alias pred, seq...)
 {
     enum all = (_findChunk!(not!pred, 1).index!seq == seq.length);
 }
 
+/**
+ */
+unittest
+{
+    import std.meta, std.range;
+
+    static assert( meta.all!(isInputRange, int[], typeof(retro([1.0, 2.0])), dstring));
+    static assert(!meta.all!(isInputRange, int[], typeof(retro([1.0, 2.0])),   dchar));
+}
 
 unittest
 {
-    struct Scope
-    {
-        template isZero(int n) { enum isZero = (n == 0); }
-    }
-    alias Scope.isZero isZero;
+    template isZero(int n) { enum isZero = (n == 0); }
 
     static assert( all!(isZero));
     static assert( all!(isZero, 0));
@@ -3965,11 +3515,7 @@ template any(alias pred, seq...)
 
 unittest
 {
-    struct Scope
-    {
-        template isZero(int n) { enum isZero = (n == 0); }
-    }
-    alias Scope.isZero isZero;
+    template isZero(int n) { enum isZero = (n == 0); }
 
     static assert(!any!(isZero));
     static assert( any!(isZero, 0));
@@ -3999,11 +3545,7 @@ template none(alias pred, seq...)
 
 unittest
 {
-    struct Scope
-    {
-        template isZero(int n) { enum isZero = (n == 0); }
-    }
-    alias Scope.isZero isZero;
+    template isZero(int n) { enum isZero = (n == 0); }
 
     static assert( none!(isZero));
     static assert(!none!(isZero, 0));
@@ -4036,32 +3578,29 @@ Params:
 Returns:
  $(D true) if $(D seq) is not empty and _only one of the elements satisfies
  the predicate.  Otherwise, $(D false) is returned.
-
-Example:
-----------
-class B {}
-class C {}
-interface I {}
-interface J {}
-
-static assert(!meta.only!(q{ is(A == class) }, I, J));
-static assert( meta.only!(q{ is(A == class) }, B, I, J));
-static assert(!meta.only!(q{ is(A == class) }, B, C, I, J));
-----------
  */
 template only(alias pred, seq...)
 {
     enum only = (countIf!(pred, seq) == 1);
 }
 
+/**
+ */
+unittest
+{
+    class B {}
+    class C {}
+    interface I {}
+    interface J {}
+
+    static assert(!meta.only!(q{ is(A == class) }, I, J));
+    static assert( meta.only!(q{ is(A == class) }, B, I, J));
+    static assert(!meta.only!(q{ is(A == class) }, B, C, I, J));
+}
 
 unittest
 {
-    struct Scope
-    {
-        template isZero(int n) { enum isZero = (n == 0); }
-    }
-    alias Scope.isZero isZero;
+    template isZero(int n) { enum isZero = (n == 0); }
 
     static assert(!only!(isZero));
     static assert( only!(isZero, 0));
@@ -4073,18 +3612,6 @@ unittest
     // String
     static assert(!only!(q{ is(A == const) }));
     static assert( only!(q{ is(A == const) }, const int));
-}
-
-unittest    // doc example
-{
-    class B {}
-    class C {}
-    interface I {}
-    interface J {}
-
-    static assert(!meta.only!(q{ is(A == class) }, I, J));
-    static assert( meta.only!(q{ is(A == class) }, B, I, J));
-    static assert(!meta.only!(q{ is(A == class) }, B, C, I, J));
 }
 
 
@@ -4105,25 +3632,14 @@ Params:
 Returns:
  Sequence $(D seq) rearranged in a uniform order.  Duplicate elements will
  be grouped into a continuous repetition of that entity.
-
-Example:
-----------
-alias meta.setify!(int, double, bool, int) A;
-alias meta.setify!(int, bool, double, bool) B;
-
-static assert(is(A == TypeSeq!(bool, double, int, int)));
-static assert(is(B == TypeSeq!(bool, bool, double, int)));
-
-// Use meta.uniq to ignore the duplicates.
-static assert(is(meta.uniq!A == meta.uniq!B));
-----------
  */
 template setify(seq...)
 {
     alias sort!(metaComp, seq) setify;
 }
 
-
+/**
+ */
 unittest
 {
     alias meta.setify!(int, double, bool, int) A;
@@ -4132,6 +3648,7 @@ unittest
     static assert(is(A == TypeSeq!(bool, double, int, int)));
     static assert(is(B == TypeSeq!(bool, bool, double, int)));
 
+    // Use meta.uniq to ignore the duplicates.
     static assert(is(meta.uniq!A == meta.uniq!B));
 }
 
@@ -4153,21 +3670,22 @@ Returns:
  $(D true) if the sequence $(D set.expand) _contains all the _items in
  $(D items) including duplicates, or $(D false) if not.  $(D true) is
  returned if $(D items) is empty.
-
-Example:
-----------
-alias TypeSeq!(string, int, int, double) A;
-static assert( meta.contains!(meta.pack!A, string));
-static assert( meta.contains!(meta.pack!A, int, double, int));
-static assert(!meta.contains!(meta.pack!A, double, double));
-static assert(!meta.contains!(meta.pack!A, void));
-----------
  */
 template contains(alias set, items...)
 {
     enum contains = (intersection!(set, pack!items).length == items.length);
 }
 
+/**
+ */
+unittest
+{
+    alias TypeSeq!(string, int, int, double) A;
+    static assert( meta.contains!(meta.pack!A, string));
+    static assert( meta.contains!(meta.pack!A, int, double, int));
+    static assert(!meta.contains!(meta.pack!A, double, double));
+    static assert(!meta.contains!(meta.pack!A, void));
+}
 
 unittest
 {
@@ -4191,15 +3709,6 @@ unittest
     static assert(!contains!(nums, 3, 3));
 }
 
-unittest
-{
-    alias TypeSeq!(string, int, int, double) A;
-    static assert( meta.contains!(meta.pack!A, string));
-    static assert( meta.contains!(meta.pack!A, int, double, int));
-    static assert(!meta.contains!(meta.pack!A, double, double));
-    static assert(!meta.contains!(meta.pack!A, void));
-}
-
 
 
 /**
@@ -4217,16 +3726,6 @@ Params:
 Returns:
  $(D true) if the sequence $(D set.expand) is composed of exactly the same
  _items in $(D items) including duplicates, or $(D false) if not.
-
-Example:
-----------
-alias TypeSeq!(string, int, int, double) A;
-
-static assert( meta.isComposedOf!(meta.pack!A, double, int, string, int));
-static assert( meta.isComposedOf!(meta.pack!A, int, double, int, string));
-static assert(!meta.isComposedOf!(meta.pack!A, int, double, string));
-static assert(!meta.isComposedOf!(meta.pack!A, void));
-----------
  */
 template isComposedOf(alias set, items...)
 {
@@ -4234,7 +3733,8 @@ template isComposedOf(alias set, items...)
                            pack!(setify!items).Tag);
 }
 
-
+/**
+ */
 unittest
 {
     alias TypeSeq!(string, int, int, double) A;
@@ -4265,14 +3765,6 @@ Returns:
 
  The order of elements in the returned sequence is normalized to the order
  defined by $(D meta.setify).
-
-Example:
-----------
-alias meta.intersection!(meta.pack!(int, int, double, bool, bool),
-                         meta.pack!(int, double, bool, double, bool),
-                         meta.pack!(bool, string, int, int, bool)) Inter;
-static assert(is(Inter == meta.setify!(int, bool, bool)));
-----------
  */
 template intersection(seqs...)
 {
@@ -4296,6 +3788,15 @@ template intersection(seqs...)
     alias _impl!seqs intersection;
 }
 
+/**
+ */
+unittest
+{
+    alias meta.intersection!(meta.pack!(int, int, double, bool, bool),
+                             meta.pack!(int, double, bool, double, bool),
+                             meta.pack!(bool, string, int, bool)) Inter;
+    static assert(is(Inter == TypeSeq!(bool, bool, int)));
+}
 
 unittest
 {
@@ -4338,14 +3839,6 @@ unittest
     alias intersection!(pack!(int, double, string)) Single;
     static assert(is(Empty == TypeSeq!()));
     static assert(is(Single == setify!(int, double, string)));
-}
-
-unittest
-{
-    alias meta.intersection!(meta.pack!(int, int, double, bool, bool),
-                             meta.pack!(int, double, bool, double, bool),
-                             meta.pack!(bool, string, int, bool)) Inter;
-    static assert(is(Inter == TypeSeq!(bool, bool, int)));
 }
 
 
@@ -4407,17 +3900,6 @@ Returns:
  Instantiation fails if no $(D _cond) is $(D true) and the $(D default) argument
  is not specified.  It also fails if there is a $(D _cond) that is not strictly
  typed as $(D bool).
-
-Example:
-----------
-enum n = 100000;
-
-alias meta.cond!(n <=  ubyte.max,  ubyte,
-                 n <= ushort.max, ushort,
-                 n <=   uint.max,   uint,   // matches
-                                   ulong) T;
-static assert(is(T == uint));
-----------
  */
 template cond(cases...) if (cases.length > 0)
 {
@@ -4448,6 +3930,18 @@ template cond(cases...) if (cases.length > 0)
     else static assert(0, "No match");
 }
 
+/**
+ */
+unittest
+{
+    enum n = 100000;
+
+    alias meta.cond!(n <=  ubyte.max,  ubyte,
+                     n <= ushort.max, ushort,
+                     n <=   uint.max,   uint,   // matches
+                                       ulong) T;
+    static assert(is(T == uint));
+}
 
 unittest
 {
@@ -4464,16 +3958,5 @@ unittest
     static assert(!__traits(compiles, cond!(-1, int)));
     static assert(!__traits(compiles, cond!(true, int, 123, int)));
     static assert(!__traits(compiles, cond!(false, int, false, int)));
-}
-
-unittest
-{
-    enum n = 100000;
-
-    alias meta.cond!(n <=  ubyte.max,  ubyte,
-                     n <= ushort.max, ushort,
-                     n <=   uint.max,   uint,
-                                       ulong) T;
-    static assert(is(T == uint));
 }
 
