@@ -57,10 +57,7 @@ template Id(alias E)
  */
 unittest
 {
-    template Front(seq...)
-    {
-        alias Front = meta.Id!(seq[0]);
-    }
+    alias Front(seq...) = meta.Id!(seq[0]);
     alias front = Front!(10, 20, 30);
     static assert(front == 10);
 }
@@ -408,15 +405,15 @@ These overloads serve partial application of $(D meta.isSame).
  */
 template isSame(A)
 {
-    template isSame(      B) { alias isSame = .isSame!(A, B); }
-    template isSame(alias B) { alias isSame = .isSame!(A, B); }
+    alias isSame(      B) = .isSame!(A, B);
+    alias isSame(alias B) = .isSame!(A, B);
 }
 
 /// ditto
 template isSame(alias A)
 {
-    template isSame(      B) { alias isSame = .isSame!(A, B); }
-    template isSame(alias B) { alias isSame = .isSame!(A, B); }
+    alias isSame(      B) = .isSame!(A, B);
+    alias isSame(alias B) = .isSame!(A, B);
 }
 
 /**
@@ -671,8 +668,8 @@ template unaryT(string expr)
         mixin _installLambdaExpr!expr;
     }
 
-    template unaryT(alias a) { alias unaryT = _impl!a._; }
-    template unaryT(      A) { alias unaryT = _impl!A._; }
+    alias unaryT(alias a) = _impl!a._;
+    alias unaryT(      A) = _impl!A._;
 }
 
 /// ditto
@@ -857,7 +854,7 @@ template variadicT(string expr)
         mixin _installLambdaExpr!expr;
     }
 
-    template variadicT(args...) { alias variadicT = _impl!args._; }
+    alias variadicT(args...) = _impl!args._;
 }
 
 /// ditto
@@ -931,20 +928,14 @@ Returns:
  */
 template bind(alias templat, args...)
 {
-    template bind(rest...)
-    {
-        alias bind = apply!(variadicT!templat, args, rest);
-    }
+    alias bind(rest...) = apply!(variadicT!templat, args, rest);
 }
 
 /**
  */
 unittest
 {
-    template compareSize(T, U)
-    {
-        enum compareSize = T.sizeof < U.sizeof;
-    }
+    enum compareSize(T, U) = T.sizeof < U.sizeof;
 
     // Get the types satisfying "int.sizeof < U.sizeof".
     alias Result = meta.filter!(meta.bind!(compareSize, int),
@@ -979,20 +970,14 @@ Returns:
  */
 template rbind(alias templat, args...)
 {
-    template rbind(rest...)
-    {
-        alias rbind = apply!(variadicT!templat, rest, args);
-    }
+    alias rbind(rest...) = apply!(variadicT!templat, rest, args);
 }
 
 /**
  */
 unittest
 {
-    template compareSize(T, U)
-    {
-        enum compareSize = T.sizeof < U.sizeof;
-    }
+    enum compareSize(T, U) = T.sizeof < U.sizeof;
 
     // Get the types satisfying "T.sizeof < int.sizeof"
     alias Result = meta.filter!(meta.rbind!(compareSize, int),
@@ -1026,10 +1011,7 @@ Returns:
  */
 template delay(alias templat, args...)
 {
-    template delay(_...)
-    {
-        alias delay = apply!(variadicT!templat, args);
-    }
+    alias delay(_...) = apply!(variadicT!templat, args);
 }
 
 /**
@@ -1079,19 +1061,19 @@ Returns:
  */
 template constant(E)
 {
-    template constant(_...) { alias constant = E; }
+    alias constant(_...) = E;
 }
 
 /// ditto
 template constant(alias E)
 {
-    template constant(_...) { alias constant = E; }
+    alias constant(_...) = E;
 }
 
 /// ditto
 template constant()
 {
-    template constant(_...) { alias constant = Seq!(); }
+    alias constant(_...) = Seq!();
 }
 
 /**
@@ -1135,10 +1117,7 @@ Returns:
  */
 template not(alias pred)
 {
-    template not(args...)
-    {
-        enum not = !apply!(variadicT!pred, args);
-    }
+    enum not(args...) = !apply!(variadicT!pred, args);
 }
 
 /**
@@ -1146,10 +1125,7 @@ template not(alias pred)
  */
 unittest
 {
-    template isStruct(T)
-    {
-        enum isStruct = is(T == struct) || is(T == union);
-    }
+    enum isStruct(T) = is(T == struct) || is(T == union);
 
     struct S {}
     union  U {}
@@ -1238,7 +1214,7 @@ template and(alias pred1 = constant!true,
 
 unittest
 {
-    template isConst(T) { enum isConst = is(T == const); }
+    enum isConst(T) = is(T == const);
 
     // Compose nothing
     alias yes = and!();
@@ -1310,10 +1286,7 @@ template or(alias pred1 = constant!false,
 
 unittest
 {
-    template isConst(T)
-    {
-        enum isConst = is(T == const);
-    }
+    enum isConst(T) = is(T == const);
 
     // Compose nothing
     alias no = or!();
@@ -1373,16 +1346,13 @@ unittest
 template compose(alias template1 = Seq,
                  alias template2 = Seq)
 {
-    template compose(args...)
-    {
-        alias compose = apply!(template1, apply!(template2, args));
-    }
+    alias compose(args...) = apply!(template1, apply!(template2, args));
 }
 
 unittest
 {
-    template Const(T) { alias Const = const(T); }
-    template Array(T) { alias Array = T[]; }
+    alias Const(T) = const(T);
+    alias Array(T) = T[];
 
     // No actual composition
     alias Const1 = compose!Const;
@@ -1470,15 +1440,12 @@ template guard(alias template1, alias template2)
 
 template guard(alias templat)
 {
-    template guard(args...)
-    {
-        alias guard = apply!(templat, args);
-    }
+    alias guard(args...) = apply!(templat, args);
 }
 
 unittest
 {
-    template Const(T) { alias Const = const(T); }
+    alias Const(T) = const(T);
 
     // No actual guard
     alias JustConst = guard!Const;
@@ -1576,10 +1543,7 @@ unittest
 /* undocumented (for internal use) */
 template compiles(templates...)
 {
-    template compiles(args...)
-    {
-        enum compiles = __traits(compiles, map!(applier!args, templates));
-    }
+    enum compiles(args...) = __traits(compiles, map!(applier!args, templates));
 }
 
 
@@ -1623,10 +1587,7 @@ template apply(alias templat, args...)
 /* undocumented (for internal use) */
 template applier(args...)
 {
-    template applier(alias templat)
-    {
-        alias applier = apply!(templat, args);
-    }
+    alias applier(alias templat) = apply!(templat, args);
 }
 
 
@@ -2131,7 +2092,7 @@ private
 {
     template unpackAt(size_t i)
     {
-        template unpackAt(alias pak) { alias unpackAt = Id!(pak.expand[i]); }
+        alias unpackAt(alias pak) = Id!(pak.expand[i]);
     }
 
     template isTransversable(size_t i, seqs...)
@@ -2263,10 +2224,7 @@ template zipWith(alias fun, seqs...) if (isZippable!seqs)
 {
     alias _fun = variadicT!fun;
 
-    template transverser(size_t i)
-    {
-        alias transverser = _fun!(transverse!(i, seqs));
-    }
+    alias transverser(size_t i) = _fun!(transverse!(i, seqs));
 
     alias zipWith = map!(transverser, iota!(_minLength!seqs));
 }
@@ -2377,15 +2335,8 @@ template mapRec(string fun, seq...)
 
 template mapRec(alias fun, seq...)
 {
-    template _impl()
-    {
-        alias _impl = Seq!();
-    }
-
-    template _impl(seq...)
-    {
-        alias _impl = fun!(seq[0], _impl!(seq[1 .. $]));
-    }
+    alias _impl()       = Seq!();
+    alias _impl(seq...) = fun!(seq[0], _impl!(seq[1 .. $]));
 
     alias mapRec = _impl!seq;
 }
@@ -2637,7 +2588,7 @@ unittest
 
 unittest
 {
-    template sizeLess(A, B) { enum sizeLess = (A.sizeof < B.sizeof); }
+    enum sizeLess(A, B) = (A.sizeof < B.sizeof);
 
     // Trivial cases
     alias Empty  = sort!(sizeLess);
@@ -3485,7 +3436,7 @@ unittest
 
 unittest
 {
-    template isZero(int n) { enum isZero = (n == 0); }
+    enum isZero(int n) = (n == 0);
 
     static assert( all!(isZero));
     static assert( all!(isZero, 0));
@@ -3515,7 +3466,7 @@ template any(alias pred, seq...)
 
 unittest
 {
-    template isZero(int n) { enum isZero = (n == 0); }
+    enum isZero(int n) = (n == 0);
 
     static assert(!any!(isZero));
     static assert( any!(isZero, 0));
@@ -3545,7 +3496,7 @@ template none(alias pred, seq...)
 
 unittest
 {
-    template isZero(int n) { enum isZero = (n == 0); }
+    enum isZero(int n) = (n == 0);
 
     static assert( none!(isZero));
     static assert(!none!(isZero, 0));
@@ -3600,7 +3551,7 @@ unittest
 
 unittest
 {
-    template isZero(int n) { enum isZero = (n == 0); }
+    enum isZero(int n) = (n == 0);
 
     static assert(!only!(isZero));
     static assert( only!(isZero, 0));
@@ -3768,22 +3719,10 @@ Returns:
  */
 template intersection(seqs...)
 {
-    template _impl(seqs...)
-    {
-        alias _impl = reduce!(compose!(pack, .intersection), seqs).expand;
-    }
-    template _impl(alias A, alias B)
-    {
-        alias _impl = intersectionBy!(metaComp, A, B);
-    }
-    template _impl(alias A)
-    {
-        alias _impl = setify!(A.expand);
-    }
-    template _impl()
-    {
-        alias _impl = Seq!();
-    }
+    alias _impl(seqs...)          = reduce!(compose!(pack, .intersection), seqs).expand;
+    alias _impl(alias A, alias B) = intersectionBy!(metaComp, A, B);
+    alias _impl(alias A)          = setify!(A.expand);
+    alias _impl()                 = Seq!();
 
     alias intersection = _impl!seqs;
 }
