@@ -294,25 +294,24 @@ static assert(meta.mangle!(real, int) == "TeTi");
  */
 template mangle(entity...)
 {
+    string _stripTag(string tag)
+    {
+        enum
+        {
+            prefix = "PS3std4meta",
+            midfix = "__T4pack",
+            suffix = "Z3Tag",
+        }
+        size_t i = prefix.length;
+
+        while ('0' <= tag[i] && tag[i] <= '9')
+        {
+            ++i;
+        }
+        return tag[i + midfix.length .. $ - suffix.length];
+    }
+
     enum mangle = _stripTag((pack!entity.Tag*).mangleof);
-}
-
-
-private string _stripTag(string tag) pure nothrow
-{
-    enum
-    {
-        prefix = "PS3std4meta",
-        midfix = "__T4pack",
-        suffix = "Z3Tag",
-    }
-    size_t i = prefix.length;
-
-    while ('0' <= tag[i] && tag[i] <= '9')
-    {
-        ++i;
-    }
-    return tag[i + midfix.length .. $ - suffix.length];
 }
 
 
@@ -488,31 +487,15 @@ static assert(!isDouble!int   );    // meta.isSame!(double, int)
  */
 template isSame(A)
 {
-    alias _isSameAs!A.isSame isSame;
+    template isSame(      B) { alias .isSame!(A, B) isSame; }
+    template isSame(alias B) { alias .isSame!(A, B) isSame; }
 }
 
 /// ditto
 template isSame(alias A)
 {
-    alias _isSameAs!A.isSame isSame;
-}
-
-
-private
-{
-    // The eponymous templates spec doesn't allow overloads, so we
-    // do it manually.
-
-    template _isSameAs(A)
-    {
-        template isSame(      B) { alias .isSame!(A, B) isSame; }
-        template isSame(alias B) { alias .isSame!(A, B) isSame; }
-    }
-    template _isSameAs(alias A)
-    {
-        template isSame(      B) { alias .isSame!(A, B) isSame; }
-        template isSame(alias B) { alias .isSame!(A, B) isSame; }
-    }
+    template isSame(      B) { alias .isSame!(A, B) isSame; }
+    template isSame(alias B) { alias .isSame!(A, B) isSame; }
 }
 
 
@@ -766,6 +749,8 @@ unittest
 
 private mixin template _installLambdaExpr(string expr)
 {
+    template _expectEmptySeq() {}
+
     // The result can be an atomic entity or a sequence as expr returns.
     static if (__traits(compiles, _expectEmptySeq!(mixin("("~ expr ~")[0 .. 0]"))))
     {
@@ -776,8 +761,6 @@ private mixin template _installLambdaExpr(string expr)
         mixin("alias  Id!("~ expr ~") _;");
     }
 }
-
-private template _expectEmptySeq() {}
 
 
 
@@ -817,25 +800,19 @@ static assert(is(Types[2] == string));
  */
 template unaryT(string expr)
 {
-    alias _unaryTGen!expr._unaryT unaryT;
+    template _impl(args...)
+    {
+        alias Id!(args[0]) a, A;
+        mixin _installLambdaExpr!expr;
+    }
+
+    template unaryT(alias a) { alias _impl!a._ unaryT; }
+    template unaryT(      A) { alias _impl!A._ unaryT; }
 }
 
 template unaryT(alias templat)
 {
     alias templat unaryT;
-}
-
-
-private template _unaryTGen(string expr)
-{
-    template _unaryT(alias a) { alias _unaryTImpl!a._ _unaryT; }
-    template _unaryT(      A) { alias _unaryTImpl!A._ _unaryT; }
-
-    private template _unaryTImpl(args...)
-    {
-        alias Id!(args[0]) a, A;
-        mixin _installLambdaExpr!expr;
-    }
 }
 
 
@@ -906,28 +883,22 @@ static assert(n3 == 4 + 8 + 2);
  */
 template binaryT(string expr)
 {
-    alias _binaryTGen!expr._binaryT binaryT;
-}
-
-template binaryT(alias templat)
-{
-    alias templat binaryT;
-}
-
-
-private template _binaryTGen(string expr)
-{
-    template _binaryT(AB...) if (AB.length == 2)
-    {
-        alias _binaryTImpl!AB._ _binaryT;
-    }
-
-    private template _binaryTImpl(args...)
+    template _impl(args...)
     {
         alias Id!(args[0]) a, A;
         alias Id!(args[1]) b, B;
         mixin _installLambdaExpr!expr;
     }
+
+    template binaryT(AB...) if (AB.length == 2)
+    {
+        alias _impl!AB._ binaryT;
+    }
+}
+
+template binaryT(alias templat)
+{
+    alias templat binaryT;
 }
 
 
@@ -999,25 +970,6 @@ static assert([ rotate1!(1, 2, 3, 4) ] == [ 2, 3, 4, 1 ]);
  */
 template variadicT(string expr)
 {
-    alias _variadicTGen!expr._variadicT variadicT;
-}
-
-template variadicT(alias templat)
-{
-    alias templat variadicT;
-}
-
-
-private template _variadicTGen(string expr)
-{
-    template _variadicT(args...) { alias _variadicTImpl!args._ _variadicT; }
-
-    private template _variadicTImpl(args...)
-    {
-        mixin _parameters!(args.length);
-        mixin _installLambdaExpr!expr;
-    }
-
     mixin template _parameters(size_t n, size_t i = 0)
     {
         static if (i < n && i < 8)
@@ -1027,6 +979,19 @@ private template _variadicTGen(string expr)
             mixin _parameters!(n, i + 1);
         }
     }
+
+    template _impl(args...)
+    {
+        mixin _parameters!(args.length);
+        mixin _installLambdaExpr!expr;
+    }
+
+    template variadicT(args...) { alias _impl!args._ variadicT; }
+}
+
+template variadicT(alias templat)
+{
+    alias templat variadicT;
 }
 
 
@@ -1237,13 +1202,8 @@ template delay(alias templat, args...)
 {
     template delay(_...)
     {
-        alias templat!args delay;
+        alias apply!(variadicT!templat, args) delay;
     }
-}
-
-template delay(string templat, args...)
-{
-    alias delay!(variadicT!templat, args) delay;
 }
 
 
@@ -1371,13 +1331,8 @@ template not(alias pred)
 {
     template not(args...)
     {
-        enum not = !pred!args;
+        enum not = !apply!(variadicT!pred, args);
     }
-}
-
-template not(string pred)
-{
-    alias not!(variadicT!pred) not;
 }
 
 
@@ -1819,22 +1774,19 @@ static assert(is( NoTopConst!(const int) == int ));
  */
 template conditional(alias pred, alias then, alias otherwise = meta.Id)
 {
-    alias _conditional!(variadicT!pred,
-                        variadicT!then,
-                        variadicT!otherwise).conditional conditional;
-}
+    alias variadicT!pred _pred;
+    alias variadicT!then _then;
+    alias variadicT!otherwise _otherwise;
 
-private template _conditional(alias pred, alias then, alias otherwise)
-{
     template conditional(args...)
     {
-        static if (pred!args)
+        static if (_pred!args)
         {
-            alias then!args conditional;
+            alias _then!args conditional;
         }
         else
         {
-            alias otherwise!args conditional;
+            alias _otherwise!args conditional;
         }
     }
 }
@@ -1912,13 +1864,9 @@ template Example(Arg)
  */
 template apply(alias templat, args...)
 {
-    alias templat!args apply;
-}
+    alias variadicT!templat _templat;
 
-/// ditto
-template apply(string templat, args...)
-{
-    alias apply!(variadicT!templat, args) apply;
+    alias _templat!args apply;
 }
 
 
@@ -2015,7 +1963,18 @@ template iota(alias beg, alias end, alias step) if (step != 0)
 {
     static if ((end - beg) / step >= 0)
     {
-        alias _iota!(beg, step).upto!end iota;
+        static assert(isValue!(long, beg) && isValue!(long, step));
+
+        static if (step > 0)
+            enum count = cast(size_t) ((end - beg + step - 1) / step);
+        else
+            enum count = cast(size_t) ((end - beg + step + 1) / step);
+
+        alias typeof(true ? beg : step) T;
+
+        template increment(alias cur) { enum T increment = cur + step; }
+
+        alias recurrence!(count, increment, beg) iota;
     }
     else
     {
@@ -2047,37 +2006,6 @@ unittest    // doc example (array filling)
     static assert(Base64Chars[16] == 'Q');
     static assert(Base64Chars[32] == 'g');
     static assert(Base64Chars[62] == '+');
-}
-
-
-private // iota for integral numbers
-{
-    template _isIntegralIota(alias beg, alias step)
-    {
-        enum _isIntegralIota = isValue!(long, beg) && isValue!(long, step);
-    }
-
-    template _iota(alias beg, alias step) if (_isIntegralIota!(beg, step))
-    {
-        template upto(alias end)
-        {
-            alias recurrence!(count!end, increment, beg) upto;
-        }
-
-     private:
-
-        alias typeof(true ? beg : step) T;
-
-        template count(alias end)
-        {
-            static if (step > 0)
-                enum count = cast(size_t) ((end - beg + step - 1) / step);
-            else
-                enum count = cast(size_t) ((end - beg + step + 1) / step);
-        }
-
-        template increment(alias cur) { enum T increment = cur + step; }
-    }
 }
 
 
@@ -2445,19 +2373,17 @@ unittest
 
 
 /* undocumented (for internal use) */
-template segmentWith(alias fun, size_t n, seq...) if (n > 0)
+template segmentWith(string fun, size_t n, seq...)
 {
-    alias _segmentWith!(variadicT!fun, n).segment!seq segmentWith;
+    alias segmentWith!(variadicT!fun, n, seq) segmentWith;
 }
 
-
-private template _segmentWith(alias fun, size_t n)
+template segmentWith(alias fun, size_t n, seq...) if (n > 0)
 {
     template segment()
     {
         alias Seq!() segment;
     }
-
     template segment(seq...)
     {
         static if (seq.length <= n)
@@ -2469,6 +2395,8 @@ private template _segmentWith(alias fun, size_t n)
             alias Seq!(fun!(seq[0 .. n]), segment!(seq[n .. $])) segment;
         }
     }
+
+    alias segment!seq segmentWith;
 }
 
 
@@ -2590,12 +2518,11 @@ private
         static if (seqs.length == 0)
             enum _minLength = 0;
         else
-            enum _minLength = _shortest!seqs.length;
-    }
+        {
+            alias most!(q{ a.length < b.length }, seqs) shortest;
 
-    template _shortest(seqs...) if (seqs.length > 0)
-    {
-        alias most!(q{ a.length < b.length }, seqs) _shortest;
+            enum _minLength = shortest.length;
+        }
     }
 }
 
@@ -2657,15 +2584,14 @@ static assert(zipped[2] == "string s");
  */
 template zipWith(alias fun, seqs...) if (isZippable!seqs)
 {
-    alias map!(_transverser!(variadicT!fun, seqs), iota!(_minLength!seqs)) zipWith;
-}
+    alias variadicT!fun _fun;
 
-private template _transverser(alias fun, seqs...)
-{
-    template _transverser(size_t i)
+    template transverser(size_t i)
     {
-        alias fun!(transverse!(i, seqs)) _transverser;
+        alias _fun!(transverse!(i, seqs)) transverser;
     }
+
+    alias map!(transverser, iota!(_minLength!seqs)) zipWith;
 }
 
 
@@ -2729,26 +2655,22 @@ static assert(is(PP[2] ==  void**));
  */
 template map(alias fun, seq...)
 {
-    static if (seq.length == 1)
+    alias unaryT!fun _fun;
+
+    static if (seq.length == 0)
     {
-        alias Seq!(fun!(seq[0])) map;
+        alias Seq!() map;
+    }
+    else static if (seq.length == 1)
+    {
+        alias Seq!(_fun!(seq[0])) map;
     }
     else
     {
-        alias Seq!(map!(fun, seq[ 0  .. $/2]),
-                   map!(fun, seq[$/2 ..  $ ])) map;
+        alias Seq!(map!(_fun, seq[ 0  .. $/2]),
+                   map!(_fun, seq[$/2 ..  $ ])) map;
     }
 }
-
-/// ditto
-template map(string fun, seq...)
-{
-    alias map!(unaryT!fun, seq) map;
-}
-
-
-template map(alias  fun) { alias Seq!() map; }
-template map(string fun) { alias Seq!() map; }
 
 
 unittest
@@ -2777,22 +2699,24 @@ unittest
 
 
 /* Recursive map, used by uniqBy */
-template mapRec(alias fun, seq...)
+template mapRec(string fun, seq...)
 {
-    alias _mapRec!(variadicT!fun).mapRec!seq mapRec;
+    alias mapRec!(variadicT!fun, seq) mapRec;
 }
 
-private template _mapRec(alias fun)
+template mapRec(alias fun, seq...)
 {
-    template mapRec(seq...)
+    template _impl()
     {
-        alias fun!(seq[0], mapRec!(seq[1 .. $])) mapRec;
+        alias Seq!() _impl;
     }
 
-    template mapRec()
+    template _impl(seq...)
     {
-        alias Seq!() mapRec;
+        alias fun!(seq[0], _impl!(seq[1 .. $])) _impl;
     }
+
+    alias _impl!seq mapRec;
 }
 
 
@@ -3016,55 +2940,52 @@ static assert(is( Dec == TypeSeq!(double, int, uint, short, bool) ));
  */
 template sort(alias comp, seq...)
 {
-     alias _sort!(binaryT!comp).sort!seq sort;
-}
-
-
-private template _sort(alias comp)
-{
-    template sort(seq...)
+    template _impl(alias comp)
     {
-        static if (seq.length < 2)
+        template sort(seq...)
         {
-            alias seq sort;
-        }
-        else
-        {
-            alias Merge!(sort!(seq[ 0  .. $/2]))
-                  .With!(sort!(seq[$/2 ..  $ ])) sort;
-        }
-    }
-
-  private:
-
-    template Merge()
-    {
-        template With(B...)
-        {
-            alias B With;
-        }
-    }
-
-    template Merge(A...)
-    {
-        template With()
-        {
-            alias A With;
-        }
-
-        template With(B...)
-        {
-            // Comparison must be in this order for stability.
-            static if (comp!(B[0], A[0]))
+            static if (seq.length < 2)
             {
-                alias Seq!(B[0], Merge!(A        ).With!(B[1 .. $])) With;
+                alias seq sort;
             }
             else
             {
-                alias Seq!(A[0], Merge!(A[1 .. $]).With!(B        )) With;
+                alias Merge!(sort!(seq[ 0  .. $/2]))
+                      .With!(sort!(seq[$/2 ..  $ ])) sort;
+            }
+        }
+
+        template Merge()
+        {
+            template With(B...)
+            {
+                alias B With;
+            }
+        }
+
+        template Merge(A...)
+        {
+            template With()
+            {
+                alias A With;
+            }
+
+            template With(B...)
+            {
+                // Comparison must be in this order for stability.
+                static if (comp!(B[0], A[0]))
+                {
+                    alias Seq!(B[0], Merge!(A        ).With!(B[1 .. $])) With;
+                }
+                else
+                {
+                    alias Seq!(A[0], Merge!(A[1 .. $]).With!(B        )) With;
+                }
             }
         }
     }
+
+    alias _impl!(binaryT!comp).sort!seq sort;
 }
 
 
@@ -3182,35 +3103,34 @@ static assert(is(Res == TypeSeq!(int, short, uint)));
  */
 template uniqBy(alias eq, seq...)
 {
-    alias mapRec!(_uniqCons!(binaryT!eq).uniqCons, seq) uniqBy;
-}
-
-
-private template _uniqCons(alias eq)
-{
-    template uniqCons(car, cdr...)
+    template _impl(alias eq)
     {
-        static if (cdr.length && eq!(car, cdr[0]))
+        template uniqCons(car, cdr...)
         {
-            alias Seq!(car, cdr[1 .. $]) uniqCons;
+            static if (cdr.length && eq!(car, cdr[0]))
+            {
+                alias Seq!(car, cdr[1 .. $]) uniqCons;
+            }
+            else
+            {
+                alias Seq!(car, cdr) uniqCons;
+            }
         }
-        else
+
+        template uniqCons(alias car, cdr...)
         {
-            alias Seq!(car, cdr) uniqCons;
+            static if (cdr.length && eq!(car, cdr[0]))
+            {
+                alias Seq!(car, cdr[1 .. $]) uniqCons;
+            }
+            else
+            {
+                alias Seq!(car, cdr) uniqCons;
+            }
         }
     }
 
-    template uniqCons(alias car, cdr...)
-    {
-        static if (cdr.length && eq!(car, cdr[0]))
-        {
-            alias Seq!(car, cdr[1 .. $]) uniqCons;
-        }
-        else
-        {
-            alias Seq!(car, cdr) uniqCons;
-        }
-    }
+    alias mapRec!(_impl!(binaryT!eq).uniqCons, seq) uniqBy;
 }
 
 
@@ -3372,33 +3292,33 @@ See_Also:
  */
 template reduce(alias fun, Seed, seq...)
 {
-    alias _reduce!(binaryT!fun).reduce!(Seed, seq) reduce;
+    alias _reduce!(binaryT!fun)._impl!(Seed, seq) reduce;
 }
 
 /// ditto
 template reduce(alias fun, alias Seed, seq...)
 {
-    alias _reduce!(binaryT!fun).reduce!(Seed, seq) reduce;
+    alias _reduce!(binaryT!fun)._impl!(Seed, seq) reduce;
 }
 
 
 private template _reduce(alias fun)
 {
-    template reduce(      Seed) { alias Seed reduce; }
-    template reduce(alias Seed) { alias Seed reduce; }
-    template reduce(      Seed, seq...) { mixin(_reduceBody); }
-    template reduce(alias Seed, seq...) { mixin(_reduceBody); }
+    template _impl(      Seed) { alias Seed _impl; }
+    template _impl(alias Seed) { alias Seed _impl; }
+    template _impl(      Seed, seq...) { mixin(_reduceBody); }
+    template _impl(alias Seed, seq...) { mixin(_reduceBody); }
 
     enum _reduceBody =
     q{
         static if (seq.length == 1)
         {
-            alias fun!(Seed, seq[0]) reduce;
+            alias fun!(Seed, seq[0]) _impl;
         }
         else
         {
             // Halving seq reduces the recursion depth.
-            alias reduce!(reduce!(Seed, seq[0 .. $/2]), seq[$/2 .. $]) reduce;
+            alias _impl!(_impl!(Seed, seq[0 .. $/2]), seq[$/2 .. $]) _impl;
         }
     };
 }
@@ -3559,24 +3479,23 @@ static assert(is(Largest == double));
  */
 template most(alias comp, seq...) if (seq.length > 0)
 {
-    alias reduce!(_more!(binaryT!comp), seq) most;
-}
-
-
-private template _more(alias comp)
-{
-    template _more(pair...)
+    template more(alias comp)
     {
-        // Comparison must be in this order for stability.
-        static if (comp!(pair[1], pair[0]))
+        template more(pair...)
         {
-            alias Id!(pair[1]) _more;
-        }
-        else
-        {
-            alias Id!(pair[0]) _more;
+            // Comparison must be in this order for stability.
+            static if (comp!(pair[1], pair[0]))
+            {
+                alias Id!(pair[1]) more;
+            }
+            else
+            {
+                alias Id!(pair[0]) more;
+            }
         }
     }
+
+    alias reduce!(more!(binaryT!comp), seq) most;
 }
 
 
@@ -3939,9 +3858,11 @@ static assert(meta.countIf!(q{ a[0] == '_' },
  */
 template countIf(alias pred, seq...)
 {
+    alias unaryT!pred _pred;
+
     static if (seq.length < 2)
     {
-        static if (seq.length == 0 || !pred!(seq[0]))
+        static if (seq.length == 0 || !_pred!(seq[0]))
         {
             enum size_t countIf = 0;
         }
@@ -3952,14 +3873,9 @@ template countIf(alias pred, seq...)
     }
     else
     {
-        enum countIf = countIf!(pred, seq[ 0  .. $/2]) +
-                       countIf!(pred, seq[$/2 ..  $ ]);
+        enum countIf = countIf!(_pred, seq[ 0  .. $/2]) +
+                       countIf!(_pred, seq[$/2 ..  $ ]);
     }
-}
-
-template countIf(string pred, seq...)
-{
-    enum countIf = countIf!(unaryT!pred, seq);
 }
 
 
@@ -4360,22 +4276,24 @@ static assert(is(Inter == meta.setify!(int, bool, bool)));
  */
 template intersection(seqs...)
 {
-    alias reduce!(compose!(pack, .intersection), seqs).expand intersection;
-}
+    template _impl(seqs...)
+    {
+        alias reduce!(compose!(pack, .intersection), seqs).expand _impl;
+    }
+    template _impl(alias A, alias B)
+    {
+        alias intersectionBy!(metaComp, A, B) _impl;
+    }
+    template _impl(alias A)
+    {
+        alias setify!(A.expand) _impl;
+    }
+    template _impl()
+    {
+        alias Seq!() _impl;
+    }
 
-template intersection(alias A, alias B)
-{
-    alias intersectionBy!(metaComp, A, B) intersection;
-}
-
-template intersection(alias A)
-{
-    alias setify!(A.expand) intersection;
-}
-
-template intersection()
-{
-    alias Seq!() intersection;
+    alias _impl!seqs intersection;
 }
 
 
@@ -4434,12 +4352,6 @@ unittest
 /* internal use */
 template intersectionBy(alias comp, alias A, alias B)
 {
-    alias _intersectionBy!comp.Intersect!(sort!(comp, A.expand))
-                                   .With!(sort!(comp, B.expand)) intersectionBy;
-}
-
-private template _intersectionBy(alias comp)
-{
     template Intersect(A...)
     {
         template With(B...)
@@ -4468,6 +4380,9 @@ private template _intersectionBy(alias comp)
     {
         template With(B...) { alias Seq!() With; }
     }
+
+    alias Intersect!(sort!(comp, A.expand))
+              .With!(sort!(comp, B.expand)) intersectionBy;
 }
 
 
@@ -4506,16 +4421,6 @@ static assert(is(T == uint));
  */
 template cond(cases...) if (cases.length > 0)
 {
-    static if (segmentWith!(_matchCase, 2, cases).length)
-    {
-        alias frontof!(segmentWith!(_matchCase, 2, cases)) cond;
-    }
-    else static assert(0, "No match");
-}
-
-
-private
-{
     template _matchCase(bool cond, then...)
     {
         static if (cond)
@@ -4535,6 +4440,12 @@ private
     {
         static assert(0, "Malformed cond-then: "~ spec.stringof);
     }
+
+    static if (segmentWith!(_matchCase, 2, cases).length)
+    {
+        alias frontof!(segmentWith!(_matchCase, 2, cases)) cond;
+    }
+    else static assert(0, "No match");
 }
 
 
