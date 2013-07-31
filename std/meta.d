@@ -222,6 +222,32 @@ unittest
 
 
 /**
+Returns $(D true) if and only if $(D E) is a packed sequence.
+
+Params:
+ seq = Zero or more compile-time entities.
+ */
+template isPack(seq...)
+{
+    static if (seq.length == 1)
+        enum isPack = is(Id!(seq[0]).Tag == pack!(seq[0].expand).Tag);
+    else
+        enum isPack = false;
+}
+
+/**
+ */
+unittest
+{
+    static assert( isPack!(pack!(1,2, int)));
+    static assert(!isPack!(1,2, int));
+    static assert(!isPack!(1));
+    static assert(!isPack!(int));
+}
+
+
+
+/**
 Makes the mangled name of a compile-time entity.
 
 Params:
