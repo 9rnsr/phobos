@@ -43,13 +43,13 @@ Params:
  */
 template Id(E)
 {
-    alias E Id;
+    alias Id = E;
 }
 
 /// ditto
 template Id(alias E)
 {
-    alias E Id;
+    alias Id = E;
 }
 
 /**
@@ -59,9 +59,9 @@ unittest
 {
     template Front(seq...)
     {
-        alias meta.Id!(seq[0]) Front;
+        alias Front = meta.Id!(seq[0]);
     }
-    alias Front!(10, 20, 30) front;
+    alias front = Front!(10, 20, 30);
     static assert(front == 10);
 }
 
@@ -69,9 +69,9 @@ unittest
 {
     int sym;
 
-    alias Id!100 n;
-    alias Id!int T;
-    alias Id!sym s;
+    alias n = Id!100;
+    alias T = Id!int;
+    alias s = Id!sym;
     static assert(n == 100);
     static assert(is(T == int));
     static assert(__traits(isSame, s, sym));
@@ -88,14 +88,14 @@ the template variadic arguments: $(D seq).
  */
 template Seq(seq...)
 {
-    alias seq Seq;
+    alias Seq = seq;
 }
 
 /**
  */
 unittest
 {
-    alias meta.Seq!(int, double, string) Types;
+    alias Types = meta.Seq!(int, double, string);
 
     static assert(is(Types[0] == int));
     static assert(is(Types[1] == double));
@@ -109,7 +109,7 @@ array literal.
  */
 unittest
 {
-    alias meta.Seq!(10, 20, 30) numbers;
+    alias numbers = meta.Seq!(10, 20, 30);
     int[] arr = [ 0, numbers, 100 ];
     assert(arr == [ 0, 10, 20, 30, 100 ]);
 }
@@ -130,7 +130,7 @@ Returns:
  */
 template TypeSeq(Types...)
 {
-    alias Types TypeSeq;
+    alias TypeSeq = Types;
 }
 
 /**
@@ -138,7 +138,7 @@ template TypeSeq(Types...)
  */
 unittest
 {
-    alias TypeSeq!(int, double, string) A;
+    alias A = TypeSeq!(int, double, string);
     static assert( is(A == TypeSeq!(int, double, string)));
     static assert(!is(A == TypeSeq!(string, int, double)));
     static assert(!is(A == TypeSeq!()));
@@ -171,7 +171,7 @@ template pack(seq...)
     /**
      * Returns the packed sequence: $(D seq).
      */
-    alias seq expand;
+    alias expand = seq;
 
 
     /**
@@ -185,7 +185,7 @@ template pack(seq...)
      */
     template at(size_t i) if (i < length)
     {
-        alias Id!(seq[i]) at;
+        alias at = Id!(seq[i]);
     }
 
 
@@ -200,25 +200,25 @@ template pack(seq...)
 unittest
 {
     // Query the 0-th element of each sequence.
-    alias meta.transverse!(0, meta.pack!(int, 32),
-                              meta.pack!(double, 5.0),
-                              meta.pack!(string, "hello.")) first;
+    alias first = meta.transverse!(0, meta.pack!(int, 32),
+                                      meta.pack!(double, 5.0),
+                                      meta.pack!(string, "hello."));
     static assert(is(first == TypeSeq!(int, double, string)));
 }
 
 unittest
 {
-    alias pack!() empty;
+    alias empty = pack!();
     static assert(empty.length == 0);
 
     int sym;
-    alias pack!(20, int, sym) mixed;
+    alias mixed = pack!(20, int, sym);
     static assert(mixed.length == 3);
     static assert(mixed.expand[0] == 20);
     static assert(is(mixed.expand[1] == int));
     static assert(__traits(isSame, mixed.expand[2], sym));
 
-    alias pack!( pack!(1,2), pack!(int,bool), pack!void ) nested;
+    alias nested = pack!( pack!(1,2), pack!(int,bool), pack!void );
     static assert(nested.length == 3);
 }
 
@@ -408,15 +408,15 @@ These overloads serve partial application of $(D meta.isSame).
  */
 template isSame(A)
 {
-    template isSame(      B) { alias .isSame!(A, B) isSame; }
-    template isSame(alias B) { alias .isSame!(A, B) isSame; }
+    template isSame(      B) { alias isSame = .isSame!(A, B); }
+    template isSame(alias B) { alias isSame = .isSame!(A, B); }
 }
 
 /// ditto
 template isSame(alias A)
 {
-    template isSame(      B) { alias .isSame!(A, B) isSame; }
-    template isSame(alias B) { alias .isSame!(A, B) isSame; }
+    template isSame(      B) { alias isSame = .isSame!(A, B); }
+    template isSame(alias B) { alias isSame = .isSame!(A, B); }
 }
 
 /**
@@ -424,7 +424,7 @@ template isSame(alias A)
 unittest
 {
     // Bind double as the first argument.
-    alias meta.isSame!double isDouble;
+    alias isDouble = meta.isSame!double;
 
     static assert( isDouble!double);    // meta.isSame!(double, double)
     static assert(!isDouble!int   );    // meta.isSame!(double, int)
@@ -432,17 +432,17 @@ unittest
 
 unittest
 {
-    alias isSame!int Tx;
+    alias Tx = isSame!int;
     static assert( Tx!int);
     static assert(!Tx!200);
     static assert(!Tx!std);
 
-    alias isSame!200 Vx;
+    alias Vx = isSame!200;
     static assert(!Vx!int);
     static assert( Vx!200);
     static assert(!Vx!std);
 
-    alias isSame!std Sx;
+    alias Sx = isSame!std;
     static assert(!Sx!int);
     static assert(!Sx!200);
     static assert( Sx!std);
@@ -468,11 +468,11 @@ template isType(alias E)
  */
 unittest
 {
-    alias meta.Seq!(int, "x",
-                    double, "y",
-                    string, "z") Mixed;
+    alias Mixed = meta.Seq!(int,    "x",
+                            double, "y",
+                            string, "z");
 
-    alias meta.filter!(meta.isType, Mixed) Types;
+    alias Types = meta.filter!(meta.isType, Mixed);
     static assert(is(Types == TypeSeq!(int, double, string)));
 }
 
@@ -642,11 +642,11 @@ private mixin template _installLambdaExpr(string expr)
     // The result can be an atomic entity or a sequence as expr returns.
     static if (__traits(compiles, _expectEmptySeq!(mixin("("~ expr ~")[0 .. 0]"))))
     {
-        mixin("alias Seq!("~ expr ~") _;");
+        mixin("alias _ = Seq!("~ expr ~");");
     }
     else
     {
-        mixin("alias  Id!("~ expr ~") _;");
+        mixin("alias _ =  Id!("~ expr ~");");
     }
 }
 
@@ -667,28 +667,28 @@ template unaryT(string expr)
 {
     template _impl(args...)
     {
-        alias Id!(args[0]) a, A;
+        alias A = Id!(args[0]), a = A;
         mixin _installLambdaExpr!expr;
     }
 
-    template unaryT(alias a) { alias _impl!a._ unaryT; }
-    template unaryT(      A) { alias _impl!A._ unaryT; }
+    template unaryT(alias a) { alias unaryT = _impl!a._; }
+    template unaryT(      A) { alias unaryT = _impl!A._; }
 }
 
 /// ditto
 template unaryT(alias templat)
 {
-    alias templat unaryT;
+    alias unaryT = templat;
 }
 
 /**
  */
 unittest
 {
-    alias meta.unaryT!q{ const A } Constify;
+    alias Constify = meta.unaryT!q{ const A };
     static assert(is(Constify!int == const int));
 
-    alias meta.unaryT!q{ a.length } lengthof;
+    alias lengthof = meta.unaryT!q{ a.length };
     static assert(lengthof!([ 1,2,3,4,5 ]) == 5);
 }
 
@@ -702,9 +702,9 @@ unittest
     import std.typecons;
 
     // Extracts the Types property of a Tuple instance.
-    alias meta.unaryT!q{ A.Types } expand;
+    alias expand = meta.unaryT!q{ A.Types };
 
-    alias expand!(Tuple!(int, double, string)) Types;
+    alias Types = expand!(Tuple!(int, double, string));
     static assert(is(Types[0] == int));
     static assert(is(Types[1] == double));
     static assert(is(Types[2] == string));
@@ -712,13 +712,13 @@ unittest
 
 unittest
 {
-    alias unaryT!q{ a + 1 } increment;
-    alias unaryT!q{ A* } Pointify;
+    alias increment = unaryT!q{ a + 1 };
+    alias Pointify  = unaryT!q{ A* };
     static assert(increment!10 == 11);
     static assert(is(Pointify!int == int*));
 
     // nested
-    alias unaryT!q{ apply!(unaryT!q{ a*2 }, a) * 2 } quadruple;
+    alias quadruple = unaryT!q{ apply!(unaryT!q{ a*2 }, a) * 2 };
     static assert(quadruple!10 == 40);
 }
 
@@ -726,18 +726,18 @@ unittest    // Test for sequence return
 {
     struct Tup(T...)
     {
-        alias T Types;
+        alias Types = T;
     }
-    alias unaryT!q{ A.Types } Expand;
-    alias Expand!(Tup!(int, double, string)) IDS;
+    alias Expand = unaryT!q{ A.Types };
+    alias IDS = Expand!(Tup!(int, double, string));
     static assert(is(IDS == Seq!(int, double, string)));
 
     // 1-sequence
-    alias unaryT!q{ Seq!(a) } oneseq;
+    alias oneseq = unaryT!q{ Seq!(a) };
     static assert(oneseq!int.length == 1);
 
     // arrays are not sequences
-    alias unaryT!q{ a[0 .. 2] } slice;
+    alias slice = unaryT!q{ a[0 .. 2] };
     static assert(slice!([1,2,3]) == [1,2]);
 }
 
@@ -758,21 +758,21 @@ template binaryT(string expr)
 {
     template _impl(args...)
     {
-        alias Id!(args[0]) a, A;
-        alias Id!(args[1]) b, B;
+        alias A = Id!(args[0]), a = A;
+        alias B = Id!(args[1]), b = B;
         mixin _installLambdaExpr!expr;
     }
 
     template binaryT(AB...) if (AB.length == 2)
     {
-        alias _impl!AB._ binaryT;
+        alias binaryT = _impl!AB._;
     }
 }
 
 /// ditto
 template binaryT(alias templat)
 {
-    alias templat binaryT;
+    alias binaryT = templat;
 }
 
 /**
@@ -781,7 +781,7 @@ template binaryT(alias templat)
  */
 unittest
 {
-    alias meta.binaryT!q{ a + B.sizeof } accumSize;
+    alias accumSize = meta.binaryT!q{ a + B.sizeof };
 
     enum n1 = accumSize!( 0,    int);
     enum n2 = accumSize!(n1, double);
@@ -791,29 +791,29 @@ unittest
 
 unittest
 {
-    alias binaryT!q{ B[A] } Assoc;
-    alias binaryT!q{ A[b] } ArrayA;
-    alias binaryT!q{ B[a] } ArrayB;
-    alias binaryT!q{ a / b } div;
+    alias Assoc  = binaryT!q{ B[A] };
+    alias ArrayA = binaryT!q{ A[b] };
+    alias ArrayB = binaryT!q{ B[a] };
+    alias div    = binaryT!q{ a / b };
     static assert(is(Assoc!(string, int) == int[string]));
     static assert(is(ArrayA!(int, 10) == int[10]));
     static assert(is(ArrayB!(10, int) == int[10]));
     static assert(div!(28, -7) == -4);
 
     // nested
-    alias binaryT!q{ apply!(binaryT!q{ a / b }, a+b, 2) } Ave;
+    alias Ave = binaryT!q{ apply!(binaryT!q{ a / b }, a+b, 2) };
     static assert(Ave!(10, 20) == 15);
 }
 
 unittest    // Test for sequence return
 {
-    alias binaryT!q{ Seq!(a, b, 3) } ab3;
+    alias ab3 = binaryT!q{ Seq!(a, b, 3) };
     static assert([ ab3!(10, 20) ] == [ 10, 20, 3 ]);
 }
 
 unittest    // bug 4431
 {
-    alias binaryT!q{ B[A] } Assoc;
+    alias Assoc = binaryT!q{ B[A] };
     struct S {}
     static assert(is(Assoc!(int, S) == S[int]));
     static assert(is(Assoc!(S, int) == int[S]));
@@ -845,8 +845,8 @@ template variadicT(string expr)
     {
         static if (i < n && i < 8)
         {
-            mixin("alias Id!(args[i]) "~ "abcdefgh"[i] ~","
-                                       ~ "ABCDEFGH"[i] ~";");
+            mixin("alias "~ "abcdefgh"[i] ~" = Id!(args[i]);");
+            mixin("alias "~ "ABCDEFGH"[i] ~" = Id!(args[i]);");
             mixin _parameters!(n, i + 1);
         }
     }
@@ -857,61 +857,61 @@ template variadicT(string expr)
         mixin _installLambdaExpr!expr;
     }
 
-    template variadicT(args...) { alias _impl!args._ variadicT; }
+    template variadicT(args...) { alias variadicT = _impl!args._; }
 }
 
 /// ditto
 template variadicT(alias templat)
 {
-    alias templat variadicT;
+    alias variadicT = templat;
 }
 
 /**
  */
 unittest
 {
-    alias meta.variadicT!q{ meta.Seq!(args[1 .. $], A) } rotate1;
+    alias rotate1 = meta.variadicT!q{ meta.Seq!(args[1 .. $], A) };
 
     static assert([ rotate1!(1, 2, 3, 4) ] == [ 2, 3, 4, 1 ]);
 }
 
 unittest
 {
-    alias variadicT!q{ a + b*c } addMul;
+    alias addMul = variadicT!q{ a + b*c };
     static assert(addMul!(2,  3,  5) == 2 +  3* 5);
     static assert(addMul!(7, 11, 13) == 7 + 11*13);
 
-    alias variadicT!q{ [ g, e, c, a, b, d, f, h ] } shuffle;
+    alias shuffle = variadicT!q{ [ g, e, c, a, b, d, f, h ] };
     static assert(shuffle!(1,2,3,4,5,6,7,8) == [ 7,5,3,1,2,4,6,8 ]);
 
     // Using uppercase parameters
-    alias variadicT!q{ const(B)[A] } MakeConstAA;
+    alias MakeConstAA = variadicT!q{ const(B)[A] };
     static assert(is(MakeConstAA!(int, double) == const(double)[int]));
     static assert(is(MakeConstAA!(int, string) == const(string)[int]));
 
-    alias variadicT!q{ pack!(G, E, C, A, B, D, F, H) } Shuffle;
+    alias Shuffle = variadicT!q{ pack!(G, E, C, A, B, D, F, H) };
     static assert(isSame!(Shuffle!(int, double, string, bool,
                                    dchar, void*, short, byte),
                              pack!(short, dchar, string, int,
                                    double, bool, void*, byte)));
 
     // Mixing multicase parameters
-    alias variadicT!q{ A[b][c] } Make2D;
+    alias Make2D = variadicT!q{ A[b][c] };
     static assert(is(Make2D!(   int, 10, 20) ==    int[10][20]));
     static assert(is(Make2D!(double, 30, 10) == double[30][10]));
 
     // args
-    alias variadicT!q{ args.length } lengthof;
+    alias lengthof = variadicT!q{ args.length };
     static assert(lengthof!(1,2,3,4,5,6,7,8,9) == 9);
 
     // nested
-    alias variadicT!q{ apply!(variadicT!q{ pack!args }, args.length, args) } argcv;
+    alias argcv = variadicT!q{ apply!(variadicT!q{ pack!args }, args.length, args) };
     static assert(isSame!(argcv!(1, 2), pack!(2u, 1,2)));
 }
 
 unittest    // Test for sequence return
 {
-    alias variadicT!q{ args[0 .. $/2] } halve;
+    alias halve = variadicT!q{ args[0 .. $/2] };
     static assert([ halve!(1,2,3,4) ] == [ 1,2 ]);
 }
 
@@ -933,7 +933,7 @@ template bind(alias templat, args...)
 {
     template bind(rest...)
     {
-        alias apply!(variadicT!templat, args, rest) bind;
+        alias bind = apply!(variadicT!templat, args, rest);
     }
 }
 
@@ -947,16 +947,16 @@ unittest
     }
 
     // Get the types satisfying "int.sizeof < U.sizeof".
-    alias meta.filter!(meta.bind!(compareSize, int),
-                       byte, double, short, int, long) Result;
+    alias Result = meta.filter!(meta.bind!(compareSize, int),
+                                byte, double, short, int, long);
     static assert(is(Result == TypeSeq!(double, long) ));
 }
 
 unittest
 {
-    alias bind!(q{ A[B] }) Assoc;
-    alias bind!(q{ A[B] }, short) ShortAssoc;
-    alias bind!(q{ A[B] }, int, double) IntDouble;
+    alias Assoc      = bind!(q{ A[B] });
+    alias ShortAssoc = bind!(q{ A[B] }, short);
+    alias IntDouble  = bind!(q{ A[B] }, int, double);
     static assert(is(Assoc!(uint, void*) == uint[void*]));
     static assert(is(ShortAssoc!string == short[string]));
     static assert(is(IntDouble!() == int[double]));
@@ -981,7 +981,7 @@ template rbind(alias templat, args...)
 {
     template rbind(rest...)
     {
-        alias apply!(variadicT!templat, rest, args) rbind;
+        alias rbind = apply!(variadicT!templat, rest, args);
     }
 }
 
@@ -995,16 +995,16 @@ unittest
     }
 
     // Get the types satisfying "T.sizeof < int.sizeof"
-    alias meta.filter!(meta.rbind!(compareSize, int),
-                       byte, double, short, int, long) Result;
+    alias Result = meta.filter!(meta.rbind!(compareSize, int),
+                                byte, double, short, int, long);
     static assert(is(Result == TypeSeq!(byte, short) ));
 }
 
 unittest
 {
-    alias rbind!(q{ A[B] }) Assoc;
-    alias rbind!(q{ A[B] }, short) AssocShort;
-    alias rbind!(q{ A[B] }, int, double) IntDouble;
+    alias Assoc      = rbind!(q{ A[B] });
+    alias AssocShort = rbind!(q{ A[B] }, short);
+    alias IntDouble  = rbind!(q{ A[B] }, int, double);
     static assert(is(Assoc!(uint, void*) == uint[void*]));
     static assert(is(AssocShort!string == string[short]));
     static assert(is(IntDouble!() == int[double]));
@@ -1028,7 +1028,7 @@ template delay(alias templat, args...)
 {
     template delay(_...)
     {
-        alias apply!(variadicT!templat, args) delay;
+        alias delay = apply!(variadicT!templat, args);
     }
 }
 
@@ -1036,7 +1036,7 @@ template delay(alias templat, args...)
  */
 unittest
 {
-    alias meta.delay!(meta.Id, int) Int;
+    alias Int = meta.delay!(meta.Id, int);
     static assert(is(Int!() == int));
     static assert(is(Int!(void) == int));
     static assert(is(Int!(1,2,3) == int));
@@ -1049,19 +1049,19 @@ unittest
 {
     struct Error;
 
-    alias meta.guard!(q{ A[] }, meta.delay!(meta.Id, Error)) Array;
+    alias Array = meta.guard!(q{ A[] }, meta.delay!(meta.Id, Error));
     static assert(is(Array!int == int[]));
     static assert(is(Array!100 == Error));
 }
 
 unittest
 {
-    alias delay!(Seq) empty;
+    alias empty = delay!(Seq);
     static assert(empty!().length == 0);
     static assert(empty!(int).length == 0);
     static assert(empty!(int, double).length == 0);
 
-    alias delay!(q{ a + b }, 10, 20) sum30;
+    alias sum30 = delay!(q{ a + b }, 10, 20);
     static assert(sum30!() == 30);
     static assert(sum30!(40) == 30);
 }
@@ -1079,43 +1079,43 @@ Returns:
  */
 template constant(E)
 {
-    template constant(_...) { alias E constant; }
+    template constant(_...) { alias constant = E; }
 }
 
 /// ditto
 template constant(alias E)
 {
-    template constant(_...) { alias E constant; }
+    template constant(_...) { alias constant = E; }
 }
 
 /// ditto
 template constant()
 {
-    template constant(_...) { alias Seq!() constant; }
+    template constant(_...) { alias constant = Seq!(); }
 }
 
 /**
  */
 unittest
 {
-    alias meta.constant!int Int;
+    alias Int = meta.constant!int;
     static assert(is(Int!() == int));
     static assert(is(Int!(double, string) == int));
 }
 
 unittest
 {
-    alias constant!string String;
+    alias String = constant!string;
     static assert(is(String!() == string));
     static assert(is(String!(1,2,3) == string));
     static assert(is(String!(double, bool) == string));
 
-    alias constant!512 number;
+    alias number = constant!512;
     static assert(number!() == 512);
     static assert(number!(1,2,3) == 512);
     static assert(number!(double, bool) == 512);
 
-    alias constant!() empty;
+    alias empty = constant!();
     static assert(empty!().length == 0);
     static assert(empty!(1,2,3).length == 0);
     static assert(empty!(double, bool).length == 0);
@@ -1163,13 +1163,13 @@ unittest
 
 unittest
 {
-    alias not!(isSame!int) notInt;
+    alias notInt = not!(isSame!int);
     static assert( notInt!double);
     static assert( notInt!"none");
     static assert(!notInt!int   );
 
     // double invert
-    alias not!notInt isInt;
+    alias isInt = not!notInt;
     static assert(!isInt!double);
     static assert(!isInt!"none");
     static assert( isInt!int   );
@@ -1177,12 +1177,12 @@ unittest
 
 unittest
 {
-    alias not!"a == 5" notFive;
+    alias notFive = not!"a == 5";
     static assert( notFive!4);
     static assert( notFive!6);
     static assert(!notFive!5);
 
-    alias not!notFive isFive;
+    alias isFive = not!notFive;
     static assert(!isFive!4);
     static assert(!isFive!6);
     static assert( isFive!5);
@@ -1209,14 +1209,14 @@ Returns:
  */
 template and(preds...)
 {
-    alias reduce!(.and, preds) and;
+    alias and = reduce!(.and, preds);
 }
 
 /**
  */
 unittest
 {
-    alias meta.and!(meta.isType, q{ is(A : long) }, q{ A.min < 0 }) isSignedInt;
+    alias isSignedInt = meta.and!(meta.isType, q{ is(A : long) }, q{ A.min < 0 });
     static assert( isSignedInt!short);
     static assert( isSignedInt!int);
     static assert(!isSignedInt!uint);
@@ -1241,21 +1241,21 @@ unittest
     template isConst(T) { enum isConst = is(T == const); }
 
     // Compose nothing
-    alias and!() yes;
+    alias yes = and!();
     static assert(yes!());
     static assert(yes!(1, 2, 3));
 
     // No actual composition
-    alias and!isConst isConst2;
+    alias isConst2 = and!isConst;
     static assert( isConst2!(const int));
     static assert(!isConst2!(      int));
 
-    alias and!q{ a < 0 } isNeg;
+    alias isNeg = and!q{ a < 0 };
     static assert( isNeg!(-1));
     static assert(!isNeg!( 0));
 
     // Compose template and string
-    alias and!(isConst, q{ A.sizeof < 4 }) isTinyConst;
+    alias isTinyConst = and!(isConst, q{ A.sizeof < 4 });
     static assert( isTinyConst!(const short));
     static assert(!isTinyConst!(      short));
     static assert(!isTinyConst!(const   int));
@@ -1283,7 +1283,7 @@ Returns:
  */
 template or(preds...)
 {
-    alias reduce!(.or, preds) or;
+    alias or = reduce!(.or, preds);
 }
 
 /**
@@ -1291,8 +1291,8 @@ template or(preds...)
 unittest
 {
     // Note that bool doesn't have the .min property.
-    alias meta.filter!(meta.or!(q{ A.sizeof < 4 }, q{ A.min < 0 }),
-                       bool, ushort, int, uint) R;
+    alias R = meta.filter!(meta.or!(q{ A.sizeof < 4 }, q{ A.min < 0 }),
+                           bool, ushort, int, uint);
     static assert(is(R == TypeSeq!(bool, ushort, int)));
 }
 
@@ -1316,20 +1316,20 @@ unittest
     }
 
     // Compose nothing
-    alias or!() no;
+    alias no = or!();
     static assert(!no!());
 
     // No actual composition
-    alias or!isConst isConst2;
+    alias isConst2 = or!isConst;
     static assert( isConst2!(const int));
     static assert(!isConst2!(      int));
 
-    alias or!q{ a < 0 } isNeg;
+    alias isNeg = or!q{ a < 0 };
     static assert( isNeg!(-1));
     static assert(!isNeg!( 0));
 
     // Compose template and string
-    alias or!(isConst, q{ A.sizeof < 4 }) isTinyOrConst;
+    alias isTinyOrConst = or!(isConst, q{ A.sizeof < 4 });
     static assert( isTinyOrConst!(const short));
     static assert( isTinyOrConst!(      short));
     static assert( isTinyOrConst!(const   int));
@@ -1344,7 +1344,7 @@ turn instantiates the passed in templates in a chaining way:
 ----------
 template composition(args...)
 {
-    alias t1!(t2!( ... tn!(args) ... )) composition;
+    alias composition = t1!(t2!( ... tn!(args) ... ));
 }
 ----------
 
@@ -1358,15 +1358,15 @@ Returns:
  */
 template compose(templates...)
 {
-    alias reduce!(.compose, templates) compose;
+    alias compose = reduce!(.compose, templates);
 }
 
 /**
  */
 unittest
 {
-    alias meta.compose!(q{ A[] },
-                        q{ const A }) ConstArray;
+    alias ConstArray = meta.compose!(q{ A[] },
+                                     q{ const A });
     static assert(is(ConstArray!int == const(int)[]));
 }
 
@@ -1375,34 +1375,34 @@ template compose(alias template1 = Seq,
 {
     template compose(args...)
     {
-        alias apply!(template1, apply!(template2, args)) compose;
+        alias compose = apply!(template1, apply!(template2, args));
     }
 }
 
 unittest
 {
-    template Const(T) { alias const(T) Const; }
-    template Array(T) { alias T[] Array; }
+    template Const(T) { alias Const = const(T); }
+    template Array(T) { alias Array = T[]; }
 
     // No actual composition
-    alias compose!Const Const1;
-    alias compose!q{ a * 7 } mul1;
+    alias Const1 = compose!Const;
+    alias mul1   = compose!q{ a * 7 };
     static assert(is(Const1!int == const int));
     static assert(mul1!11 == 77);
 
     // Two templates
-    alias compose!(Array, Const) ArrayConst;
+    alias ArrayConst = compose!(Array, Const);
     static assert(is(ArrayConst!int == const(int)[]));
 
-    alias compose!(Seq, q{ a / b }) SeqDiv;
+    alias SeqDiv = compose!(Seq, q{ a / b });
     static assert(SeqDiv!(77, 11).length == 1);
     static assert(SeqDiv!(77, 11)[0] == 7);
 
-    alias compose!(q{ [ args ] }, reverse) arrayRev;
+    alias arrayRev = compose!(q{ [ args ] }, reverse);
     static assert(arrayRev!(1,2,3) == [ 3,2,1 ]);
 
     // More compositions
-    alias compose!(q{ a * 11 }, q{ a + 7 }, q{ -a }) mul11add7neg;
+    alias mul11add7neg = compose!(q{ a * 11 }, q{ a + 7 }, q{ -a });
     static assert(mul11add7neg!(-6) == (6 + 7) * 11);
 }
 
@@ -1419,11 +1419,11 @@ template trial(args...)
 {
     static if (__traits(compiles, t1!(args)))
     {
-        alias t1!(args) trial;
+        alias trial = t1!(args);
     }
     else
     {
-        alias t2!(args) trial;
+        alias trial = t2!(args);
     }
 }
 ----------
@@ -1440,14 +1440,14 @@ Returns:
  */
 template guard(templates...) if (templates.length > 0)
 {
-    alias reduce!(.guard, templates) guard;
+    alias guard = reduce!(.guard, templates);
 }
 
 /**
  */
 unittest
 {
-    alias meta.guard!(q{ A.min < 0 }, q{ false }) hasNegativeMin;
+    alias hasNegativeMin = meta.guard!(q{ A.min < 0 }, q{ false });
     static assert( hasNegativeMin!int);
     static assert(!hasNegativeMin!double);
     static assert(!hasNegativeMin!void);    // void.min is not defined!
@@ -1459,11 +1459,11 @@ template guard(alias template1, alias template2)
     {
         static if (__traits(compiles, apply!(template1, args)))
         {
-            alias apply!(template1, args) guard;
+            alias guard = apply!(template1, args);
         }
         else
         {
-            alias apply!(template2, args) guard;
+            alias guard = apply!(template2, args);
         }
     }
 }
@@ -1472,34 +1472,34 @@ template guard(alias templat)
 {
     template guard(args...)
     {
-        alias apply!(templat, args) guard;
+        alias guard = apply!(templat, args);
     }
 }
 
 unittest
 {
-    template Const(T) { alias const(T) Const; }
+    template Const(T) { alias Const = const(T); }
 
     // No actual guard
-    alias guard!Const JustConst;
+    alias JustConst = guard!Const;
     static assert(is(JustConst!int == const int));
     static assert(!__traits(compiles, JustConst!10));
 
-    alias guard!q{ a + 1 } increment;
+    alias increment = guard!q{ a + 1 };
     static assert(increment!13 == 14);
     static assert(!__traits(compiles, increment!double));
 
     // Double trial
-    alias guard!(Const, Id) MaybeConst;
+    alias MaybeConst = guard!(Const, Id);
     static assert(is(MaybeConst!int == const int));
     static assert(MaybeConst!"string" == "string");
 
-    alias guard!(q{ +a }, q{ A.init }) valueof;
+    alias valueof = guard!(q{ +a }, q{ A.init });
     static assert(valueof!1.0 == 1.0);
     static assert(valueof!int == 0);
 
     // Triple trial
-    alias guard!(q{ [a] }, q{ [A.min]  }, q{ [A.init] }) makeArray;
+    alias makeArray = guard!(q{ [a] }, q{ [A.min]  }, q{ [A.init] });
     static assert(makeArray!1.0 == [ 1.0 ]);
     static assert(makeArray!int == [ int.min ]);
     static assert(makeArray!string == [ "" ]);
@@ -1523,19 +1523,19 @@ Returns:
  */
 template conditional(alias pred, alias then, alias otherwise = meta.Id)
 {
-    alias variadicT!pred _pred;
-    alias variadicT!then _then;
-    alias variadicT!otherwise _otherwise;
+    alias _pred      = variadicT!pred;
+    alias _then      = variadicT!then;
+    alias _otherwise = variadicT!otherwise;
 
     template conditional(args...)
     {
         static if (_pred!args)
         {
-            alias _then!args conditional;
+            alias conditional = _then!args;
         }
         else
         {
-            alias _otherwise!args conditional;
+            alias conditional = _otherwise!args;
         }
     }
 }
@@ -1546,7 +1546,7 @@ unittest
 {
     import std.meta, std.traits, std.typecons;
 
-    alias meta.conditional!(q{ is(A == class) }, Rebindable, Unqual) NoTopConst;
+    alias NoTopConst = meta.conditional!(q{ is(A == class) }, Rebindable, Unqual);
 
     static assert(is( NoTopConst!(const Object) == Rebindable!(const Object) ));
     static assert(is( NoTopConst!(const int[]) == const(int)[] ));
@@ -1555,17 +1555,17 @@ unittest
 
 unittest
 {
-    alias conditional!(q{  true }, q{ const A }, q{ immutable A }) Const;
-    alias conditional!(q{ false }, q{ const A }, q{ immutable A }) Imm;
+    alias Const = conditional!(q{  true }, q{ const A }, q{ immutable A });
+    alias Imm   = conditional!(q{ false }, q{ const A }, q{ immutable A });
     static assert(is(Const!double ==     const double));
     static assert(is(  Imm!double == immutable double));
 
-    alias conditional!(isType, q{ A }, q{ typeof(a) }) LooseTypeof;
+    alias LooseTypeof = conditional!(isType, q{ A }, q{ typeof(a) });
     static assert(is(LooseTypeof!int == int));
     static assert(is(LooseTypeof!"abc" == string));
 
     // Using default 'otherwise'
-    alias conditional!(q{ is(A == immutable) }, q{ A[] }) ImmArray;
+    alias ImmArray = conditional!(q{ is(A == immutable) }, q{ A[] });
     static assert(is(ImmArray!int == int));
     static assert(is(ImmArray!string == string));
     static assert(is(ImmArray!(immutable int) == immutable(int)[]));
@@ -1613,9 +1613,9 @@ template Example(Arg)
  */
 template apply(alias templat, args...)
 {
-    alias variadicT!templat _templat;
+    alias _templat = variadicT!templat;
 
-    alias _templat!args apply;
+    alias apply = _templat!args;
 }
 
 
@@ -1625,18 +1625,18 @@ template applier(args...)
 {
     template applier(alias templat)
     {
-        alias apply!(templat, args) applier;
+        alias applier = apply!(templat, args);
     }
 }
 
 
 unittest
 {
-    alias applier!() empty;
+    alias empty = applier!();
     static assert(isSame!( pack!(empty!Seq ), pack!( Seq!()) ));
     static assert(isSame!( pack!(empty!pack), pack!(pack!()) ));
 
-    alias applier!(int, 100) int100;
+    alias int100 = applier!(int, 100);
     static assert(isSame!( int100!q{ A[b] }, int[100] ));
 }
 
@@ -1652,11 +1652,11 @@ template recurrence(size_t n, alias fun, Seed...)
 {
     static if (n < 2)
     {
-        alias Seed[0 .. n * $] recurrence;
+        alias recurrence = Seed[0 .. n * $];
     }
     else
     {
-        alias Seq!(Seed, recurrence!(n - 1, fun, apply!(fun, Seed))) recurrence;
+        alias recurrence = Seq!(Seed, recurrence!(n - 1, fun, apply!(fun, Seed)));
     }
 }
 
@@ -1668,7 +1668,7 @@ unittest
     static assert([ recurrence!(2, q{ a*5 }, 1) ] == [ 1,5 ]);
     static assert([ recurrence!(5, q{ a*5 }, 1) ] == [ 1,5,25,125,625 ]);
 
-    alias recurrence!(3, q{ Seq!(args, void) }, int) VI;
+    alias VI = recurrence!(3, q{ Seq!(args, void) }, int);
     static assert(is(VI == TypeSeq!(int, int, void, int, void, void)));
 }
 
@@ -1705,28 +1705,28 @@ template iota(alias beg, alias end, alias step) if (step != 0)
         else
             enum count = cast(size_t) ((end - beg + step + 1) / step);
 
-        alias typeof(true ? beg : step) T;
+        alias T = typeof(true ? beg : step);
 
         template increment(alias cur) { enum T increment = cur + step; }
 
-        alias recurrence!(count, increment, beg) iota;
+        alias iota = recurrence!(count, increment, beg);
     }
     else
     {
-        alias Seq!() iota;
+        alias iota = Seq!();
     }
 }
 
 /// ditto
 template iota(alias beg, alias end)
 {
-    alias iota!(beg, end, cast(typeof(beg)) 1) iota;
+    alias iota = iota!(beg, end, cast(typeof(beg)) 1);
 }
 
 /// ditto
 template iota(alias end)
 {
-    alias iota!(cast(typeof(end)) 0, end) iota;
+    alias iota = iota!(cast(typeof(end)) 0, end);
 }
 
 /**
@@ -1784,12 +1784,12 @@ template repeat(size_t n, seq...)
 {
     static if (n < 2 || seq.length == 0)
     {
-        alias seq[0 .. n*$] repeat;
+        alias repeat = seq[0 .. n*$];
     }
     else
     {
-        alias Seq!(repeat!(   n    / 2, seq),
-                   repeat!((n + 1) / 2, seq)) repeat;
+        alias repeat = Seq!(repeat!(   n    / 2, seq),
+                            repeat!((n + 1) / 2, seq));
     }
 }
 
@@ -1839,7 +1839,7 @@ unittest
 /* undocumented (used by stride) */
 template frontof(seq...)
 {
-    alias Id!(seq[0]) frontof;
+    alias frontof = Id!(seq[0]);
 }
 
 
@@ -1862,12 +1862,12 @@ template reverse(seq...)
 {
     static if (seq.length < 2)
     {
-        alias seq reverse;
+        alias reverse = seq;
     }
     else
     {
-        alias Seq!(reverse!(seq[$/2 ..  $ ]),
-                   reverse!(seq[ 0  .. $/2])) reverse;
+        alias reverse = Seq!(reverse!(seq[$/2 ..  $ ]),
+                             reverse!(seq[ 0  .. $/2]));
     }
 }
 
@@ -1875,7 +1875,7 @@ template reverse(seq...)
  */
 unittest
 {
-    alias meta.reverse!(int, double, string) Rev;
+    alias Rev = meta.reverse!(int, double, string);
     static assert(is(Rev == TypeSeq!(string, double, int)));
 }
 
@@ -1918,17 +1918,17 @@ template rotate(sizediff_t n, seq...)
 {
     static if (seq.length < 2)
     {
-        alias seq rotate;
+        alias rotate = seq;
     }
     else
     {
         static if (n < 0)
         {
-            alias rotate!(seq.length + n, seq) rotate;
+            alias rotate = rotate!(seq.length + n, seq);
         }
         else
         {
-            alias Seq!(seq[n % $ .. $], seq[0 .. n % $]) rotate;
+            alias rotate = Seq!(seq[n % $ .. $], seq[0 .. n % $]);
         }
     }
 }
@@ -1937,8 +1937,8 @@ template rotate(sizediff_t n, seq...)
  */
 unittest
 {
-    alias meta.rotate!(+1, int, double, string) rotL;
-    alias meta.rotate!(-1, int, double, string) rotR;
+    alias rotL = meta.rotate!(+1, int, double, string);
+    alias rotR = meta.rotate!(-1, int, double, string);
 
     static assert(is(rotL == TypeSeq!(double, string, int)));
     static assert(is(rotR == TypeSeq!(string, int, double)));
@@ -1946,23 +1946,23 @@ unittest
 
 unittest
 {
-    alias rotate!(0) empty0;
-    alias rotate!(0, int) single0;
-    alias rotate!(0, int, double, string) triple0;
+    alias empty0  = rotate!(0);
+    alias single0 = rotate!(0, int);
+    alias triple0 = rotate!(0, int, double, string);
     static assert(is( empty0 == Seq!()));
     static assert(is(single0 == Seq!(int)));
     static assert(is(triple0 == Seq!(int, double, string)));
 
-    alias rotate!(+2) empty2;
-    alias rotate!(+2, int) single2;
-    alias rotate!(+2, int, double, string) triple2;
+    alias empty2  = rotate!(+2);
+    alias single2 = rotate!(+2, int);
+    alias triple2 = rotate!(+2, int, double, string);
     static assert(is( empty2 == Seq!()));
     static assert(is(single2 == Seq!(int)));
     static assert(is(triple2 == Seq!(string, int, double)));
 
-    alias rotate!(-2) empty2rev;
-    alias rotate!(-2, int) single2rev;
-    alias rotate!(-2, int, double, string) triple2rev;
+    alias empty2rev  = rotate!(-2);
+    alias single2rev = rotate!(-2, int);
+    alias triple2rev = rotate!(-2, int, double, string);
     static assert(is( empty2rev == Seq!()));
     static assert(is(single2rev == Seq!(int)));
     static assert(is(triple2rev == Seq!(double, string, int)));
@@ -1984,17 +1984,17 @@ Returns:
  */
 template stride(size_t n, seq...) if (n > 0)
 {
-    alias segmentWith!(frontof, n, seq) stride;
+    alias stride = segmentWith!(frontof, n, seq);
 }
 
 /**
  */
 unittest
 {
-    alias meta.Seq!(int, "index", 10,
-                    double, "number", 5.0) seq;
-    alias meta.stride!(3, seq        ) Types;
-    alias meta.stride!(3, seq[1 .. $]) names;
+    alias seq = meta.Seq!(int, "index", 10,
+                          double, "number", 5.0);
+    alias Types = meta.stride!(3, seq        );
+    alias names = meta.stride!(3, seq[1 .. $]);
 
     static assert(meta.isSame!(meta.pack!Types, meta.pack!(int, double)));
     static assert(meta.isSame!(meta.pack!names, meta.pack!("index", "number")));
@@ -2006,7 +2006,7 @@ unittest
     static assert(is(stride!(2) == Seq!()));
     static assert(is(stride!(5) == Seq!()));
 
-    alias stride!(1, int, double, string) AsIs;
+    alias AsIs = stride!(1, int, double, string);
     static assert(is(AsIs == TypeSeq!(int, double, string)));
 
     static assert([ stride!(2, 1,2,3,4,5) ] == [ 1,3,5 ]);
@@ -2033,7 +2033,7 @@ Returns:
  */
 template segment(size_t n, seq...) if (n > 0)
 {
-    alias segmentWith!(pack, n, seq) segment;
+    alias segment = segmentWith!(pack, n, seq);
 }
 
 /**
@@ -2042,24 +2042,24 @@ template segment(size_t n, seq...) if (n > 0)
  */
 unittest
 {
-    alias meta.Seq!(int, "index", 10,
-                    double, "number", 5.0) seq;
+    alias seq = meta.Seq!(int, "index", 10,
+                          double, "number", 5.0);
 
-    alias meta.segment!(3, seq) patterns;
+    alias patterns = meta.segment!(3, seq);
     static assert(meta.isSame!(patterns[0], meta.pack!(int, "index", 10)));
     static assert(meta.isSame!(patterns[1], meta.pack!(double, "number", 5.0)));
 }
 
 unittest
 {
-    alias segment!(1) empty1;
-    alias segment!(9) empty9;
+    alias empty1 = segment!(1);
+    alias empty9 = segment!(9);
     static assert(empty1.length == 0);
     static assert(empty9.length == 0);
 
-    alias segment!(1, 1,2,3,4) seg1;
-    alias segment!(2, 1,2,3,4) seg2;
-    alias segment!(3, 1,2,3,4) seg3;
+    alias seg1 = segment!(1, 1,2,3,4);
+    alias seg2 = segment!(2, 1,2,3,4);
+    alias seg3 = segment!(3, 1,2,3,4);
     static assert(isSame!( pack!seg1, pack!(pack!(1), pack!(2), pack!(3), pack!(4)) ));
     static assert(isSame!( pack!seg2, pack!(pack!(1,2), pack!(3,4)) ));
     static assert(isSame!( pack!seg3, pack!(pack!(1,2,3), pack!4) ));
@@ -2070,51 +2070,51 @@ unittest
 /* undocumented (for internal use) */
 template segmentWith(string fun, size_t n, seq...)
 {
-    alias segmentWith!(variadicT!fun, n, seq) segmentWith;
+    alias segmentWith = segmentWith!(variadicT!fun, n, seq);
 }
 
 template segmentWith(alias fun, size_t n, seq...) if (n > 0)
 {
     template segment()
     {
-        alias Seq!() segment;
+        alias segment = Seq!();
     }
     template segment(seq...)
     {
         static if (seq.length <= n)
         {
-            alias Seq!(fun!seq) segment;
+            alias segment = Seq!(fun!seq);
         }
         else
         {
-            alias Seq!(fun!(seq[0 .. n]), segment!(seq[n .. $])) segment;
+            alias segment = Seq!(fun!(seq[0 .. n]), segment!(seq[n .. $]));
         }
     }
 
-    alias segment!seq segmentWith;
+    alias segmentWith = segment!seq;
 }
 
 
 unittest
 {
-    alias segmentWith!(pack, 1) empty1;
-    alias segmentWith!(pack, 5) empty5;
+    alias empty1 = segmentWith!(pack, 1);
+    alias empty5 = segmentWith!(pack, 5);
     static assert(empty1.length == 0);
     static assert(empty5.length == 0);
 
-    alias segmentWith!(q{ a*2 }, 1,
-                       1,2,3,4,5,6) doubled;
+    alias doubled = segmentWith!(q{ a*2 }, 1,
+                                 1,2,3,4,5,6);
     static assert([ doubled ] == [ 2,4,6,8,10,12 ]);
 
-    alias segmentWith!(reverse, 2,
-                       1,2,3,4,5,6,7,8,9) rev2;
+    alias rev2 = segmentWith!(reverse, 2,
+                              1,2,3,4,5,6,7,8,9);
     static assert([ rev2 ] == [ 2,1,4,3,6,5,8,7,9 ]);
 }
 
 unittest
 {
-    alias meta.segmentWith!(q{ B[A] }, 2,
-                            string, int, string, double) result;
+    alias result = meta.segmentWith!(q{ B[A] }, 2,
+                                     string, int, string, double);
     static assert(is(result[0] ==    int[string]));
     static assert(is(result[1] == double[string]));
 }
@@ -2124,14 +2124,14 @@ unittest
 /* undocumented (for internal use) */
 template transverse(size_t i, seqs...) if (isTransversable!(i, seqs))
 {
-    alias map!(unpackAt!i, seqs) transverse;
+    alias transverse = map!(unpackAt!i, seqs);
 }
 
 private
 {
     template unpackAt(size_t i)
     {
-        template unpackAt(alias pak) { alias Id!(pak.expand[i]) unpackAt; }
+        template unpackAt(alias pak) { alias unpackAt = Id!(pak.expand[i]); }
     }
 
     template isTransversable(size_t i, seqs...)
@@ -2143,17 +2143,17 @@ private
 
 unittest
 {
-    alias transverse!0 empty0;
-    alias transverse!9 empty9;
+    alias empty0 = transverse!0;
+    alias empty9 = transverse!9;
     static assert(empty0.length == 0);
     static assert(empty9.length == 0);
 
-    alias transverse!(0, pack!(int, double, string)) single0;
-    alias transverse!(2, pack!(int, double, string)) single2;
+    alias single0 = transverse!(0, pack!(int, double, string));
+    alias single2 = transverse!(2, pack!(int, double, string));
     static assert(is(single0 == Seq!int));
     static assert(is(single2 == Seq!string));
 
-    alias transverse!(1, pack!(1,2), pack!(3,4,5), pack!(6,7)) jagged;
+    alias jagged = transverse!(1, pack!(1,2), pack!(3,4,5), pack!(6,7));
     static assert([ jagged ] == [ 2,4,7 ]);
 
     static assert(!__traits(compiles, transverse!(0, 1,2,3) ));
@@ -2162,9 +2162,9 @@ unittest
 
 unittest
 {
-    alias meta.transverse!(1, meta.pack!(int, 255),
-                              meta.pack!(double, 7.5),
-                              meta.pack!(string, "yo")) second;
+    alias second = meta.transverse!(1, meta.pack!(int, 255),
+                                       meta.pack!(double, 7.5),
+                                       meta.pack!(string, "yo"));
     static assert(meta.isSame!(meta.pack!second, meta.pack!(255, 7.5, "yo")));
 }
 
@@ -2186,16 +2186,16 @@ Returns:
  */
 template zip(seqs...) if (isZippable!seqs)
 {
-    alias zipWith!(pack, seqs) zip;
+    alias zip = zipWith!(pack, seqs);
 }
 
 /**
  */
 unittest
 {
-    alias meta.zip!(meta.pack!(int, 255),
-                    meta.pack!(double, 7.5),
-                    meta.pack!(string, "yo")) zipped;
+    alias zipped = meta.zip!(meta.pack!(int, 255),
+                             meta.pack!(double, 7.5),
+                             meta.pack!(string, "yo"));
     static assert(meta.isSame!(zipped[0], meta.pack!(int, double, string)));
     static assert(meta.isSame!(zipped[1], meta.pack!(255, 7.5, "yo")));
 }
@@ -2216,7 +2216,7 @@ private
             enum _minLength = 0;
         else
         {
-            alias most!(q{ a.length < b.length }, seqs) shortest;
+            alias shortest = most!(q{ a.length < b.length }, seqs);
 
             enum _minLength = shortest.length;
         }
@@ -2226,23 +2226,23 @@ private
 
 unittest
 {
-    alias zip!() empty;
+    alias empty = zip!();
     static assert(empty.length == 0);
 
-    alias zip!(pack!(int, double, bool), pack!(4, 8, 1)) zip3;
+    alias zip3 = zip!(pack!(int, double, bool), pack!(4, 8, 1));
     static assert(zip3.length == 3);
     static assert(isSame!(zip3[0], pack!(   int, 4)));
     static assert(isSame!(zip3[1], pack!(double, 8)));
     static assert(isSame!(zip3[2], pack!(  bool, 1)));
 
-    alias zip!(pack!(int, double, string),
-               pack!("i", "x"),
-               pack!(5, 1.5, "moinmoin")) jagged;
+    alias jagged = zip!(pack!(int, double, string),
+                        pack!("i", "x"),
+                        pack!(5, 1.5, "moinmoin"));
     static assert(jagged.length == 2);
     static assert(isSame!(jagged[0], pack!(   int, "i",   5)));
     static assert(isSame!(jagged[1], pack!(double, "x", 1.5)));
 
-    alias zip!(pack!int, pack!(), pack!(double, string)) degen;
+    alias degen = zip!(pack!int, pack!(), pack!(double, string));
     static assert(degen.length == 0);
 }
 
@@ -2261,23 +2261,23 @@ Returns:
  */
 template zipWith(alias fun, seqs...) if (isZippable!seqs)
 {
-    alias variadicT!fun _fun;
+    alias _fun = variadicT!fun;
 
     template transverser(size_t i)
     {
-        alias _fun!(transverse!(i, seqs)) transverser;
+        alias transverser = _fun!(transverse!(i, seqs));
     }
 
-    alias map!(transverser, iota!(_minLength!seqs)) zipWith;
+    alias zipWith = map!(transverser, iota!(_minLength!seqs));
 }
 
 /**
  */
 unittest
 {
-    alias meta.pack!("int", "double", "string") types;
-    alias meta.pack!(  "i",      "x",      "s") names;
-    alias meta.zipWith!(q{ a~" "~b }, types, names) zipped;
+    alias types = meta.pack!("int", "double", "string");
+    alias names = meta.pack!(  "i",      "x",      "s");
+    alias zipped = meta.zipWith!(q{ a~" "~b }, types, names);
 
     static assert(zipped[0] == "int i");
     static assert(zipped[1] == "double x");
@@ -2288,16 +2288,16 @@ unittest
 {
     static struct MyPack(int n, T);
 
-    alias zipWith!(compose!(MyPack, reverse),
-                   pack!(int, double, string),
-                   pack!(  1,      2,      3)) revzip;
+    alias revzip = zipWith!(compose!(MyPack, reverse),
+                            pack!(int, double, string),
+                            pack!(  1,      2,      3));
     static assert(is(revzip[0] == MyPack!(1,    int)));
     static assert(is(revzip[1] == MyPack!(2, double)));
     static assert(is(revzip[2] == MyPack!(3, string)));
 
-    alias zipWith!(q{ A[B] },
-                   pack!(  int, double, string),
-                   pack!(dchar, string,    int)) assoc;
+    alias assoc = zipWith!(q{ A[B] },
+                           pack!(  int, double, string),
+                           pack!(dchar, string,    int));
     static assert(is(assoc[0] ==    int[ dchar]));
     static assert(is(assoc[1] == double[string]));
     static assert(is(assoc[2] == string[   int]));
@@ -2324,20 +2324,20 @@ Returns:
  */
 template map(alias fun, seq...)
 {
-    alias unaryT!fun _fun;
+    alias _fun = unaryT!fun;
 
     static if (seq.length == 0)
     {
-        alias Seq!() map;
+        alias map = Seq!();
     }
     else static if (seq.length == 1)
     {
-        alias Seq!(_fun!(seq[0])) map;
+        alias map = Seq!(_fun!(seq[0]));
     }
     else
     {
-        alias Seq!(map!(_fun, seq[ 0  .. $/2]),
-                   map!(_fun, seq[$/2 ..  $ ])) map;
+        alias map = Seq!(map!(_fun, seq[ 0  .. $/2]),
+                         map!(_fun, seq[$/2 ..  $ ]));
     }
 }
 
@@ -2346,7 +2346,7 @@ template map(alias fun, seq...)
  */
 unittest
 {
-    alias meta.map!(q{ A* }, int, double, void*) PP;
+    alias PP = meta.map!(q{ A* }, int, double, void*);
     static assert(is(PP[0] ==    int*));
     static assert(is(PP[1] == double*));
     static assert(is(PP[2] ==  void**));
@@ -2357,13 +2357,13 @@ unittest
     static assert(map!(Id).length == 0);
     static assert(map!(q{ a }).length == 0);
 
-    alias map!(Id, int) single;
+    alias single = map!(Id, int);
     static assert(is(single == Seq!int));
 
-    alias map!(q{ const A }, int) const1;
+    alias const1 = map!(q{ const A }, int);
     static assert(is(const1 == Seq!(const int)));
 
-    alias map!(q{ 2*a }, 1,2,3,4,5) double5;
+    alias double5 = map!(q{ 2*a }, 1,2,3,4,5);
     static assert([ double5 ] == [ 2,4,6,8,10 ]);
 }
 
@@ -2372,22 +2372,22 @@ unittest
 /* Recursive map, used by uniqBy */
 template mapRec(string fun, seq...)
 {
-    alias mapRec!(variadicT!fun, seq) mapRec;
+    alias mapRec = mapRec!(variadicT!fun, seq);
 }
 
 template mapRec(alias fun, seq...)
 {
     template _impl()
     {
-        alias Seq!() _impl;
+        alias _impl = Seq!();
     }
 
     template _impl(seq...)
     {
-        alias fun!(seq[0], _impl!(seq[1 .. $])) _impl;
+        alias _impl = fun!(seq[0], _impl!(seq[1 .. $]));
     }
 
-    alias _impl!seq mapRec;
+    alias mapRec = _impl!seq;
 }
 
 
@@ -2406,31 +2406,31 @@ Returns:
  */
 template filter(alias pred, seq...)
 {
-    alias map!(conditional!(pred, Id, constant!()), seq) filter;
+    alias filter = map!(conditional!(pred, Id, constant!()), seq);
 }
 
 /**
  */
 unittest
 {
-    alias meta.filter!(q{ A.sizeof < 4 }, byte, short, int, long) SmallTypes;
+    alias SmallTypes = meta.filter!(q{ A.sizeof < 4 }, byte, short, int, long);
     static assert(is(SmallTypes == TypeSeq!(byte, short)));
 }
 
 unittest
 {
-    alias filter!(isType) empty;
+    alias empty = filter!(isType);
     static assert(empty.length == 0);
 
-    alias filter!(isType, 1,2,3) none;
-    alias filter!(isValue, 1,2,3) all;
+    alias none = filter!(isType, 1,2,3);
+    alias all = filter!(isValue, 1,2,3);
     static assert([ none ] == []);
     static assert([ all ] == [ 1,2,3 ]);
 
-    alias filter!(isType, int, "x", double, "y") someT;
+    alias someT = filter!(isType, int, "x", double, "y");
     static assert(is(someT == Seq!(int, double)));
 
-    alias filter!(q{ a < 0 }, 4, -3, 2, -1, 0) someV;
+    alias someV = filter!(q{ a < 0 }, 4, -3, 2, -1, 0);
     static assert([ someV ] == [ -3, -1 ]);
 }
 
@@ -2449,35 +2449,35 @@ Returns:
  */
 template remove(E, seq...)
 {
-    alias filter!(not!(isSame!E), seq) remove;
+    alias remove = filter!(not!(isSame!E), seq);
 }
 
 /// ditto
 template remove(alias E, seq...)
 {
-    alias filter!(not!(isSame!E), seq) remove;
+    alias remove = filter!(not!(isSame!E), seq);
 }
 
 /**
  */
 unittest
 {
-    alias meta.remove!(void, int, void, double, void, string) Res;
+    alias Res = meta.remove!(void, int, void, double, void, string);
     static assert(is(Res == TypeSeq!(int, double, string)));
 }
 
 unittest
 {
-    alias remove!(void) empty1;
-    alias remove!(1024) empty2;
+    alias empty1 = remove!(void);
+    alias empty2 = remove!(1024);
     static assert(empty1.length == 0);
     static assert(empty2.length == 0);
 
     static assert([ remove!(void, 1,2,3,2,1) ] == [ 1,2,3,2,1 ]);
     static assert([ remove!(   2, 1,2,3,2,1) ] == [ 1,  3,  1 ]);
 
-    alias remove!(void, int,void,string,void,double) NoVoid;
-    alias remove!(   2, int,void,string,void,double) No2;
+    alias NoVoid = remove!(void, int,void,string,void,double);
+    alias No2    = remove!(   2, int,void,string,void,double);
     static assert(is(NoVoid == Seq!(int,     string,     double)));
     static assert(is(No2    == Seq!(int,void,string,void,double)));
 }
@@ -2498,13 +2498,13 @@ Returns:
  */
 template replace(From, To, seq...)
 {
-    alias map!(conditional!(isSame!From, constant!To), seq) replace;
+    alias replace = map!(conditional!(isSame!From, constant!To), seq);
 }
 
 /// ditto
 template replace(alias From, alias To, seq...)
 {
-    alias map!(conditional!(isSame!From, constant!To), seq) replace;
+    alias replace = map!(conditional!(isSame!From, constant!To), seq);
 }
 
 /**
@@ -2516,9 +2516,9 @@ unittest
     struct Example(Params...)
     {
         // Resolve 'This'
-        alias meta.replace!(This, Example!Params, Params) Types;
+        alias Types = meta.replace!(This, Example!Params, Params);
     }
-    alias Example!(int, double, This) Ex;
+    alias Ex = Example!(int, double, This);
     static assert(is(Ex.Types[2] == Ex));
 }
 
@@ -2529,31 +2529,31 @@ unittest
  */
 unittest
 {
-    alias meta.map!(meta.conditional!(q{ is(A == const) }, meta.constant!void),
-                    int, const double, string, const bool) Res;
+    alias Res = meta.map!(meta.conditional!(q{ is(A == const) }, meta.constant!void),
+                          int, const double, string, const bool);
     static assert(is(Res == TypeSeq!(int, void, string, void)));
 }
 
 unittest
 {
-    alias replace!(void, int) empty;
+    alias empty = replace!(void, int);
     static assert(empty.length == 0);
 
-    alias replace!(void, int, Seq!(int, string, double)) NoMatch;
+    alias NoMatch = replace!(void, int, Seq!(int, string, double));
     static assert(is(NoMatch == TypeSeq!(int, string, double)));
 
     // Test for the specializations
-    alias replace!(void, int, Seq!(void, double, void, string)) TT;
+    alias TT = replace!(void, int, Seq!(void, double, void, string));
     static assert(is(TT == TypeSeq!(int, double, int, string)));
 
-    alias replace!(null, "", Seq!(null, "abc", null, "def")) vv;
+    alias vv = replace!(null, "", Seq!(null, "abc", null, "def"));
     static assert([ vv ] == [ "", "abc", "", "def" ]);
 
     // Test for ambiguity problem with user-defined types due to @@@BUG4431@@@
     struct S;
-    alias replace!(  S, int, S, S, S) amb1;
-    alias replace!(int,   S, S, S, S) amb2;
-    alias replace!(  S,   S, S, S, S) amb3;
+    alias amb1 = replace!(  S, int, S, S, S);
+    alias amb2 = replace!(int,   S, S, S, S);
+    alias amb3 = replace!(  S,   S, S, S, S);
 }
 
 
@@ -2579,12 +2579,12 @@ template sort(alias comp, seq...)
         {
             static if (seq.length < 2)
             {
-                alias seq sort;
+                alias sort = seq;
             }
             else
             {
-                alias Merge!(sort!(seq[ 0  .. $/2]))
-                      .With!(sort!(seq[$/2 ..  $ ])) sort;
+                alias sort = Merge!(sort!(seq[ 0  .. $/2]))
+                             .With!(sort!(seq[$/2 ..  $ ]));
             }
         }
 
@@ -2592,7 +2592,7 @@ template sort(alias comp, seq...)
         {
             template With(B...)
             {
-                alias B With;
+                alias With = B;
             }
         }
 
@@ -2600,7 +2600,7 @@ template sort(alias comp, seq...)
         {
             template With()
             {
-                alias A With;
+                alias With = A;
             }
 
             template With(B...)
@@ -2608,17 +2608,17 @@ template sort(alias comp, seq...)
                 // Comparison must be in this order for stability.
                 static if (comp!(B[0], A[0]))
                 {
-                    alias Seq!(B[0], Merge!(A        ).With!(B[1 .. $])) With;
+                    alias With = Seq!(B[0], Merge!(A        ).With!(B[1 .. $]));
                 }
                 else
                 {
-                    alias Seq!(A[0], Merge!(A[1 .. $]).With!(B        )) With;
+                    alias With = Seq!(A[0], Merge!(A[1 .. $]).With!(B        ));
                 }
             }
         }
     }
 
-    alias _impl!(binaryT!comp).sort!seq sort;
+    alias sort = _impl!(binaryT!comp).sort!seq;
 }
 
 /**
@@ -2626,10 +2626,10 @@ template sort(alias comp, seq...)
 unittest
 {
     // Sort types in terms of the sizes.
-    alias TypeSeq!(double, int, bool, uint, short) Types;
+    alias Types = TypeSeq!(double, int, bool, uint, short);
 
-    alias meta.sort!(q{ A.sizeof < B.sizeof }, Types) Inc;
-    alias meta.sort!(q{ A.sizeof > B.sizeof }, Types) Dec;
+    alias Inc = meta.sort!(q{ A.sizeof < B.sizeof }, Types);
+    alias Dec = meta.sort!(q{ A.sizeof > B.sizeof }, Types);
 
     static assert(is( Inc == TypeSeq!(bool, short, int, uint, double) ));
     static assert(is( Dec == TypeSeq!(double, int, uint, short, bool) ));
@@ -2640,17 +2640,17 @@ unittest
     template sizeLess(A, B) { enum sizeLess = (A.sizeof < B.sizeof); }
 
     // Trivial cases
-    alias sort!(sizeLess) Empty;
-    alias sort!(sizeLess, int) Single;
+    alias Empty  = sort!(sizeLess);
+    alias Single = sort!(sizeLess, int);
     static assert(is(Empty == Seq!()));
     static assert(is(Single == Seq!(int)));
 
     //
-    alias sort!(sizeLess, int, short) Double;
+    alias Double = sort!(sizeLess, int, short);
     static assert(is(Double == Seq!(short, int)));
 
-    alias sort!(sizeLess, long, int, short, byte) Sorted1;
-    alias sort!(sizeLess, short, int, byte, long) Sorted2;
+    alias Sorted1 = sort!(sizeLess, long, int, short, byte);
+    alias Sorted2 = sort!(sizeLess, short, int, byte, long);
     static assert(is(Sorted1 == Seq!(byte, short, int, long)));
     static assert(is(Sorted2 == Seq!(byte, short, int, long)));
 
@@ -2658,7 +2658,7 @@ unittest
     static assert([ sort!(q{ a > b }, 3,5,1,4,2) ] == [ 5,4,3,2,1 ]);
 
     // Test for stability
-    alias sort!(sizeLess, uint, short, ushort, int) Equiv;
+    alias Equiv = sort!(sizeLess, uint, short, ushort, int);
     static assert(is(Equiv == Seq!(short, ushort, uint, int)));
 }
 
@@ -2676,32 +2676,32 @@ Returns:
  */
 template uniq(seq...)
 {
-    alias uniqBy!(isSame, seq) uniq;
+    alias uniq = uniqBy!(isSame, seq);
 }
 
 /**
  */
 unittest
 {
-    alias meta.uniq!(1, 2, 3, 3, 4, 4, 4, 2, 2) result;
+    alias result = meta.uniq!(1, 2, 3, 3, 4, 4, 4, 2, 2);
     static assert([ result ] == [ 1, 2, 3, 4, 2 ]);
 }
 
 unittest
 {
-    alias uniq!() empty;
+    alias empty = uniq!();
     static assert(empty.length == 0);
 
-    alias uniq!(int) Single;
+    alias Single = uniq!(int);
     static assert(is(Single == Seq!(int)));
 
-    alias uniq!(int, double, string) Nodup;
+    alias Nodup = uniq!(int, double, string);
     static assert(is(Nodup == Seq!(int, double, string)));
 
-    alias uniq!(int, int, double, string, string, string) Dup;
+    alias Dup = uniq!(int, int, double, string, string, string);
     static assert(is(Dup == Seq!(int, double, string)));
 
-    alias uniq!("abc", "123", "abc", "123") noConsec;
+    alias noConsec = uniq!("abc", "123", "abc", "123");
     static assert([ noConsec ] == [ "abc", "123", "abc", "123" ]);
 }
 
@@ -2728,11 +2728,11 @@ template uniqBy(alias eq, seq...)
         {
             static if (cdr.length && eq!(car, cdr[0]))
             {
-                alias Seq!(car, cdr[1 .. $]) uniqCons;
+                alias uniqCons = Seq!(car, cdr[1 .. $]);
             }
             else
             {
-                alias Seq!(car, cdr) uniqCons;
+                alias uniqCons = Seq!(car, cdr);
             }
         }
 
@@ -2740,36 +2740,36 @@ template uniqBy(alias eq, seq...)
         {
             static if (cdr.length && eq!(car, cdr[0]))
             {
-                alias Seq!(car, cdr[1 .. $]) uniqCons;
+                alias uniqCons = Seq!(car, cdr[1 .. $]);
             }
             else
             {
-                alias Seq!(car, cdr) uniqCons;
+                alias uniqCons = Seq!(car, cdr);
             }
         }
     }
 
-    alias mapRec!(_impl!(binaryT!eq).uniqCons, seq) uniqBy;
+    alias uniqBy = mapRec!(_impl!(binaryT!eq).uniqCons, seq);
 }
 
 /**
  */
 unittest
 {
-    alias meta.uniqBy!(q{ A.sizeof == B.sizeof },
-                       int, uint, short, ushort, uint) Res;
+    alias Res = meta.uniqBy!(q{ A.sizeof == B.sizeof },
+                             int, uint, short, ushort, uint);
     static assert(is(Res == TypeSeq!(int, short, uint)));
 }
 
 unittest
 {
-    alias uniqBy!(q{ a == b }) empty;
+    alias empty = uniqBy!(q{ a == b });
     static assert(empty.length == 0);
 
-    alias uniqBy!(q{ a == b }, 1,2,3,4,5) nodup;
+    alias nodup = uniqBy!(q{ a == b }, 1,2,3,4,5);
     static assert([ nodup ] == [ 1,2,3,4,5 ]);
 
-    alias uniqBy!(q{ a < b }, 1,2,3,0,8,7,6,5) noinc;
+    alias noinc = uniqBy!(q{ a < b }, 1,2,3,0,8,7,6,5);
     static assert([ noinc ] == [ 1,0,7,6,5 ]);
 }
 
@@ -2787,29 +2787,29 @@ Returns:
  */
 template removeDuplicates(seq...)
 {
-    alias removeDuplicatesBy!(isSame, seq) removeDuplicates;
+    alias removeDuplicates = removeDuplicatesBy!(isSame, seq);
 }
 
 /**
  */
 unittest
 {
-    alias meta.removeDuplicates!(int, bool, bool, int, string) Res;
+    alias Res = meta.removeDuplicates!(int, bool, bool, int, string);
     static assert(is(Res == TypeSeq!(int, bool, string)));
 }
 
 unittest
 {
-    alias removeDuplicates!() empty;
+    alias empty = removeDuplicates!();
     static assert(empty.length == 0);
 
-    alias removeDuplicates!(int) Single;
+    alias Single = removeDuplicates!(int);
     static assert(is(Single == Seq!(int)));
 
-    alias removeDuplicates!(int, double, string, int, double) Dup;
+    alias Dup = removeDuplicates!(int, double, string, int, double);
     static assert(is(Dup == Seq!(int, double, string)));
 
-    alias removeDuplicates!("fun", "gun", "fun", "hun") values;
+    alias values = removeDuplicates!("fun", "gun", "fun", "hun");
     static assert([ values ] == [ "fun", "gun", "hun" ]);
 }
 
@@ -2832,14 +2832,14 @@ template removeDuplicatesBy(alias eq, seq...)
 {
     static if (seq.length < 2)
     {
-        alias seq removeDuplicatesBy;
+        alias removeDuplicatesBy = seq;
     }
     else
     {
-        alias Seq!(seq[0],
+        alias removeDuplicatesBy =
+              Seq!(seq[0],
                    removeDuplicatesBy!(
-                       eq, filter!(bind!(not!eq, seq[0]), seq[1 .. $])))
-              removeDuplicatesBy;
+                       eq, filter!(bind!(not!eq, seq[0]), seq[1 .. $])));
     }
 }
 
@@ -2847,20 +2847,20 @@ template removeDuplicatesBy(alias eq, seq...)
  */
 unittest
 {
-    alias meta.removeDuplicatesBy!(q{ A.sizeof == B.sizeof },
-                                   int, uint, short, ushort, uint) Res;
+    alias Res = meta.removeDuplicatesBy!(q{ A.sizeof == B.sizeof },
+                                         int, uint, short, ushort, uint);
     static assert(is(Res == TypeSeq!(int, short)));
 }
 
 unittest
 {
-    alias removeDuplicatesBy!(q{ a == b }) empty;
+    alias empty = removeDuplicatesBy!(q{ a == b });
     static assert(empty.length == 0);
 
-    alias removeDuplicatesBy!(q{ a == b }, 1,2,3,4,5) nodup;
+    alias nodup = removeDuplicatesBy!(q{ a == b }, 1,2,3,4,5);
     static assert([ nodup ] == [ 1,2,3,4,5 ]);
 
-    alias removeDuplicatesBy!(q{ a < b }, 9,6,7,8,3,4,5,0) decrease;
+    alias decrease = removeDuplicatesBy!(q{ a < b }, 9,6,7,8,3,4,5,0);
     static assert([ decrease ] == [ 9,6,3,0 ]);
 }
 
@@ -2891,13 +2891,13 @@ See_Also:
  */
 template reduce(alias fun, Seed, seq...)
 {
-    alias _reduce!(binaryT!fun)._impl!(Seed, seq) reduce;
+    alias reduce = _reduce!(binaryT!fun)._impl!(Seed, seq);
 }
 
 /// ditto
 template reduce(alias fun, alias Seed, seq...)
 {
-    alias _reduce!(binaryT!fun)._impl!(Seed, seq) reduce;
+    alias reduce = _reduce!(binaryT!fun)._impl!(Seed, seq);
 }
 
 /**
@@ -2905,7 +2905,7 @@ template reduce(alias fun, alias Seed, seq...)
  */
 unittest
 {
-    alias TypeSeq!(int, double, short, bool, dchar) Types;
+    alias Types = TypeSeq!(int, double, short, bool, dchar);
 
     // Note: 'a' gets the "current sum" and 'B' gets a type in the sequence.
     enum size = meta.reduce!(q{ a + B.sizeof }, 0, Types);
@@ -2915,8 +2915,8 @@ unittest
 
 private template _reduce(alias fun)
 {
-    template _impl(      Seed) { alias Seed _impl; }
-    template _impl(alias Seed) { alias Seed _impl; }
+    template _impl(      Seed) { alias _impl = Seed; }
+    template _impl(alias Seed) { alias _impl = Seed; }
     template _impl(      Seed, seq...) { mixin(_reduceBody); }
     template _impl(alias Seed, seq...) { mixin(_reduceBody); }
 
@@ -2924,12 +2924,12 @@ private template _reduce(alias fun)
     q{
         static if (seq.length == 1)
         {
-            alias fun!(Seed, seq[0]) _impl;
+            alias _impl = fun!(Seed, seq[0]);
         }
         else
         {
             // Halving seq reduces the recursion depth.
-            alias _impl!(_impl!(Seed, seq[0 .. $/2]), seq[$/2 .. $]) _impl;
+            alias _impl = _impl!(_impl!(Seed, seq[0 .. $/2]), seq[$/2 .. $]);
         }
     };
 }
@@ -2940,7 +2940,7 @@ unittest
     static assert(is(reduce!(q{ A[B] }, int) == int));
     static assert(reduce!(q{ a ~ b }, "abc") == "abc");
 
-    alias reduce!(q{ A[B] }, int, double, string) Assoc;
+    alias Assoc = reduce!(q{ A[B] }, int, double, string);
     static assert(is(Assoc == int[double][string]));
 
     enum concat = reduce!(q{ a ~ b }, "abc", "123", "xyz", "987");
@@ -2948,8 +2948,8 @@ unittest
 
     // Test for ambiguity on matching string/alias parameters
     struct S {}
-    alias reduce!(        q{ A[B] }, S) K1;
-    alias reduce!(binaryT!q{ A[B] }, S) K2;
+    alias K1 = reduce!(        q{ A[B] }, S);
+    alias K2 = reduce!(binaryT!q{ A[B] }, S);
     enum s1 = reduce!(        q{ a ~ b }, "");
     enum s2 = reduce!(binaryT!q{ a ~ b }, "");
 }
@@ -2977,13 +2977,13 @@ Returns:
  */
 template scan(alias fun, Seed, seq...)
 {
-    alias _scan!(binaryT!fun).scan!(Seed, seq) scan;
+    alias scan = _scan!(binaryT!fun).scan!(Seed, seq);
 }
 
 /// ditto
 template scan(alias fun, alias Seed, seq...)
 {
-    alias _scan!(binaryT!fun).scan!(Seed, seq) scan;
+    alias scan = _scan!(binaryT!fun).scan!(Seed, seq);
 }
 
 /**
@@ -2994,9 +2994,9 @@ template scan(alias fun, alias Seed, seq...)
  */
 unittest
 {
-    alias TypeSeq!(int, double, short, bool, dchar) Types;
+    alias Types = TypeSeq!(int, double, short, bool, dchar);
 
-    alias meta.scan!(q{ a + B.sizeof }, 0, Types) sums;
+    alias sums = meta.scan!(q{ a + B.sizeof }, 0, Types);
     static assert([ sums ] == [ 0,
                                 0+4,
                                 0+4+8,
@@ -3014,11 +3014,11 @@ private template _scan(alias fun)
     q{
         static if (seq.length == 0)
         {
-            alias Seq!(Seed) scan;
+            alias scan = Seq!(Seed);
         }
         else
         {
-            alias Seq!(Seed, scan!(fun!(Seed, seq[0]), seq[1 .. $])) scan;
+            alias scan = Seq!(Seed, scan!(fun!(Seed, seq[0]), seq[1 .. $]));
         }
     };
 }
@@ -3026,13 +3026,13 @@ private template _scan(alias fun)
 
 unittest
 {
-    alias scan!(q{ A[B] }, int, double, string) Assocs;
+    alias Assocs = scan!(q{ A[B] }, int, double, string);
     static assert(Assocs.length == 3);
     static assert(is(Assocs[0] == int));
     static assert(is(Assocs[1] == int[double]));
     static assert(is(Assocs[2] == int[double][string]));
 
-    alias scan!(q{ a ~ b }, "abc", "123", "xyz", "987") concats;
+    alias concats = scan!(q{ a ~ b }, "abc", "123", "xyz", "987");
     static assert(concats.length == 4);
     static assert(concats[0] == "abc");
     static assert(concats[1] == "abc123");
@@ -3041,8 +3041,8 @@ unittest
 
     // Test for non-ambiguity
     struct S {}
-    alias scan!(        q{ A[B] }, S) K1;
-    alias scan!(binaryT!q{ A[B] }, S) K2;
+    alias K1 = scan!(        q{ A[B] }, S);
+    alias K2 = scan!(binaryT!q{ A[B] }, S);
     enum s1 = scan!(        q{ a ~ b }, "");
     enum s2 = scan!(binaryT!q{ a ~ b }, "");
 }
@@ -3067,16 +3067,16 @@ template most(alias comp, seq...) if (seq.length > 0)
             // Comparison must be in this order for stability.
             static if (comp!(pair[1], pair[0]))
             {
-                alias Id!(pair[1]) more;
+                alias more = Id!(pair[1]);
             }
             else
             {
-                alias Id!(pair[0]) more;
+                alias more = Id!(pair[0]);
             }
         }
     }
 
-    alias reduce!(more!(binaryT!comp), seq) most;
+    alias most = reduce!(more!(binaryT!comp), seq);
 }
 
 /**
@@ -3085,10 +3085,10 @@ template most(alias comp, seq...) if (seq.length > 0)
  */
 unittest
 {
-    alias TypeSeq!(int, bool, double, short) Types;
+    alias Types = TypeSeq!(int, bool, double, short);
 
     // Take the largest type in the sequence: double.
-    alias meta.most!(q{ A.sizeof > B.sizeof }, Types) Largest;
+    alias Largest = meta.most!(q{ A.sizeof > B.sizeof }, Types);
     static assert(is(Largest == double));
 }
 
@@ -3099,8 +3099,8 @@ unittest
     static assert(most!(q{ a < b }, 5, 1, -3, 2, 4) == -3);
 
     // stability
-    alias most!(q{ A.sizeof < B.sizeof }, short, byte, float, ubyte, uint) Min;
-    alias most!(q{ A.sizeof > B.sizeof }, short, byte, float, ubyte, uint) Max;
+    alias Min = most!(q{ A.sizeof < B.sizeof }, short, byte, float, ubyte, uint);
+    alias Max = most!(q{ A.sizeof > B.sizeof }, short, byte, float, ubyte, uint);
     static assert(is(Min ==  byte));
     static assert(is(Max == float));
 }
@@ -3166,22 +3166,22 @@ Returns:
  */
 template find(E, seq...)
 {
-    alias findIf!(isSame!E, seq) find;
+    alias find = findIf!(isSame!E, seq);
 }
 
 /// ditto
 template find(alias E, seq...)
 {
-    alias findIf!(isSame!E, seq) find;
+    alias find = findIf!(isSame!E, seq);
 }
 
 /**
  */
 unittest
 {
-    alias TypeSeq!(int, short, double, bool, string) Types;
+    alias Types = TypeSeq!(int, short, double, bool, string);
 
-    alias meta.find!(bool, Types) AfterBool;
+    alias AfterBool = meta.find!(bool, Types);
     static assert(is(AfterBool == TypeSeq!(bool, string)));
 }
 
@@ -3193,19 +3193,19 @@ unittest
     static assert(find!(void, int, string).length == 0);
     static assert(find!(   0, int, string).length == 0);
 
-    alias find!(void, int, string, void, void, double) Void;
+    alias Void = find!(void, int, string, void, void, double);
     static assert(is(Void == Seq!(void, void, double)));
 
-    alias find!("opAssign", "toString", "opAssign", "empty") opAss;
+    alias opAss = find!("opAssign", "toString", "opAssign", "empty");
     static assert([ opAss ] == [ "opAssign", "empty" ]);
 }
 
 unittest
 {
-    alias TypeSeq!(int, short, double, bool, string) Types;
+    alias Types = TypeSeq!(int, short, double, bool, string);
 
-    alias meta.find!(meta.most!(q{ A.sizeof > B.sizeof }, Types),
-                     Types) Sub;
+    alias Sub = meta.find!(meta.most!(q{ A.sizeof > B.sizeof }, Types),
+                           Types);
     static assert(is(Sub == TypeSeq!(double, bool, string)));
 }
 
@@ -3224,15 +3224,15 @@ Returns:
  */
 template findIf(alias pred, seq...)
 {
-    alias seq[_findChunk!(unaryT!pred, 1).index!seq .. $] findIf;
+    alias findIf = seq[_findChunk!(unaryT!pred, 1).index!seq .. $];
 }
 
 /**
  */
 unittest
 {
-    alias meta.findIf!(q{ is(A == const) },
-                       int, double, const string, bool) Res;
+    alias Res = meta.findIf!(q{ is(A == const) },
+                             int, double, const string, bool);
     static assert(is(Res == TypeSeq!(const string, bool)));
 }
 
@@ -3272,7 +3272,7 @@ template index(alias E, seq...)
  */
 unittest
 {
-    alias TypeSeq!(int, double, bool, string) Types;
+    alias Types = TypeSeq!(int, double, bool, string);
 
     static assert(meta.index!(bool, Types) ==  2);
     static assert(meta.index!(void, Types) == -1);
@@ -3328,7 +3328,7 @@ template indexIf(alias pred, seq...)
  */
 unittest
 {
-    alias TypeSeq!(int, double, short, string) Types;
+    alias Types = TypeSeq!(int, double, short, string);
 
     static assert(meta.indexIf!(q{ A.sizeof < 4 }, Types) ==  2);
     static assert(meta.indexIf!(q{ A.sizeof < 2 }, Types) == -1);
@@ -3375,7 +3375,7 @@ template count(alias E, seq...)
  */
 unittest
 {
-    alias TypeSeq!(int, double, string, void) Types;
+    alias Types = TypeSeq!(int, double, string, void);
     static assert(meta.count!(void, Types) == 1);
 }
 
@@ -3410,7 +3410,7 @@ Returns:
  */
 template countIf(alias pred, seq...)
 {
-    alias unaryT!pred _pred;
+    alias _pred = unaryT!pred;
 
     static if (seq.length < 2)
     {
@@ -3635,15 +3635,15 @@ Returns:
  */
 template setify(seq...)
 {
-    alias sort!(metaComp, seq) setify;
+    alias setify = sort!(metaComp, seq);
 }
 
 /**
  */
 unittest
 {
-    alias meta.setify!(int, double, bool, int) A;
-    alias meta.setify!(int, bool, double, bool) B;
+    alias A = meta.setify!(int, double, bool, int);
+    alias B = meta.setify!(int, bool, double, bool);
 
     static assert(is(A == TypeSeq!(bool, double, int, int)));
     static assert(is(B == TypeSeq!(bool, bool, double, int)));
@@ -3680,7 +3680,7 @@ template contains(alias set, items...)
  */
 unittest
 {
-    alias TypeSeq!(string, int, int, double) A;
+    alias A = TypeSeq!(string, int, int, double);
     static assert( meta.contains!(meta.pack!A, string));
     static assert( meta.contains!(meta.pack!A, int, double, int));
     static assert(!meta.contains!(meta.pack!A, double, double));
@@ -3693,7 +3693,7 @@ unittest
     static assert(!contains!(pack!(), int));
     static assert(!contains!(pack!(), int, "index"));
 
-    alias pack!(1, 1, 1, 2, 2, 3) nums;
+    alias nums = pack!(1, 1, 1, 2, 2, 3);
     static assert( contains!(nums));
     static assert( contains!(nums, nums.expand));
 
@@ -3737,7 +3737,7 @@ template isComposedOf(alias set, items...)
  */
 unittest
 {
-    alias TypeSeq!(string, int, int, double) A;
+    alias A = TypeSeq!(string, int, int, double);
 
     static assert( meta.isComposedOf!(meta.pack!A, double, int, string, int));
     static assert( meta.isComposedOf!(meta.pack!A, int, double, int, string));
@@ -3770,62 +3770,62 @@ template intersection(seqs...)
 {
     template _impl(seqs...)
     {
-        alias reduce!(compose!(pack, .intersection), seqs).expand _impl;
+        alias _impl = reduce!(compose!(pack, .intersection), seqs).expand;
     }
     template _impl(alias A, alias B)
     {
-        alias intersectionBy!(metaComp, A, B) _impl;
+        alias _impl = intersectionBy!(metaComp, A, B);
     }
     template _impl(alias A)
     {
-        alias setify!(A.expand) _impl;
+        alias _impl = setify!(A.expand);
     }
     template _impl()
     {
-        alias Seq!() _impl;
+        alias _impl = Seq!();
     }
 
-    alias _impl!seqs intersection;
+    alias intersection = _impl!seqs;
 }
 
 /**
  */
 unittest
 {
-    alias meta.intersection!(meta.pack!(int, int, double, bool, bool),
-                             meta.pack!(int, double, bool, double, bool),
-                             meta.pack!(bool, string, int, bool)) Inter;
+    alias Inter = meta.intersection!(meta.pack!(int, int, double, bool, bool),
+                                     meta.pack!(int, double, bool, double, bool),
+                                     meta.pack!(bool, string, int, bool));
     static assert(is(Inter == TypeSeq!(bool, bool, int)));
 }
 
 unittest
 {
     // Test for values
-    alias Seq!(1,2,2,4,5,7,9) a;
-    alias Seq!(0,1,2,4,4,7,8) b;
-    alias Seq!(0,1,4,4,5,7,8) c;
+    alias a = Seq!(1,2,2,4,5,7,9);
+    alias b = Seq!(0,1,2,4,4,7,8);
+    alias c = Seq!(0,1,4,4,5,7,8);
 
-    alias intersection!(pack!a, pack!a) aa;
-    alias intersection!(pack!a, pack!b) ab;
-    alias intersection!(pack!b, pack!c) bc;
+    alias aa = intersection!(pack!a, pack!a);
+    alias ab = intersection!(pack!a, pack!b);
+    alias bc = intersection!(pack!b, pack!c);
     static assert(isComposedOf!(pack!aa, a));
     static assert(isComposedOf!(pack!ab, 1,2,4,7));
     static assert(isComposedOf!(pack!bc, 0,1,4,4,7,8));
 
     // Test for types
-    alias Seq!(int, int, double, string) T;
-    alias Seq!(double, string, double, int) U;
-    alias Seq!(double, void, int, double) V;
+    alias T = Seq!(int, int, double, string);
+    alias U = Seq!(double, string, double, int);
+    alias V = Seq!(double, void, int, double);
 
-    alias intersection!(pack!T, pack!T) TT;
-    alias intersection!(pack!T, pack!U) TU;
-    alias intersection!(pack!U, pack!V) UV;
+    alias TT = intersection!(pack!T, pack!T);
+    alias TU = intersection!(pack!T, pack!U);
+    alias UV = intersection!(pack!U, pack!V);
     static assert(isComposedOf!(pack!TT, T));
     static assert(isComposedOf!(pack!TU, double, int, string));
     static assert(isComposedOf!(pack!UV, double, double, int));
 
     // Degeneration
-    alias Seq!() e;
+    alias e = Seq!();
     static assert(intersection!(pack!e, pack!e).length == 0);
     static assert(intersection!(pack!e, pack!T).length == 0);
     static assert(intersection!(pack!T, pack!a).length == 0);
@@ -3835,8 +3835,8 @@ unittest
 {
     static assert(intersection!().length == 0);
 
-    alias intersection!(pack!()) Empty;
-    alias intersection!(pack!(int, double, string)) Single;
+    alias Empty  = intersection!(pack!());
+    alias Single = intersection!(pack!(int, double, string));
     static assert(is(Empty == TypeSeq!()));
     static assert(is(Single == setify!(int, double, string)));
 }
@@ -3851,31 +3851,31 @@ template intersectionBy(alias comp, alias A, alias B)
         {
             static if (comp!(A[0], B[0]))
             {
-                alias Seq!(Intersect!(A[1 .. $])
-                               .With!(B        )) With;
+                alias With = Seq!(Intersect!(A[1 .. $])
+                                      .With!(B        ));
             }
             else static if (comp!(B[0], A[0]))
             {
-                alias Seq!(Intersect!(A        )
-                               .With!(B[1 .. $])) With;
+                alias With = Seq!(Intersect!(A        )
+                                      .With!(B[1 .. $]));
             }
             else
             {
-                alias Seq!(A[0], Intersect!(A[1 .. $])
-                                     .With!(B[1 .. $])) With;
+                alias With = Seq!(A[0], Intersect!(A[1 .. $])
+                                            .With!(B[1 .. $]));
             }
         }
 
-        template With() { alias Seq!() With; }
+        template With() { alias With = Seq!(); }
     }
 
     template Intersect()
     {
-        template With(B...) { alias Seq!() With; }
+        template With(B...) { alias With = Seq!(); }
     }
 
-    alias Intersect!(sort!(comp, A.expand))
-              .With!(sort!(comp, B.expand)) intersectionBy;
+    alias intersectionBy = Intersect!(sort!(comp, A.expand))
+                               .With!(sort!(comp, B.expand));
 }
 
 
@@ -3907,16 +3907,16 @@ template cond(cases...) if (cases.length > 0)
     {
         static if (cond)
         {
-            alias then _matchCase;
+            alias _matchCase = then;
         }
         else
         {
-            alias Seq!() _matchCase;
+            alias _matchCase = Seq!();
         }
     }
 
-    template _matchCase(      fallback) { alias fallback _matchCase; }
-    template _matchCase(alias fallback) { alias fallback _matchCase; }
+    template _matchCase(      fallback) { alias _matchCase = fallback; }
+    template _matchCase(alias fallback) { alias _matchCase = fallback; }
 
     template _matchCase(spec...) if (spec.length > 1)
     {
@@ -3925,7 +3925,7 @@ template cond(cases...) if (cases.length > 0)
 
     static if (segmentWith!(_matchCase, 2, cases).length)
     {
-        alias frontof!(segmentWith!(_matchCase, 2, cases)) cond;
+        alias cond = frontof!(segmentWith!(_matchCase, 2, cases));
     }
     else static assert(0, "No match");
 }
@@ -3936,10 +3936,10 @@ unittest
 {
     enum n = 100000;
 
-    alias meta.cond!(n <=  ubyte.max,  ubyte,
-                     n <= ushort.max, ushort,
-                     n <=   uint.max,   uint,   // matches
-                                       ulong) T;
+    alias T = meta.cond!(n <=  ubyte.max,  ubyte,
+                         n <= ushort.max, ushort,
+                         n <=   uint.max,   uint,   // matches
+                                           ulong);
     static assert(is(T == uint));
 }
 
