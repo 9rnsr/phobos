@@ -6,17 +6,17 @@
  * Implemented according to $(WEB tools.ietf.org/html/rfc4648,
  * RFC 4648 - The Base16, Base32, and Base64 Data Encodings).
  *
-* Example:
+ * Example:
  * $(D_RUN_CODE
  * $(ARGS
  * -----
- *ubyte[] data = [0x14, 0xfb, 0x9c, 0x03, 0xd9, 0x7e];
- *
- *const(char)[] encoded = Base64.encode(data);
- *assert(encoded == "FPucA9l+");
- *
- *ubyte[] decoded = Base64.decode("FPucA9l+");
- *assert(decoded == [0x14, 0xfb, 0x9c, 0x03, 0xd9, 0x7e]);
+ * ubyte[] data = [0x14, 0xfb, 0x9c, 0x03, 0xd9, 0x7e];
+ * 
+ * const(char)[] encoded = Base64.encode(data);
+ * assert(encoded == "FPucA9l+");
+ * 
+ * ubyte[] decoded = Base64.decode("FPucA9l+");
+ * assert(decoded == [0x14, 0xfb, 0x9c, 0x03, 0xd9, 0x7e]);
  * -----
  * ), $(ARGS), $(ARGS), $(ARGS import std.base64;))
  * Support Range interface using Encoder / Decoder.
@@ -26,18 +26,18 @@
  * $(ARGS
  * -----
  * // Create MIME Base64 with CRLF, per line 76.
- *File f = File("./text.txt", "r");
- *scope(exit) f.close();
- *
- *Appender!string mime64 = appender!string;
- *
- *foreach (encoded; Base64.encoder(f.byChunk(57))) 
- *{
- *    mime64.put(encoded);
- *    mime64.put("\r\n");
- *}
- *
- *writeln(mime64.data);
+ * File f = File("./text.txt", "r");
+ * scope(exit) f.close();
+ * 
+ * Appender!string mime64 = appender!string;
+ * 
+ * foreach (encoded; Base64.encoder(f.byChunk(57))) 
+ * {
+ *     mime64.put(encoded);
+ *     mime64.put("\r\n");
+ * }
+ * 
+ * writeln(mime64.data);
  * -----
  *), $(ARGS), $(ARGS), $(ARGS import std.base64, std.array, std.stdio: File, writeln;))
  *
@@ -58,13 +58,13 @@ version(unittest) import std.algorithm, std.conv, std.file, std.stdio;
 /**
  * The Base64
  */
-alias Base64Impl!('+', '/') Base64;
+alias Base64 = Base64Impl!('+', '/');
 
 
 /**
  * The "URL and Filename safe" Base64
  */
-alias Base64Impl!('-', '_') Base64URL;
+alias Base64URL = Base64Impl!('-', '_');
 
 
 /**
@@ -72,8 +72,8 @@ alias Base64Impl!('-', '_') Base64URL;
  *
  * Example:
  * -----
- * alias Base64Impl!('+', '/')                   Base64;    // The Base64 format(Already defined).
- * alias Base64Impl!('!', '=', Base64.NoPadding) Base64Re;  // non-standard Base64 format for Regular expression
+ * alias Base64   = Base64Impl!('+', '/');                    // The Base64 format(Already defined).
+ * alias Base64Re = Base64Impl!('!', '=', Base64.NoPadding);  // non-standard Base64 format for Regular expression
  * -----
  *
  * NOTE:
@@ -161,7 +161,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         auto      bufptr = buffer.ptr;
         auto      srcptr = source.ptr;
 
-        foreach (Unused; 0..blocks) {
+        foreach (Unused; 0..blocks)
+        {
             immutable val = srcptr[0] << 16 | srcptr[1] << 8 | srcptr[2];
             *bufptr++ = EncodeMap[val >> 18       ];
             *bufptr++ = EncodeMap[val >> 12 & 0x3f];
@@ -170,19 +171,22 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
             srcptr += 3;
         }
 
-        if (remain) {
+        if (remain)
+        {
             immutable val = srcptr[0] << 16 | (remain == 2 ? srcptr[1] << 8 : 0);
             *bufptr++ = EncodeMap[val >> 18       ];
             *bufptr++ = EncodeMap[val >> 12 & 0x3f];
 
-            final switch (remain) {
+            final switch (remain)
+            {
             case 2:
                 *bufptr++ = EncodeMap[val >> 6 & 0x3f];
                 static if (Padding != NoPadding)
                     *bufptr++ = Padding;
                 break;
             case 1:
-                static if (Padding != NoPadding) {
+                static if (Padding != NoPadding)
+                {
                     *bufptr++ = Padding;
                     *bufptr++ = Padding;
                 }
@@ -223,7 +227,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         immutable remain = srcLen % 3;
         auto      bufptr = buffer.ptr;
 
-        foreach (Unused; 0..blocks) {
+        foreach (Unused; 0..blocks)
+        {
             immutable v1 = source.front; source.popFront();
             immutable v2 = source.front; source.popFront();
             immutable v3 = source.front; source.popFront();
@@ -234,9 +239,11 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
             *bufptr++ = EncodeMap[val       & 0x3f];
         }
 
-        if (remain) {
+        if (remain)
+        {
             size_t val = source.front << 16;
-            if (remain == 2) {
+            if (remain == 2)
+            {
                 source.popFront();
                 val |= source.front << 8;
             }
@@ -244,14 +251,16 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
             *bufptr++ = EncodeMap[val >> 18       ];
             *bufptr++ = EncodeMap[val >> 12 & 0x3f];
 
-            final switch (remain) {
+            final switch (remain)
+            {
             case 2:
                 *bufptr++ = EncodeMap[val >> 6 & 0x3f];
                 static if (Padding != NoPadding)
                     *bufptr++ = Padding;
                 break;
             case 1:
-                static if (Padding != NoPadding) {
+                static if (Padding != NoPadding)
+                {
                     *bufptr++ = Padding;
                     *bufptr++ = Padding;
                 }
@@ -297,7 +306,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         auto      srcptr = source.ptr;
         size_t    pcount;
 
-        foreach (Unused; 0..blocks) {
+        foreach (Unused; 0..blocks)
+        {
             immutable val = srcptr[0] << 16 | srcptr[1] << 8 | srcptr[2];
             put(range, EncodeMap[val >> 18       ]);
             put(range, EncodeMap[val >> 12 & 0x3f]);
@@ -307,24 +317,28 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
             pcount += 4;
         }
 
-        if (remain) {
+        if (remain)
+        {
             immutable val = srcptr[0] << 16 | (remain == 2 ? srcptr[1] << 8 : 0);
             put(range, EncodeMap[val >> 18       ]);
             put(range, EncodeMap[val >> 12 & 0x3f]);
             pcount += 2;
 
-            final switch (remain) {
+            final switch (remain)
+            {
             case 2:
                 put(range, EncodeMap[val >> 6 & 0x3f]);
                 pcount++;
 
-                static if (Padding != NoPadding) {
+                static if (Padding != NoPadding)
+                {
                     put(range, Padding);
                     pcount++;
                 }
                 break;
             case 1:
-                static if (Padding != NoPadding) {
+                static if (Padding != NoPadding)
+                {
                     put(range, Padding);
                     put(range, Padding);
                     pcount += 2;
@@ -361,7 +375,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         immutable remain = srcLen % 3;
         size_t    pcount;
 
-        foreach (Unused; 0..blocks) {
+        foreach (Unused; 0..blocks)
+        {
             immutable v1 = source.front; source.popFront();
             immutable v2 = source.front; source.popFront();
             immutable v3 = source.front; source.popFront();
@@ -373,9 +388,11 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
             pcount += 4;
         }
 
-        if (remain) {
+        if (remain)
+        {
             size_t val = source.front << 16;
-            if (remain == 2) {
+            if (remain == 2)
+            {
                 source.popFront();
                 val |= source.front << 8;
             }
@@ -384,18 +401,21 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
             put(range, EncodeMap[val >> 12 & 0x3f]);
             pcount += 2;
 
-            final switch (remain) {
+            final switch (remain)
+            {
             case 2:
                 put(range, EncodeMap[val >> 6 & 0x3f]);
                 pcount++;
 
-                static if (Padding != NoPadding) {
+                static if (Padding != NoPadding)
+                {
                     put(range, Padding);
                     pcount++;
                 }
                 break;
             case 1:
-                static if (Padding != NoPadding) {
+                static if (Padding != NoPadding)
+                {
                     put(range, Padding);
                     put(range, Padding);
                     pcount += 2;
@@ -501,7 +521,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         }
 
 
-        static if (isForwardRange!Range) {
+        static if (isForwardRange!Range)
+        {
             /**
              * Captures a Range state.
              *
@@ -600,19 +621,24 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
             enforce(!empty, new Base64Exception("Cannot call popFront on Encoder with no data remaining"));
 
             static if (Padding != NoPadding)
-                if (padding) {
+            {
+                if (padding)
+                {
                     first = Padding;
                     pos   = -1;
                     padding--;
                     return;
                 }
+            }
 
-            if (range_.empty) {
+            if (range_.empty)
+            {
                 pos = -1;
                 return;
             }
 
-            final switch (pos) {
+            final switch (pos)
+            {
             case 0:
                 first = EncodeMap[range_.front >> 2];
                 break;
@@ -620,10 +646,13 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
                 immutable t = (range_.front & 0b11) << 4;
                 range_.popFront();
 
-                if (range_.empty) {
+                if (range_.empty)
+                {
                     first   = EncodeMap[t];
                     padding = 3;
-                } else {
+                }
+                else
+                {
                     first = EncodeMap[t | (range_.front >> 4)];
                 }
                 break;
@@ -631,10 +660,13 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
                 immutable t = (range_.front & 0b1111) << 2;
                 range_.popFront();
 
-                if (range_.empty) {
+                if (range_.empty)
+                {
                     first   = EncodeMap[t];
                     padding = 2;
-                } else {
+                }
+                else
+                {
                     first = EncodeMap[t | (range_.front >> 6)];
                 }
                 break;
@@ -644,11 +676,13 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
                 break;
             }
 
-            ++pos %= 4;
+            //++pos %= 4;
+            ++pos, pos %= 4;
         }
 
 
-        static if (isForwardRange!Range) {
+        static if (isForwardRange!Range)
+        {
             /**
              * Captures a Range state.
              *
@@ -675,14 +709,14 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      *$(D_RUN_CODE
      *$(ARGS
      * -----
-     *File f = File("text.txt", "r");
-     *scope(exit) f.close();
-     *
-     *uint line = 0;
-     *foreach (encoded; Base64.encoder(f.byLine())) 
-     *{
-     *    writeln(++line, ". ", encoded);
-     *}
+     * File f = File("text.txt", "r");
+     * scope(exit) f.close();
+     * 
+     * uint line = 0;
+     * foreach (encoded; Base64.encoder(f.byLine())) 
+     * {
+     *     writeln(++line, ". ", encoded);
+     * }
      * -----
      *), $(ARGS), $(ARGS), $(ARGS import std.base64, std.stdio: File, writeln;))
      *
@@ -693,13 +727,13 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      *$(D_RUN_CODE
      *$(ARGS
      * -----
-     *ubyte[] data = cast(ubyte[]) "0123456789";
-     *
-     * // The ElementType of data is not aggregation type
-     *foreach (encoded; Base64.encoder(data)) 
-     *{
-     *    writeln(encoded);
-     *}
+     * ubyte[] data = cast(ubyte[]) "0123456789";
+     * 
+     *  // The ElementType of data is not aggregation type
+     * foreach (encoded; Base64.encoder(data)) 
+     * {
+     *     writeln(encoded);
+     * }
      * -----
      *), $(ARGS), $(ARGS), $(ARGS import std.base64, std.stdio: writeln;))
      *
@@ -813,7 +847,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         auto      srcptr = source.ptr;
         auto      bufptr = buffer.ptr;
 
-        foreach (Unused; 0..blocks) {
+        foreach (Unused; 0..blocks)
+        {
             immutable v1 = decodeChar(*srcptr++);
             immutable v2 = decodeChar(*srcptr++);
 
@@ -832,10 +867,12 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
             *bufptr++ = cast(ubyte)((v3 << 6 | v4) & 0xff);
         }
 
-        static if (Padding == NoPadding) {
+        static if (Padding == NoPadding)
+        {
             immutable remain = srcLen % 4;
 
-            if (remain) {
+            if (remain)
+            {
                 immutable v1 = decodeChar(*srcptr++);
                 immutable v2 = decodeChar(*srcptr++);
 
@@ -880,7 +917,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         immutable blocks = srcLen / 4;
         auto      bufptr = buffer.ptr;
 
-        foreach (Unused; 0..blocks) {
+        foreach (Unused; 0..blocks)
+        {
             immutable v1 = decodeChar(source.front); source.popFront();
             immutable v2 = decodeChar(source.front); source.popFront();
 
@@ -901,16 +939,19 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
             source.popFront();
         }
 
-        static if (Padding == NoPadding) {
+        static if (Padding == NoPadding)
+        {
             immutable remain = srcLen % 4;
 
-            if (remain) {
+            if (remain)
+            {
                 immutable v1 = decodeChar(source.front); source.popFront();
                 immutable v2 = decodeChar(source.front);
 
                 *bufptr++ = cast(ubyte)(v1 << 2 | v2 >> 4);
 
-                if (remain == 3) {
+                if (remain == 3)
+                {
                     source.popFront();
                     *bufptr++ = cast(ubyte)((v2 << 4 | decodeChar(source.front) >> 2) & 0xff);
                 }
@@ -959,7 +1000,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         auto      srcptr = source.ptr;
         size_t    pcount;
 
-        foreach (Unused; 0..blocks) {
+        foreach (Unused; 0..blocks)
+        {
             immutable v1 = decodeChar(*srcptr++);
             immutable v2 = decodeChar(*srcptr++);
 
@@ -981,17 +1023,20 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
             pcount++;
         }
 
-        static if (Padding == NoPadding) {
+        static if (Padding == NoPadding)
+        {
             immutable remain = srcLen % 4;
 
-            if (remain) {
+            if (remain)
+            {
                 immutable v1 = decodeChar(*srcptr++);
                 immutable v2 = decodeChar(*srcptr++);
 
                 put(range, cast(ubyte)(v1 << 2 | v2 >> 4));
                 pcount++;
 
-                if (remain == 3) {
+                if (remain == 3)
+                {
                     put(range, cast(ubyte)((v2 << 4 | decodeChar(*srcptr++) >> 2) & 0xff));
                     pcount++;
                 }
@@ -1028,7 +1073,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         immutable blocks = srcLen / 4;
         size_t    pcount;
 
-        foreach (Unused; 0..blocks) {
+        foreach (Unused; 0..blocks)
+        {
             immutable v1 = decodeChar(source.front); source.popFront();
             immutable v2 = decodeChar(source.front); source.popFront();
 
@@ -1052,17 +1098,20 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
             pcount++;
         }
 
-        static if (Padding == NoPadding) {
+        static if (Padding == NoPadding)
+        {
             immutable remain = srcLen % 4;
 
-            if (remain) {
+            if (remain)
+            {
                 immutable v1 = decodeChar(source.front); source.popFront();
                 immutable v2 = decodeChar(source.front);
 
                 put(range, cast(ubyte)(v1 << 2 | v2 >> 4));
                 pcount++;
 
-                if (remain == 3) {
+                if (remain == 3)
+                {
                     source.popFront();
                     put(range, cast(ubyte)((v2 << 4 | decodeChar(source.front) >> 2) & 0xff));
                     pcount++;
@@ -1164,7 +1213,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         }
 
 
-        static if (isForwardRange!Range) {
+        static if (isForwardRange!Range)
+        {
             /**
              * Captures a Range state.
              *
@@ -1190,13 +1240,18 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         {
             auto data = cast(const(char)[])range_.front;
 
-            static if (Padding == NoPadding) {
-                while (data.length % 4 == 1) {
+            static if (Padding == NoPadding)
+            {
+                while (data.length % 4 == 1)
+                {
                     range_.popFront();
                     data ~= cast(const(char)[])range_.front;
                 }
-            } else {
-                while (data.length % 4 != 0) {
+            }
+            else
+            {
+                while (data.length % 4 != 0)
+                {
                     range_.popFront();
                     data ~= cast(const(char)[])range_.front;
                 }
@@ -1275,12 +1330,15 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         {
             enforce(!empty, new Base64Exception("Cannot call popFront on Decoder with no data remaining"));
 
-            static if (Padding == NoPadding) {
+            static if (Padding == NoPadding)
+            {
                 bool endCondition()
                 {
                     return range_.empty;
                 }
-            } else {
+            }
+            else
+            {
                 bool endCondition()
                 {
                     enforce(!range_.empty, new Base64Exception("Missing padding"));
@@ -1288,12 +1346,14 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
                 }
             }
 
-            if (range_.empty || range_.front == Padding) {
+            if (range_.empty || range_.front == Padding)
+            {
                 pos = -1;
                 return;
             }
 
-            final switch (pos) {
+            final switch (pos)
+            {
             case 0:
                 enforce(!endCondition(), new Base64Exception("Premature end of data found"));
 
@@ -1307,10 +1367,13 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
                 immutable t = (DecodeMap[range_.front] & 0b1111) << 4;
                 range_.popFront();
 
-                if (endCondition()) {
+                if (endCondition())
+                {
                     pos = -1;
                     return;
-                } else {
+                }
+                else
+                {
                     first = cast(ubyte)(t | (DecodeMap[range_.front] >> 2));
                 }
                 break;
@@ -1318,10 +1381,13 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
                 immutable t = (DecodeMap[range_.front] & 0b11) << 6;
                 range_.popFront();
 
-                if (endCondition()) {
+                if (endCondition())
+                {
                     pos = -1;
                     return;
-                } else {
+                }
+                else
+                {
                     first = cast(ubyte)(t | DecodeMap[range_.front]);
                 }
 
@@ -1329,11 +1395,13 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
                 break;
             }
 
-            ++pos %= 3;
+            //++pos %= 3;
+            ++pos, pos %= 3;
         }
 
 
-        static if (isForwardRange!Range) {
+        static if (isForwardRange!Range)
+        {
             /**
              * Captures a Range state.
              *
@@ -1360,10 +1428,10 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      *$(D_RUN_CODE
      *$(ARGS
      * -----
-     *foreach (decoded; Base64.decoder(stdin.byLine())) 
-     *{
-     *    writeln(decoded);
-     *}
+     * foreach (decoded; Base64.decoder(stdin.byLine())) 
+     * {
+     *     writeln(decoded);
+     * }
      * -----
      *), $(ARGS FPucA9l+), $(ARGS), $(ARGS import std.base64, std.stdio;))
      *
@@ -1374,11 +1442,11 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      *$(D_RUN_CODE
      *$(ARGS
      * -----
-     *auto encoded = Base64.encoder(cast(ubyte[])"0123456789");
-     *foreach (n; map!q{a - '0'}(Base64.decoder(encoded))) 
-     *{
-     *    writeln(n);
-     *}
+     * auto encoded = Base64.encoder(cast(ubyte[])"0123456789");
+     * foreach (n; map!q{a - '0'}(Base64.decoder(encoded))) 
+     * {
+     *     writeln(n);
+     * }
      * -----
      *), $(ARGS), $(ARGS), $(ARGS import std.base64, std.stdio: writeln;
      *import std.algorithm: map;))
@@ -1440,20 +1508,24 @@ class Base64Exception : Exception
 
 unittest
 {
-    alias Base64Impl!('!', '=', Base64.NoPadding) Base64Re;
+    alias Base64Re = Base64Impl!('!', '=', Base64.NoPadding);
 
     // Test vectors from RFC 4648
-    ubyte[][string] tv = [
-         ""      :cast(ubyte[])"",
-         "f"     :cast(ubyte[])"f",
-         "fo"    :cast(ubyte[])"fo",
-         "foo"   :cast(ubyte[])"foo",
-         "foob"  :cast(ubyte[])"foob",
-         "fooba" :cast(ubyte[])"fooba",
-         "foobar":cast(ubyte[])"foobar"
+    ubyte[][string] tv =
+    [
+         ""       : cast(immutable ubyte[])"",
+         "f"      : cast(immutable ubyte[])"f",
+         "fo"     : cast(immutable ubyte[])"fo",
+         "foo"    : cast(immutable ubyte[])"foo",
+         "foob"   : cast(immutable ubyte[])"foob",
+         "fooba"  : cast(immutable ubyte[])"fooba",
+         "foobar" : cast(immutable ubyte[])"foobar"
     ];
+    //enum tv_values = tv.values[].map!(to!(ubyte[])).array().sort().array();
 
-    { // Base64
+    assertCTFEable!(
+    {
+      // Base64
         // encode
         assert(Base64.encodeLength(tv[""].length)       == 0);
         assert(Base64.encodeLength(tv["f"].length)      == 4);
@@ -1503,9 +1575,11 @@ unittest
         assertThrown!Base64Exception(Base64.decode("Zg="));
         assertThrown!Base64Exception(Base64.decode("Zm8"));
         assertThrown!Base64Exception(Base64.decode("Zg==;"));
-    }
+    });
 
-    { // No padding
+    assertCTFEable!(
+    {
+      // No padding
         // encode
         assert(Base64Re.encodeLength(tv[""].length)       == 0);
         assert(Base64Re.encodeLength(tv["f"].length)      == 2);
@@ -1542,9 +1616,11 @@ unittest
 
         // decodeLength is nothrow
         assert(Base64.decodeLength(1) == 0);
-    }
+    });
 
-    { // with OutputRange
+    assertCTFEable!(
+    {
+      // with OutputRange
         auto a = Appender!(char[])([]);
         auto b = Appender!(ubyte[])([]);
 
@@ -1575,12 +1651,13 @@ unittest
         assert(Base64.encode(tv["foobar"], a) == 8);
         assert(Base64.decode(a.data, b)       == 6);
         assert(tv["foobar"] == b.data); a.clear(); b.clear();
-    }
+    });
 
     // @@@9543@@@ These tests were disabled because they actually relied on the input range having length.
     // The implementation (currently) doesn't support encoding/decoding from a length-less source.
     version(none)
-    { // with InputRange
+    {
+      // with InputRange
         // InputRange to ubyte[] or char[]
         auto encoded = Base64.encode(map!(to!(ubyte))(["20", "251", "156", "3", "217", "126"]));
         assert(encoded == "FPucA9l+");
@@ -1595,7 +1672,8 @@ unittest
         assert(b.data == [0x14, 0xfb, 0x9c, 0x03, 0xd9, 0x7e]);
     }
 
-    { // Encoder and Decoder
+    {
+      // Encoder and Decoder
         {
             std.file.write("testingEncoder", "\nf\nfo\nfoo\nfoob\nfooba\nfoobar");
 
@@ -1634,9 +1712,12 @@ unittest
             assert(i == witness.length);
         }
 
-        { // ForwardRange
+        //assertCTFEable!
+        //(
+        {
+          // ForwardRange
             {
-                auto encoder = Base64.encoder(tv.values.sort);
+                auto encoder = Base64.encoder(tv_sorted_values);
                 auto witness = ["", "Zg==", "Zm8=", "Zm9v", "Zm9vYg==", "Zm9vYmE=", "Zm9vYmFy"];
                 size_t i;
 
@@ -1650,7 +1731,7 @@ unittest
 
             {
                 auto decoder = Base64.decoder(["", "Zg==", "Zm8=", "Zm9v", "Zm9vYg==", "Zm9vYmE=", "Zm9vYmFy"]);
-                auto witness = tv.values.sort;
+                auto witness = tv.values[]/*.sort()*/;
                 size_t i;
 
                 assert(decoder.front == witness[i++]); decoder.popFront();
@@ -1660,13 +1741,17 @@ unittest
                 foreach (decoded; decoder.save)
                     assert(decoded == witness[i++]);
             }
-        }
+        }//);
     }
 
-    { // Encoder and Decoder for single character encoding and decoding
-        alias Base64Impl!('+', '/', Base64.NoPadding) Base64NoPadding;
+    //assertCTFEable!
+    //(
+    {
+      // Encoder and Decoder for single character encoding and decoding
+        alias Base64NoPadding = Base64Impl!('+', '/', Base64.NoPadding);
 
-        auto tests = [
+        auto tests =
+        [
             ""       : ["", "", "", ""],
             "f"      : ["Zg==", "Zg==", "Zg", "Zg"],
             "fo"     : ["Zm8=", "Zm8=", "Zm8", "Zm8"],
@@ -1676,7 +1761,8 @@ unittest
             "foobar" : ["Zm9vYmFy", "Zm9vYmFy", "Zm9vYmFy", "Zm9vYmFy"],
         ];
 
-        foreach (u, e; tests) {
+        foreach (u, e; tests)
+        {
             assert(equal(Base64.encoder(cast(ubyte[])u), e[0]));
             assert(equal(Base64.decoder(Base64.encoder(cast(ubyte[])u)), u));
 
@@ -1689,5 +1775,5 @@ unittest
             assert(equal(Base64Re.encoder(cast(ubyte[])u), e[3]));
             assert(equal(Base64Re.decoder(Base64Re.encoder(cast(ubyte[])u)), u));
         }
-    }
+    }//);
 }
