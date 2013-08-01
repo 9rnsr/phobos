@@ -71,10 +71,10 @@ bool isAlphaNum(dchar c) @safe pure nothrow
 
 unittest
 {
-    foreach(c; chain(digits, octalDigits, fullHexDigits, letters, lowercase, uppercase))
+    foreach (c; chain(digits, octalDigits, fullHexDigits, letters, lowercase, uppercase))
         assert(isAlphaNum(c));
 
-    foreach(c; whitespace)
+    foreach (c; whitespace)
         assert(!isAlphaNum(c));
 }
 
@@ -89,10 +89,10 @@ bool isAlpha(dchar c) @safe pure nothrow
 
 unittest
 {
-    foreach(c; chain(letters, lowercase, uppercase))
+    foreach (c; chain(letters, lowercase, uppercase))
         assert(isAlpha(c));
 
-    foreach(c; chain(digits, octalDigits, whitespace))
+    foreach (c; chain(digits, octalDigits, whitespace))
         assert(!isAlpha(c));
 }
 
@@ -107,10 +107,10 @@ bool isLower(dchar c) @safe pure nothrow
 
 unittest
 {
-    foreach(c; lowercase)
+    foreach (c; lowercase)
         assert(isLower(c));
 
-    foreach(c; chain(digits, uppercase, whitespace))
+    foreach (c; chain(digits, uppercase, whitespace))
         assert(!isLower(c));
 }
 
@@ -125,10 +125,10 @@ bool isUpper(dchar c) @safe pure nothrow
 
 unittest
 {
-    foreach(c; uppercase)
+    foreach (c; uppercase)
         assert(isUpper(c));
 
-    foreach(c; chain(digits, lowercase, whitespace))
+    foreach (c; chain(digits, lowercase, whitespace))
         assert(!isUpper(c));
 }
 
@@ -143,10 +143,10 @@ bool isDigit(dchar c) @safe pure nothrow
 
 unittest
 {
-    foreach(c; digits)
+    foreach (c; digits)
         assert(isDigit(c));
 
-    foreach(c; chain(letters, whitespace))
+    foreach (c; chain(letters, whitespace))
         assert(!isDigit(c));
 }
 
@@ -161,10 +161,10 @@ bool isOctalDigit(dchar c) @safe pure nothrow
 
 unittest
 {
-    foreach(c; octalDigits)
+    foreach (c; octalDigits)
         assert(isOctalDigit(c));
 
-    foreach(c; chain(letters, ['8', '9'], whitespace))
+    foreach (c; chain(letters, ['8', '9'], whitespace))
         assert(!isOctalDigit(c));
 }
 
@@ -179,10 +179,10 @@ bool isHexDigit(dchar c) @safe pure nothrow
 
 unittest
 {
-    foreach(c; fullHexDigits)
+    foreach (c; fullHexDigits)
         assert(isHexDigit(c));
 
-    foreach(c; chain(lowercase[6 .. $], uppercase[6 .. $], whitespace))
+    foreach (c; chain(lowercase[6 .. $], uppercase[6 .. $], whitespace))
         assert(!isHexDigit(c));
 }
 
@@ -198,10 +198,10 @@ bool isWhite(dchar c) @safe pure nothrow
 
 unittest
 {
-    foreach(c; whitespace)
+    foreach (c; whitespace)
         assert(isWhite(c));
 
-    foreach(c; chain(digits, letters))
+    foreach (c; chain(digits, letters))
         assert(!isWhite(c));
 }
 
@@ -216,11 +216,11 @@ bool isControl(dchar c) @safe pure nothrow
 
 unittest
 {
-    foreach(dchar c; iota(0, 32))
+    foreach (dchar c; iota(0, 32))
         assert(isControl(c));
     assert(isControl(127));
 
-    foreach(c; chain(digits, letters, [' ']))
+    foreach (c; chain(digits, letters, [' ']))
         assert(!isControl(c));
 }
 
@@ -236,9 +236,9 @@ bool isPunctuation(dchar c) @safe pure nothrow
 
 unittest
 {
-    foreach(dchar c; iota(0, 128))
+    foreach (dchar c; iota(0, 128))
     {
-        if(isControl(c) || isAlphaNum(c) || c == ' ')
+        if (isControl(c) || isAlphaNum(c) || c == ' ')
             assert(!isPunctuation(c));
         else
             assert(isPunctuation(c));
@@ -257,9 +257,9 @@ bool isGraphical(dchar c) @safe pure nothrow
 
 unittest
 {
-    foreach(dchar c; iota(0, 128))
+    foreach (dchar c; iota(0, 128))
     {
-        if(isControl(c) || c == ' ')
+        if (isControl(c) || c == ' ')
             assert(!isGraphical(c));
         else
             assert(isGraphical(c));
@@ -277,9 +277,9 @@ bool isPrintable(dchar c) @safe pure nothrow
 
 unittest
 {
-    foreach(dchar c; iota(0, 128))
+    foreach (dchar c; iota(0, 128))
     {
-        if(isControl(c))
+        if (isControl(c))
             assert(!isPrintable(c));
         else
             assert(isPrintable(c));
@@ -298,7 +298,7 @@ bool isASCII(dchar c) @safe pure nothrow
 
 unittest
 {
-    foreach(dchar c; iota(0, 128))
+    foreach (dchar c; iota(0, 128))
         assert(isASCII(c));
 
     assert(!isASCII(128));
@@ -321,12 +321,12 @@ body
 
 unittest
 {
-    foreach(i, c; uppercase)
+    foreach (i, c; uppercase)
         assert(toLower(c) == lowercase[i]);
 
-    foreach(dchar c; iota(0, 128))
+    foreach (dchar c; iota(0, 128))
     {
-        if(c < 'A' || c > 'Z')
+        if (c < 'A' || c > 'Z')
             assert(toLower(c) == c);
     }
 }
@@ -348,12 +348,12 @@ body
 
 unittest
 {
-    foreach(i, c; lowercase)
+    foreach (i, c; lowercase)
         assert(toUpper(c) == uppercase[i]);
 
-    foreach(dchar c; iota(0, 128))
+    foreach (dchar c; iota(0, 128))
     {
-        if(c < 'a' || c > 'z')
+        if (c < 'a' || c > 'z')
             assert(toUpper(c) == c);
     }
 }
@@ -379,22 +379,22 @@ enum
 
 immutable ubyte[128] _ctype =
 [
-        _CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
-        _CTL,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL,_CTL,
-        _CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
-        _CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
-        _SPC|_BLK,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
-        _PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
-        _DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,
-        _DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,
-        _PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
-        _PNC,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC,
-        _UC,_UC,_UC,_UC,_UC,_UC,_UC,_UC,
-        _UC,_UC,_UC,_UC,_UC,_UC,_UC,_UC,
-        _UC,_UC,_UC,_PNC,_PNC,_PNC,_PNC,_PNC,
-        _PNC,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC,
-        _LC,_LC,_LC,_LC,_LC,_LC,_LC,_LC,
-        _LC,_LC,_LC,_LC,_LC,_LC,_LC,_LC,
-        _LC,_LC,_LC,_PNC,_PNC,_PNC,_PNC,_CTL
+    _CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
+    _CTL,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL,_CTL,
+    _CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
+    _CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
+    _SPC|_BLK,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
+    _PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
+    _DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,
+    _DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,
+    _PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
+    _PNC,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC,
+    _UC,_UC,_UC,_UC,_UC,_UC,_UC,_UC,
+    _UC,_UC,_UC,_UC,_UC,_UC,_UC,_UC,
+    _UC,_UC,_UC,_PNC,_PNC,_PNC,_PNC,_PNC,
+    _PNC,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC,
+    _LC,_LC,_LC,_LC,_LC,_LC,_LC,_LC,
+    _LC,_LC,_LC,_LC,_LC,_LC,_LC,_LC,
+    _LC,_LC,_LC,_PNC,_PNC,_PNC,_PNC,_CTL
 ];
 
