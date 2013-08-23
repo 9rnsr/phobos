@@ -105,14 +105,14 @@ private
         return Demangle!uint(atts, mstr);
     }
 
-    alias TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong) IntegralTypeList;
-    alias TypeTuple!(byte, short, int, long) SignedIntTypeList;
-    alias TypeTuple!(ubyte, ushort, uint, ulong) UnsignedIntTypeList;
-    alias TypeTuple!(float, double, real) FloatingPointTypeList;
-    alias TypeTuple!(ifloat, idouble, ireal) ImaginaryTypeList;
-    alias TypeTuple!(cfloat, cdouble, creal) ComplexTypeList;
-    alias TypeTuple!(IntegralTypeList, FloatingPointTypeList) NumericTypeList;
-    alias TypeTuple!(char, wchar, dchar) CharTypeList;
+    alias { byte, ubyte, short, ushort, int, uint, long, ulong } IntegralTypeList;
+    alias { byte, short, int, long } SignedIntTypeList;
+    alias { ubyte, ushort, uint, ulong } UnsignedIntTypeList;
+    alias { float, double, real } FloatingPointTypeList;
+    alias { ifloat, idouble, ireal } ImaginaryTypeList;
+    alias { cfloat, cdouble, creal } ComplexTypeList;
+    alias { IntegralTypeList, FloatingPointTypeList } NumericTypeList;
+    alias { char, wchar, dchar } CharTypeList;
 }
 package
 {
@@ -136,7 +136,7 @@ version(unittest)
     template WildOf(T)        { alias        inout(T)  WildOf;        }
     template SharedWildOf(T)  { alias shared(inout(T)) SharedWildOf;  }
 
-    alias TypeTuple!(MutableOf, ConstOf, SharedOf, SharedConstOf, ImmutableOf) TypeQualifierList;
+    alias { MutableOf, ConstOf, SharedOf, SharedConstOf, ImmutableOf } TypeQualifierList;
 
     struct SubTypeOf(T)
     {
@@ -665,14 +665,14 @@ template ParameterTypeTuple(func...)
 unittest
 {
     int foo(int i, bool b) { return 0; }
-    static assert(is(ParameterTypeTuple!foo == TypeTuple!(int, bool)));
-    static assert(is(ParameterTypeTuple!(typeof(&foo)) == TypeTuple!(int, bool)));
+    static assert(is(ParameterTypeTuple!foo == { int, bool }));
+    static assert(is(ParameterTypeTuple!(typeof(&foo)) == { int, bool }));
 
     struct S { real opCall(real r, int i) { return 0.0; } }
     S s;
-    static assert(is(ParameterTypeTuple!S == TypeTuple!(real, int)));
-    static assert(is(ParameterTypeTuple!(S*) == TypeTuple!(real, int)));
-    static assert(is(ParameterTypeTuple!s == TypeTuple!(real, int)));
+    static assert(is(ParameterTypeTuple!S == { real, int }));
+    static assert(is(ParameterTypeTuple!(S*) == { real, int }));
+    static assert(is(ParameterTypeTuple!s == { real, int }));
 
     class Test
     {
@@ -775,7 +775,7 @@ template ParameterStorageClassTuple(func...)
         }
         else // went thru all the parameters
         {
-            alias TypeTuple!() demangleNextParameter;
+            alias demangleNextParameter = {};
         }
     }
 
@@ -856,15 +856,15 @@ template ParameterIdentifierTuple(func...)
 
         // Define dummy entities to avoid pointless errors
         template Get(size_t i) { enum Get = ""; }
-        alias TypeTuple!() PT;
+        alias PT = {};
     }
 
     template Impl(size_t i = 0)
     {
         static if (i == PT.length)
-            alias TypeTuple!() Impl;
+            alias Impl = {};
         else
-            alias TypeTuple!(Get!i, Impl!(i+1)) Impl;
+            alias Impl = { Get!i, Impl!(i+1) };
     }
 
     alias Impl!() ParameterIdentifierTuple;
@@ -908,7 +908,7 @@ unittest
     static assert([PIT!baw] == ["_param_0", "_param_1", "_param_2"]);
 
     // depends on internal
-    void baz(TypeTuple!(int, string, int[]) args){}
+    void baz({ int, string, int[] } args){}
     static assert([PIT!baz] == ["_param_0", "_param_1", "_param_2"]);
 +/
 }
@@ -955,15 +955,15 @@ template ParameterDefaultValueTuple(func...)
 
         // Define dummy entities to avoid pointless errors
         template Get(size_t i) { enum Get = ""; }
-        alias TypeTuple!() PT;
+        alias PT = {};
     }
 
     template Impl(size_t i = 0)
     {
         static if (i == PT.length)
-            alias TypeTuple!() Impl;
+            alias Impl = {};
         else
-            alias TypeTuple!(Get!i, Impl!(i+1)) Impl;
+            alias Impl = { Get!i, Impl!(i+1) };
     }
 
     alias Impl!() ParameterDefaultValueTuple;
@@ -1656,10 +1656,10 @@ version (unittest)
 unittest
 {
     alias FunctionAttribute FA;
-    foreach (BaseT; TypeTuple!(typeof(&sc), typeof(&novar), typeof(&cstyle),
-        typeof(&dstyle), typeof(&typesafe)))
+    foreach (BaseT; { typeof(&sc), typeof(&novar), typeof(&cstyle),
+        typeof(&dstyle), typeof(&typesafe) })
     {
-        foreach (T; TypeTuple!(BaseT, FunctionTypeOf!BaseT))
+        foreach (T; { BaseT, FunctionTypeOf!BaseT })
         {
             enum linkage = functionLinkage!T;
             enum attrs = functionAttributes!T;
@@ -1801,15 +1801,15 @@ unittest
     static assert(is(FieldTypeTuple!int == TypeTuple!int));
 
     static struct StaticStruct1 { }
-    static assert(is(FieldTypeTuple!StaticStruct1 == TypeTuple!()));
+    static assert(is(FieldTypeTuple!StaticStruct1 == {}));
 
     static struct StaticStruct2 { int a, b; }
-    static assert(is(FieldTypeTuple!StaticStruct2 == TypeTuple!(int, int)));
+    static assert(is(FieldTypeTuple!StaticStruct2 == { int, int }));
 
     int i;
 
     struct NestedStruct1 { void f() { ++i; } }
-    static assert(is(FieldTypeTuple!NestedStruct1 == TypeTuple!()));
+    static assert(is(FieldTypeTuple!NestedStruct1 == { }));
 
     struct NestedStruct2 { int a; void f() { ++i; } }
     static assert(is(FieldTypeTuple!NestedStruct2 == TypeTuple!int));
@@ -1824,7 +1824,7 @@ unittest
 // {
 //     static if (T.length == 0)
 //     {
-//         alias TypeTuple!() Result;
+//         alias Result = { };
 //     }
 //     else
 //     {
@@ -1852,7 +1852,7 @@ unittest
 //                                              T[1 .. $]).Result
 //                     Tail;
 //             }
-//             alias TypeTuple!(Head, Tail) Result;
+//             alias { Head, Tail } Result;
 //         }
 //     }
 // }
@@ -1921,28 +1921,28 @@ template RepresentationTypeTuple(T)
     {
         static if (T.length == 0)
         {
-            alias TypeTuple!() Impl;
+            alias Impl = { };
         }
         else
         {
             static if (is(T[0] R: Rebindable!R))
             {
-                alias Impl!(Impl!R, T[1 .. $]) Impl;
+                alias Impl = Impl!(Impl!R, T[1 .. $]);
             }
             else  static if (is(T[0] == struct) || is(T[0] == union))
             {
     // @@@BUG@@@ this should work
     //             alias .RepresentationTypes!(T[0].tupleof)
     //                 RepresentationTypes;
-                alias Impl!(FieldTypeTuple!(T[0]), T[1 .. $]) Impl;
+                alias Impl = Impl!(FieldTypeTuple!(T[0]), T[1 .. $]);
             }
             else static if (is(T[0] U == typedef))
             {
-                alias Impl!(FieldTypeTuple!U, T[1 .. $]) Impl;
+                alias Impl = Impl!(FieldTypeTuple!U, T[1 .. $]);
             }
             else
             {
-                alias TypeTuple!(T[0], Impl!(T[1 .. $])) Impl;
+                alias Impl = { T[0], Impl!(T[1 .. $]) };
             }
         }
     }
@@ -1970,8 +1970,8 @@ unittest
     struct S3 { int a; char b; }
     struct S4 { S1 a; int b; S3 c; }
     static assert(is(RepresentationTypeTuple!S2 == TypeTuple!int));
-    static assert(is(RepresentationTypeTuple!S3 == TypeTuple!(int, char)));
-    static assert(is(RepresentationTypeTuple!S4 == TypeTuple!(int, int, int, char)));
+    static assert(is(RepresentationTypeTuple!S3 == { int, char }));
+    static assert(is(RepresentationTypeTuple!S4 == { int, int, int, char }));
 
     struct S11 { int a; float b; }
     struct S21 { char[] a; union { S11 b; S11 * c; } }
@@ -1996,15 +1996,15 @@ RepresentationOffsets
 
 // private template Repeat(size_t n, T...)
 // {
-//     static if (n == 0) alias TypeTuple!() Repeat;
-//     else alias TypeTuple!(T, Repeat!(n - 1, T)) Repeat;
+//     static if (n == 0) alias Repeat = { };
+//     else alias Repeat = { T, Repeat!(n - 1, T) };
 // }
 
 // template RepresentationOffsetsImpl(size_t n, T...)
 // {
 //     static if (T.length == 0)
 //     {
-//         alias TypeTuple!() Result;
+//         alias Result = { };
 //     }
 //     else
 //     {
@@ -2024,9 +2024,8 @@ RepresentationOffsets
 //         {
 //             alias TypeTuple!myOffset Head;
 //         }
-//         alias TypeTuple!(Head,
-//                          RepresentationOffsetsImpl!(
-//                              myOffset + T[0].sizeof, T[1 .. $]).Result)
+//         alias { Head, RepresentationOffsetsImpl!(
+//                              myOffset + T[0].sizeof, T[1 .. $]).Result }
 //             Result;
 //     }
 // }
@@ -3126,15 +3125,15 @@ template EnumMembers(E)
     {
         static if (names.length > 0)
         {
-            alias TypeTuple!(
+            alias EnumSpecificMembers = {
                     WithIdentifier!(names[0])
                         .Symbolize!(__traits(getMember, E, names[0])),
                     EnumSpecificMembers!(names[1 .. $])
-                ) EnumSpecificMembers;
+                };
         }
         else
         {
-            alias TypeTuple!() EnumSpecificMembers;
+            alias EnumSpecificMembers = { };
         }
     }
 
@@ -3219,11 +3218,11 @@ unittest
     interface I1 { }
     interface I2 { }
     interface I12 : I1, I2 { }
-    static assert(is(BaseTypeTuple!I12 == TypeTuple!(I1, I2)));
+    static assert(is(BaseTypeTuple!I12 == { I1, I2 }));
 
     interface I3 : I1 { }
     interface I123 : I1, I2, I3 { }
-    static assert(is(BaseTypeTuple!I123 == TypeTuple!(I1, I2, I3)));
+    static assert(is(BaseTypeTuple!I123 == { I1, I2, I3 }));
 }
 
 unittest
@@ -3268,17 +3267,17 @@ template BaseClassesTuple(T)
 {
     static if (is(T == Object))
     {
-        alias TypeTuple!() BaseClassesTuple;
+        alias BaseClassesTuple = { };
     }
     else static if (is(BaseTypeTuple!T[0] == Object))
     {
-        alias TypeTuple!Object BaseClassesTuple;
+        alias BaseClassesTuple = { Object };
     }
     else
     {
-        alias TypeTuple!(BaseTypeTuple!T[0],
-                         BaseClassesTuple!(BaseTypeTuple!T[0]))
-            BaseClassesTuple;
+        alias BaseClassesTuple =
+            { BaseTypeTuple!T[0],
+              BaseClassesTuple!(BaseTypeTuple!T[0]) };
     }
 }
 
@@ -3288,9 +3287,9 @@ unittest
     class C2 : C1 { }
     class C3 : C2 { }
     static assert(!BaseClassesTuple!Object.length);
-    static assert(is(BaseClassesTuple!C1 == TypeTuple!(Object)));
-    static assert(is(BaseClassesTuple!C2 == TypeTuple!(C1, Object)));
-    static assert(is(BaseClassesTuple!C3 == TypeTuple!(C2, C1, Object)));
+    static assert(is(BaseClassesTuple!C1 == { Object }));
+    static assert(is(BaseClassesTuple!C2 == { C1, Object }));
+    static assert(is(BaseClassesTuple!C3 == { C2, C1, Object }));
     static assert(!BaseClassesTuple!Object.length);
     struct S { }
     static assert(!__traits(compiles, BaseClassesTuple!S));
@@ -3298,7 +3297,7 @@ unittest
     static assert(!__traits(compiles, BaseClassesTuple!I));
     class C4 : I { }
     class C5 : C4, I { }
-    static assert(is(BaseClassesTuple!C5 == TypeTuple!(C4, Object)));
+    static assert(is(BaseClassesTuple!C5 == { C4, Object }));
 }
 
 /**
@@ -3330,21 +3329,21 @@ template InterfacesTuple(T)
     {
         static if (T.length)
         {
-            alias TypeTuple!(Flatten!H, Flatten!T) Flatten;
+            alias Flatten = { Flatten!H, Flatten!T };
         }
         else
         {
             static if (is(H == interface))
-                alias TypeTuple!(H, InterfacesTuple!H) Flatten;
+                alias Flatten = { H, InterfacesTuple!H };
             else
-                alias InterfacesTuple!H Flatten;
+                alias Flatten = InterfacesTuple!H;
         }
     }
 
     static if (is(T S == super) && S.length)
-        alias NoDuplicates!(Flatten!S) InterfacesTuple;
+        alias InterfacesTuple = NoDuplicates!(Flatten!S);
     else
-        alias TypeTuple!() InterfacesTuple;
+        alias InterfacesTuple = { };
 }
 
 unittest
@@ -3370,10 +3369,8 @@ unittest
         interface J {}
         class B2 : J {}
         class C2 : B2, Ia, Ib {}
-        static assert(is(InterfacesTuple!I ==
-                        TypeTuple!(Ia, Iaa, Iab, Ib, Iba, Ibb)));
-        static assert(is(InterfacesTuple!C2 ==
-                        TypeTuple!(J, Ia, Iaa, Iab, Ib, Iba, Ibb)));
+        static assert(is(InterfacesTuple!I == { Ia, Iaa, Iab, Ib, Iba, Ibb }));
+        static assert(is(InterfacesTuple!C2 == { J, Ia, Iaa, Iab, Ib, Iba, Ibb }));
     }
 }
 
@@ -3402,10 +3399,9 @@ unittest
 template TransitiveBaseTypeTuple(T)
 {
     static if (is(T == Object))
-        alias TypeTuple!() TransitiveBaseTypeTuple;
+        alias TransitiveBaseTypeTuple = { };
     else
-        alias TypeTuple!(BaseClassesTuple!T, InterfacesTuple!T)
-            TransitiveBaseTypeTuple;
+        alias TransitiveBaseTypeTuple = { BaseClassesTuple!T, InterfacesTuple!T };
 }
 
 unittest
@@ -3469,21 +3465,21 @@ template MemberFunctionsTuple(C, string name)
                 template walkThru(Parents...)
                 {
                     static if (Parents.length > 0)
-                        alias TypeTuple!(
+                        alias {
                                     CollectOverloads!(Parents[0]),
                                     walkThru!(Parents[1 .. $])
-                                ) walkThru;
+                              } walkThru;
                     else
-                        alias TypeTuple!() walkThru;
+                        alias walkThru = { };
                 }
 
                 static if (is(Node Parents == super))
-                    alias TypeTuple!(inSight, walkThru!Parents) CollectOverloads;
+                    alias { inSight, walkThru!Parents } CollectOverloads;
                 else
                     alias TypeTuple!inSight CollectOverloads;
             }
             else
-                alias TypeTuple!() CollectOverloads; // no overloads in this hierarchy
+                alias CollectOverloads = { }; // no overloads in this hierarchy
         }
 
         // duplicates in this tuple will be removed by shrink()
@@ -3509,10 +3505,10 @@ template MemberFunctionsTuple(C, string name)
                     alias shrinkOne!(rest[0], rest[1 .. $]) shrinkOne;
                 else
                     // target and rest[0] are distinct.
-                    alias TypeTuple!(
+                    alias {
                                 shrinkOne!(target, rest[1 .. $]),
                                 rest[0] // keep
-                            ) shrinkOne;
+                          } shrinkOne;
             }
             else
                 alias TypeTuple!target shrinkOne; // done
@@ -3526,17 +3522,17 @@ template MemberFunctionsTuple(C, string name)
             static if (overloads.length > 0)
             {
                 alias shrinkOne!overloads temp;
-                alias TypeTuple!(temp[0], shrink!(temp[1 .. $])) shrink;
+                alias { temp[0], shrink!(temp[1 .. $]) } shrink;
             }
             else
-                alias TypeTuple!() shrink; // done
+                alias shrink = { }; // done
         }
 
         // done.
-        alias shrink!overloads MemberFunctionsTuple;
+        alias MemberFunctionsTuple = shrink!overloads;
     }
     else
-        alias TypeTuple!() MemberFunctionsTuple;
+        alias MemberFunctionsTuple = { };
 }
 
 unittest
@@ -3688,69 +3684,69 @@ unittest
 template ImplicitConversionTargets(T)
 {
     static if (is(T == bool))
-        alias TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong,
-            float, double, real, char, wchar, dchar)
+        alias { byte, ubyte, short, ushort, int, uint, long, ulong,
+            float, double, real, char, wchar, dchar }
             ImplicitConversionTargets;
     else static if (is(T == byte))
-        alias TypeTuple!(short, ushort, int, uint, long, ulong,
-            float, double, real, char, wchar, dchar)
+        alias { short, ushort, int, uint, long, ulong,
+            float, double, real, char, wchar, dchar }
             ImplicitConversionTargets;
     else static if (is(T == ubyte))
-        alias TypeTuple!(short, ushort, int, uint, long, ulong,
-            float, double, real, char, wchar, dchar)
+        alias { short, ushort, int, uint, long, ulong,
+            float, double, real, char, wchar, dchar }
             ImplicitConversionTargets;
     else static if (is(T == short))
-        alias TypeTuple!(ushort, int, uint, long, ulong,
-            float, double, real)
+        alias { ushort, int, uint, long, ulong,
+            float, double, real }
             ImplicitConversionTargets;
     else static if (is(T == ushort))
-        alias TypeTuple!(int, uint, long, ulong, float, double, real)
+        alias { int, uint, long, ulong, float, double, real }
             ImplicitConversionTargets;
     else static if (is(T == int))
-        alias TypeTuple!(long, ulong, float, double, real)
+        alias { long, ulong, float, double, real }
             ImplicitConversionTargets;
     else static if (is(T == uint))
-        alias TypeTuple!(long, ulong, float, double, real)
+        alias { long, ulong, float, double, real }
             ImplicitConversionTargets;
     else static if (is(T == long))
-        alias TypeTuple!(float, double, real)
+        alias { float, double, real }
             ImplicitConversionTargets;
     else static if (is(T == ulong))
-        alias TypeTuple!(float, double, real)
+        alias { float, double, real }
             ImplicitConversionTargets;
     else static if (is(T == float))
-        alias TypeTuple!(double, real)
+        alias { double, real }
             ImplicitConversionTargets;
     else static if (is(T == double))
         alias TypeTuple!real
             ImplicitConversionTargets;
     else static if (is(T == char))
-        alias TypeTuple!(wchar, dchar, byte, ubyte, short, ushort,
-            int, uint, long, ulong, float, double, real)
+        alias { wchar, dchar, byte, ubyte, short, ushort,
+            int, uint, long, ulong, float, double, real }
             ImplicitConversionTargets;
     else static if (is(T == wchar))
-        alias TypeTuple!(wchar, dchar, short, ushort, int, uint, long, ulong,
-            float, double, real)
+        alias { wchar, dchar, short, ushort, int, uint, long, ulong,
+            float, double, real }
             ImplicitConversionTargets;
     else static if (is(T == dchar))
-        alias TypeTuple!(wchar, dchar, int, uint, long, ulong,
-            float, double, real)
+        alias { wchar, dchar, int, uint, long, ulong,
+            float, double, real }
             ImplicitConversionTargets;
     else static if (is(T : typeof(null)))
-        alias TypeTuple!(typeof(null)) ImplicitConversionTargets;
+        alias { typeof(null) } ImplicitConversionTargets;
     else static if(is(T : Object))
         alias TransitiveBaseTypeTuple!T ImplicitConversionTargets;
     // @@@BUG@@@ this should work
     // else static if (isDynamicArray!T && !is(typeof(T.init[0]) == const))
-    //     alias TypeTuple!(const(typeof(T.init[0]))[]) ImplicitConversionTargets;
+    //     alias { const(typeof(T.init[0]))[] } ImplicitConversionTargets;
     else static if (is(T == char[]))
-        alias TypeTuple!(const(char)[]) ImplicitConversionTargets;
+        alias { const(char)[] } ImplicitConversionTargets;
     else static if (isDynamicArray!T && !is(typeof(T.init[0]) == const))
-        alias TypeTuple!(const(typeof(T.init[0]))[]) ImplicitConversionTargets;
+        alias { const(typeof(T.init[0]))[] } ImplicitConversionTargets;
     else static if (is(T : void*))
-        alias TypeTuple!(void*) ImplicitConversionTargets;
+        alias { void* } ImplicitConversionTargets;
     else
-        alias TypeTuple!() ImplicitConversionTargets;
+        alias ImplicitConversionTargets = { };
 }
 
 unittest
@@ -4111,7 +4107,7 @@ unittest
         static assert( is(Q!T == BooleanTypeOf!(            Q!T  )));
         static assert( is(Q!T == BooleanTypeOf!( SubTypeOf!(Q!T) )));
     }
-    foreach (T; TypeTuple!(void, NumericTypeList, ImaginaryTypeList, ComplexTypeList, CharTypeList))
+    foreach (T; { void, NumericTypeList, ImaginaryTypeList, ComplexTypeList, CharTypeList })
     foreach (Q; TypeQualifierList)
     {
         static assert(!is(BooleanTypeOf!(            Q!T  )), Q!T.stringof);
@@ -4172,7 +4168,7 @@ unittest
         static assert( is(Q!T == IntegralTypeOf!(            Q!T  )));
         static assert( is(Q!T == IntegralTypeOf!( SubTypeOf!(Q!T) )));
     }
-    foreach (T; TypeTuple!(void, bool, FloatingPointTypeList, ImaginaryTypeList, ComplexTypeList, CharTypeList))
+    foreach (T; { void, bool, FloatingPointTypeList, ImaginaryTypeList, ComplexTypeList, CharTypeList })
     foreach (Q; TypeQualifierList)
     {
         static assert(!is(IntegralTypeOf!(            Q!T  )));
@@ -4213,7 +4209,7 @@ unittest
         static assert( is(Q!T == FloatingPointTypeOf!(            Q!T  )));
         static assert( is(Q!T == FloatingPointTypeOf!( SubTypeOf!(Q!T) )));
     }
-    foreach (T; TypeTuple!(void, bool, IntegralTypeList, ImaginaryTypeList, ComplexTypeList, CharTypeList))
+    foreach (T; { void, bool, IntegralTypeList, ImaginaryTypeList, ComplexTypeList, CharTypeList })
     foreach (Q; TypeQualifierList)
     {
         static assert(!is(FloatingPointTypeOf!(            Q!T  )));
@@ -4241,7 +4237,7 @@ unittest
         static assert( is(Q!T == NumericTypeOf!(            Q!T  )));
         static assert( is(Q!T == NumericTypeOf!( SubTypeOf!(Q!T) )));
     }
-    foreach (T; TypeTuple!(void, bool, CharTypeList, ImaginaryTypeList, ComplexTypeList))
+    foreach (T; { void, bool, CharTypeList, ImaginaryTypeList, ComplexTypeList })
     foreach (Q; TypeQualifierList)
     {
         static assert(!is(NumericTypeOf!(            Q!T  )));
@@ -4316,13 +4312,13 @@ unittest
         static assert( is(CharTypeOf!(            Q!T  )));
         static assert( is(CharTypeOf!( SubTypeOf!(Q!T) )));
     }
-    foreach (T; TypeTuple!(void, bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList))
+    foreach (T; { void, bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList })
     foreach (Q; TypeQualifierList)
     {
         static assert(!is(CharTypeOf!(            Q!T  )));
         static assert(!is(CharTypeOf!( SubTypeOf!(Q!T) )));
     }
-    foreach (T; TypeTuple!(string, wstring, dstring, char[4]))
+    foreach (T; { string, wstring, dstring, char[4] })
     foreach (Q; TypeQualifierList)
     {
         static assert(!is(CharTypeOf!(            Q!T  )));
@@ -4346,8 +4342,8 @@ template StaticArrayTypeOf(T)
 
 unittest
 {
-    foreach (T; TypeTuple!(bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList))
-    foreach (Q; TypeTuple!(TypeQualifierList, WildOf, SharedWildOf))
+    foreach (T; { bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList })
+    foreach (Q; { TypeQualifierList, WildOf, SharedWildOf })
     {
         static assert(is( Q!(   T[1] ) == StaticArrayTypeOf!( Q!(              T[1]  ) ) ));
 
@@ -4392,13 +4388,13 @@ template DynamicArrayTypeOf(T)
 
 unittest
 {
-    foreach (T; TypeTuple!(/*void, */bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList))
-    foreach (Q; TypeTuple!(TypeQualifierList, WildOf, SharedWildOf))
+    foreach (T; { /*void, */bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList })
+    foreach (Q; { TypeQualifierList, WildOf, SharedWildOf })
     {
         static assert(is( Q!T[]  == DynamicArrayTypeOf!( Q!T[] ) ));
         static assert(is( Q!(T[])  == DynamicArrayTypeOf!( Q!(T[]) ) ));
 
-      foreach (P; TypeTuple!(MutableOf, ConstOf, ImmutableOf))
+      foreach (P; { MutableOf, ConstOf, ImmutableOf })
       {
         static assert(is( Q!(P!T[]) == DynamicArrayTypeOf!( Q!(SubTypeOf!(P!T[])) ) ));
         static assert(is( Q!(P!(T[])) == DynamicArrayTypeOf!( Q!(SubTypeOf!(P!(T[]))) ) ));
@@ -4448,7 +4444,7 @@ template StringTypeOf(T)
 unittest
 {
     foreach (T; CharTypeList)
-    foreach (Q; TypeTuple!(MutableOf, ConstOf, ImmutableOf, WildOf))
+    foreach (Q; { MutableOf, ConstOf, ImmutableOf, WildOf })
     {
         static assert(is(Q!T[] == StringTypeOf!( Q!T[] )));
 
@@ -4462,7 +4458,7 @@ unittest
         }
     }
     foreach (T; CharTypeList)
-    foreach (Q; TypeTuple!(SharedOf, SharedConstOf, SharedWildOf))
+    foreach (Q; { SharedOf, SharedConstOf, SharedWildOf })
     {
         static assert(!is(StringTypeOf!( Q!T[] )));
     }
@@ -4511,18 +4507,18 @@ template AssocArrayTypeOf(T)
 
 unittest
 {
-    foreach (T; TypeTuple!(int/*bool, CharTypeList, NumericTypeList, ImaginaryTypeList, ComplexTypeList*/))
-    foreach (P; TypeTuple!(TypeQualifierList, WildOf, SharedWildOf))
-    foreach (Q; TypeTuple!(TypeQualifierList, WildOf, SharedWildOf))
-    foreach (R; TypeTuple!(TypeQualifierList, WildOf, SharedWildOf))
+    foreach (T; { int/*bool, CharTypeList, NumericTypeList, ImaginaryTypeList, ComplexTypeList*/ })
+    foreach (P; { TypeQualifierList, WildOf, SharedWildOf })
+    foreach (Q; { TypeQualifierList, WildOf, SharedWildOf })
+    foreach (R; { TypeQualifierList, WildOf, SharedWildOf })
     {
         static assert(is( P!(Q!T[R!T]) == AssocArrayTypeOf!(            P!(Q!T[R!T])  ) ));
     }
-    foreach (T; TypeTuple!(int/*bool, CharTypeList, NumericTypeList, ImaginaryTypeList, ComplexTypeList*/))
-    foreach (O; TypeTuple!(TypeQualifierList, WildOf, SharedWildOf))
-    foreach (P; TypeTuple!TypeQualifierList)
-    foreach (Q; TypeTuple!TypeQualifierList)
-    foreach (R; TypeTuple!TypeQualifierList)
+    foreach (T; { int/*bool, CharTypeList, NumericTypeList, ImaginaryTypeList, ComplexTypeList*/ })
+    foreach (O; { TypeQualifierList, WildOf, SharedWildOf })
+    foreach (P; { TypeQualifierList })
+    foreach (Q; { TypeQualifierList })
+    foreach (R; { TypeQualifierList })
     {
         static assert(is( O!(P!(Q!T[R!T])) == AssocArrayTypeOf!( O!(SubTypeOf!(P!(Q!T[R!T]))) ) ));
     }
@@ -4604,7 +4600,7 @@ unittest
 {
     enum EF : real { a = 1.414, b = 1.732, c = 2.236 }
 
-    foreach (T; TypeTuple!(FloatingPointTypeList, EF))
+    foreach (T; { FloatingPointTypeList, EF })
     {
         foreach (Q; TypeQualifierList)
         {
@@ -4632,7 +4628,7 @@ template isNumeric(T)
 
 unittest
 {
-    foreach (T; TypeTuple!(NumericTypeList))
+    foreach (T; { NumericTypeList })
     {
         foreach (Q; TypeQualifierList)
         {
@@ -4686,7 +4682,7 @@ template isUnsigned(T)
 
 unittest
 {
-    foreach (T; TypeTuple!(UnsignedIntTypeList))
+    foreach (T; { UnsignedIntTypeList })
     {
         foreach (Q; TypeQualifierList)
         {
@@ -4706,7 +4702,7 @@ template isSigned(T)
 
 unittest
 {
-    foreach (T; TypeTuple!(SignedIntTypeList))
+    foreach (T; { SignedIntTypeList })
     {
         foreach (Q; TypeQualifierList)
         {
@@ -4728,7 +4724,7 @@ unittest
 {
     enum EC : char { a = 'x', b = 'y' }
 
-    foreach (T; TypeTuple!(CharTypeList, EC))
+    foreach (T; { CharTypeList, EC })
     {
         foreach (Q; TypeQualifierList)
         {
@@ -4755,7 +4751,7 @@ template isSomeString(T)
 
 unittest
 {
-    foreach (T; TypeTuple!(char[], dchar[], string, wstring, dstring, char[4]))
+    foreach (T; { char[], dchar[], string, wstring, dstring, char[4] })
     {
         static assert( isSomeString!(           T ));
         static assert(!isSomeString!(SubTypeOf!(T)));
@@ -4777,16 +4773,16 @@ template isNarrowString(T)
 
 unittest
 {
-    foreach (T; TypeTuple!(char[], string, wstring, char[4]))
+    foreach (T; { char[], string, wstring, char[4] })
     {
-        foreach (Q; TypeTuple!(MutableOf, ConstOf, ImmutableOf)/*TypeQualifierList*/)
+        foreach (Q; { MutableOf, ConstOf, ImmutableOf }/*TypeQualifierList*/)
         {
             static assert( isNarrowString!(            Q!T  ));
             static assert(!isNarrowString!( SubTypeOf!(Q!T) ));
         }
     }
 
-    foreach (T; TypeTuple!(int, int[], byte[], dchar[], dstring))
+    foreach (T; { int, int[], byte[], dchar[], dstring })
     {
         foreach (Q; TypeQualifierList)
         {
@@ -4806,9 +4802,9 @@ template isStaticArray(T)
 
 unittest
 {
-    foreach (T; TypeTuple!(int[51], int[][2],
-                           char[][int][11], immutable char[13u],
-                           const(real)[1], const(real)[1][1], void[0]))
+    foreach (T; { int[51], int[][2],
+                  char[][int][11], immutable char[13u],
+                  const(real)[1], const(real)[1][1], void[0] })
     {
         foreach (Q; TypeQualifierList)
         {
@@ -4840,7 +4836,7 @@ template isDynamicArray(T)
 
 unittest
 {
-    foreach (T; TypeTuple!(int[], char[], string, long[3][], double[string][]))
+    foreach (T; { int[], char[], string, long[3][], double[string][] })
     {
         foreach (Q; TypeQualifierList)
         {
@@ -4866,7 +4862,7 @@ template isArray(T)
 
 unittest
 {
-    foreach (T; TypeTuple!(int[], int[5], void[]))
+    foreach (T; { int[], int[5], void[] })
     {
         foreach (Q; TypeQualifierList)
         {
@@ -4896,7 +4892,7 @@ unittest
         @property uint[] values() { return null; }
     }
 
-    foreach (T; TypeTuple!(int[int], int[string], immutable(char[5])[int]))
+    foreach (T; { int[int], int[string], immutable(char[5])[int] })
     {
         foreach (Q; TypeQualifierList)
         {
@@ -4932,7 +4928,7 @@ template isPointer(T)
 
 unittest
 {
-    foreach (T; TypeTuple!(int*, void*, char[]*))
+    foreach (T; { int*, void*, char[]* })
     {
         foreach (Q; TypeQualifierList)
         {
@@ -5705,10 +5701,10 @@ unittest
     static assert(mostNegative!double == -double.max);
     static assert(mostNegative!real == -real.max);
 
-    foreach(T; TypeTuple!(byte, short, int, long))
+    foreach (T; { byte, short, int, long })
         static assert(mostNegative!T == T.min);
 
-    foreach(T; TypeTuple!(ubyte, ushort, uint, ulong, char, wchar, dchar))
+    foreach (T; { ubyte, ushort, uint, ulong, char, wchar, dchar })
         static assert(mostNegative!T == 0);
 }
 

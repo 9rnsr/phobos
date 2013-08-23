@@ -506,7 +506,7 @@ unittest
     assert(rnd.front == 399268537);
 
     // Check .save works
-    foreach (Type; TypeTuple!(MinstdRand0, MinstdRand))
+    foreach (Type; { MinstdRand0, MinstdRand })
     {
         auto rnd1 = Type(unpredictableSeed);
         auto rnd2 = rnd1.save;
@@ -769,7 +769,7 @@ unittest
 unittest
 {
     // Check .save works
-    foreach(Type; TypeTuple!(Mt19937))
+    foreach (Type; { Mt19937 })
     {
         auto gen1 = Type(unpredictableSeed);
         auto gen2 = gen1.save;
@@ -1030,7 +1030,7 @@ unittest
         [0UL, 246875399, 3690007200, 1264581005, 3906711041, 1866187943, 2481925219, 2464530826, 1604040631, 3653403911]
     ];
 
-    alias TypeTuple!(Xorshift32, Xorshift64, Xorshift96, Xorshift128, Xorshift160, Xorshift192) XorshiftTypes;
+    alias { Xorshift32, Xorshift64, Xorshift96, Xorshift128, Xorshift160, Xorshift192 } XorshiftTypes;
 
     foreach (I, Type; XorshiftTypes)
     {
@@ -1074,8 +1074,8 @@ unittest
  */
 version(unittest)
 {
-    package alias PseudoRngTypes = TypeTuple!(MinstdRand0, MinstdRand, Mt19937, Xorshift32, Xorshift64,
-                                              Xorshift96, Xorshift128, Xorshift160, Xorshift192);
+    package alias PseudoRngTypes = { MinstdRand0, MinstdRand, Mt19937, Xorshift32, Xorshift64,
+                                     Xorshift96, Xorshift128, Xorshift160, Xorshift192 };
 }
 
 unittest
@@ -1313,8 +1313,8 @@ unittest
     auto c = uniform(0.0, 1.0);
     assert(0 <= c && c < 1);
 
-    foreach(T; TypeTuple!(char, wchar, dchar, byte, ubyte, short, ushort,
-                          int, uint, long, ulong, float, double, real))
+    foreach (T; { char, wchar, dchar, byte, ubyte, short, ushort,
+                  int, uint, long, ulong, float, double, real })
     {
         T lo = 0, hi = 100;
         T init = uniform(lo, hi);
@@ -1357,8 +1357,8 @@ if (!is(T == enum) && (isIntegral!T || isSomeChar!T))
 
 unittest
 {
-    foreach(T; TypeTuple!(char, wchar, dchar, byte, ubyte, short, ushort,
-                          int, uint, long, ulong))
+    foreach (T; { char, wchar, dchar, byte, ubyte, short, ushort,
+                  int, uint, long, ulong })
     {
         T init = uniform!T();
         size_t i = 50;

@@ -276,19 +276,19 @@ template Tuple(Specs...)
     {
         static if (Specs.length == 0)
         {
-            alias TypeTuple!() parseSpecs;
+            alias parseSpecs = { };
         }
         else static if (is(Specs[0]))
         {
             static if (is(typeof(Specs[1]) : string))
             {
-                alias TypeTuple!(FieldSpec!(Specs[0 .. 2]),
-                                 parseSpecs!(Specs[2 .. $])) parseSpecs;
+                alias { FieldSpec!(Specs[0 .. 2]),
+                        parseSpecs!(Specs[2 .. $]) } parseSpecs;
             }
             else
             {
-                alias TypeTuple!(FieldSpec!(Specs[0]),
-                                 parseSpecs!(Specs[1 .. $])) parseSpecs;
+                alias { FieldSpec!(Specs[0]),
+                        parseSpecs!(Specs[1 .. $]) } parseSpecs;
             }
         }
         else
@@ -342,11 +342,11 @@ template Tuple(Specs...)
     {
         static if (spec.name.length == 0)
         {
-            alias TypeTuple!(spec.Type) expandSpec;
+            alias { spec.Type } expandSpec;
         }
         else
         {
-            alias TypeTuple!(spec.Type, spec.name) expandSpec;
+            alias { spec.Type, spec.name } expandSpec;
         }
     }
 

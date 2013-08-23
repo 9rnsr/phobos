@@ -2537,8 +2537,8 @@ unittest
     else static assert (0);
 
     import std.typetuple;
-    foreach (T; TypeTuple!(char[], const(char)[], string, wchar[],
-        const(wchar)[], wstring, dchar[], const(dchar)[], dstring))
+    foreach (T; { char[], const(char)[], string, wchar[],
+        const(wchar)[], wstring, dchar[], const(dchar)[], dstring })
     {
         foreach (fn; valid)
             assert (isValidFilename(to!T(fn)));

@@ -310,7 +310,7 @@ unittest
 
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; { string, wstring, dstring })
     {
         assert(indexOf(cast(S)null, cast(dchar)'a') == -1);
         assert(indexOf(to!S("def"), cast(dchar)'a') == -1);
@@ -367,7 +367,7 @@ unittest
 {
     debug(string) printf("string.indexOf(startIdx).unittest\n");
 
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; { string, wstring, dstring })
     {
         assert(indexOf(cast(S)null, cast(dchar)'a', 1) == -1);
         assert(indexOf(to!S("def"), cast(dchar)'a', 1) == -1);
@@ -434,9 +434,9 @@ unittest
 
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; { string, wstring, dstring })
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; { string, wstring, dstring })
         {
             assert(indexOf(cast(S)null, to!T("a")) == -1);
             assert(indexOf(to!S("def"), to!T("a")) == -1);
@@ -508,9 +508,9 @@ unittest
 {
     debug(string) printf("string.indexOf(startIdx).unittest\n");
 
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach(S; { string, wstring, dstring })
     {
-        foreach(T; TypeTuple!(string, wstring, dstring))
+        foreach(T; { string, wstring, dstring })
         {
             assert(indexOf(cast(S)null, to!T("a"), 1337) == -1);
             assert(indexOf(to!S("def"), to!T("a"), 0) == -1);
@@ -635,7 +635,7 @@ unittest
 
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; { string, wstring, dstring })
     {
         assert(lastIndexOf(cast(S) null, 'a') == -1);
         assert(lastIndexOf(to!S("def"), 'a') == -1);
@@ -693,7 +693,7 @@ unittest
 {
     debug(string) printf("string.lastIndexOf.unittest\n");
 
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach(S; { string, wstring, dstring })
     {
         assert(lastIndexOf(cast(S) null, 'a') == -1);
         assert(lastIndexOf(to!S("def"), 'a') == -1);
@@ -801,9 +801,9 @@ unittest
 
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; { string, wstring, dstring })
     {
-        foreach (T; TypeTuple!(string, wstring, dstring))
+        foreach (T; { string, wstring, dstring })
         {
             enum typeStr = S.stringof ~ " " ~ T.stringof;
 
@@ -879,9 +879,9 @@ unittest
 {
     debug(string) printf("string.lastIndexOf.unittest\n");
 
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach (S; { string, wstring, dstring })
     {
-        foreach(T; TypeTuple!(string, wstring, dstring))
+        foreach (T; { string, wstring, dstring })
         {
             enum typeStr = S.stringof ~ " " ~ T.stringof;
 
@@ -933,7 +933,7 @@ auto representation(Char)(Char[] s) pure nothrow
     if (isSomeChar!Char)
 {
     // Get representation type
-    alias TypeTuple!(ubyte, ushort, uint)[Char.sizeof / 2] U;
+    alias { ubyte, ushort, uint }[Char.sizeof / 2] U;
 
     // const and immutable storage classes
     static if (is(Char == immutable))
@@ -969,9 +969,9 @@ unittest
         assert(representation(str) is cast(T[]) str);
     }
 
-    foreach (Type; TypeTuple!(Tuple!(char , ubyte ),
-                              Tuple!(wchar, ushort),
-                              Tuple!(dchar, uint  )))
+    foreach (Type; { Tuple!(char , ubyte ),
+                     Tuple!(wchar, ushort),
+                     Tuple!(dchar, uint  ) })
     {
         alias Char = FieldTypeTuple!Type[0];
         alias Int  = FieldTypeTuple!Type[1];
@@ -1060,7 +1060,7 @@ unittest
 {
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
+    foreach (S; { string, wstring, dstring, char[], wchar[], dchar[] })
     {
         S s1 = to!S("FoL");
         S s2;
@@ -1142,7 +1142,7 @@ unittest
 
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; { char[], wchar[], dchar[], string, wstring, dstring })
     {
         auto s = to!S("\rpeter\n\rpaul\r\njerry\u2028ice\u2029cream\n\nsunday\n");
 
@@ -1275,9 +1275,9 @@ unittest
 
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!( char[], const  char[],  string,
-                           wchar[], const wchar[], wstring,
-                           dchar[], const dchar[], dstring))
+    foreach (S; {  char[], const  char[],  string,
+                  wchar[], const wchar[], wstring,
+                  dchar[], const dchar[], dstring })
     {
         assert(equal(stripLeft(to!S("  foo\t ")), "foo\t "));
         assert(equal(stripLeft(to!S("\u2008  foo\t \u2007")), "foo\t \u2007"));
@@ -1414,7 +1414,7 @@ unittest
 
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; { char[], wchar[], dchar[], string, wstring, dstring })
     {
         // @@@ BUG IN COMPILER, MUST INSERT CAST
         assert(chomp(cast(S)null) is null);
@@ -1431,7 +1431,7 @@ unittest
         assert(chomp(to!S("hello\u2028\u2028")) == "hello\u2028");
         assert(chomp(to!S("hello\u2029\u2029")) == "hello\u2029");
 
-        foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+        foreach (T; { char[], wchar[], dchar[], string, wstring, dstring })
         {
             // @@@ BUG IN COMPILER, MUST INSERT CAST
             assert(chomp(cast(S)null, cast(T)null) is null);
@@ -1491,9 +1491,9 @@ C1[] chompPrefix(C1, C2)(C1[] str, C2[] delimiter) @safe pure
 {
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; { char[], wchar[], dchar[], string, wstring, dstring })
     {
-        foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+        foreach (T; { char[], wchar[], dchar[], string, wstring, dstring })
         {
             assert(equal(chompPrefix(to!S("abcdefgh"), to!T("abcde")), "fgh"));
             assert(equal(chompPrefix(to!S("abcde"), to!T("abcdefgh")), "abcde"));
@@ -1543,7 +1543,7 @@ unittest
 
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; { char[], wchar[], dchar[], string, wstring, dstring })
     {
         assert(chop(cast(S) null) is null);
         assert(equal(chop(to!S("hello")), "hell"));
@@ -1671,7 +1671,7 @@ unittest
 
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; { char[], wchar[], dchar[], string, wstring, dstring })
     {
         S s = to!S("hello");
 
@@ -1764,7 +1764,7 @@ unittest
 
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; { char[], wchar[], dchar[], string, wstring, dstring })
     {
         S s = to!S("This \tis\t a fofof\tof list");
         assert(cmp(detab(s), "This    is       a fofof        of list") == 0);
@@ -1970,9 +1970,9 @@ unittest
 {
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!( char[], const( char)[], immutable( char)[],
-                           wchar[], const(wchar)[], immutable(wchar)[],
-                           dchar[], const(dchar)[], immutable(dchar)[]))
+    foreach (S; {  char[], const( char)[], immutable( char)[],
+                  wchar[], const(wchar)[], immutable(wchar)[],
+                  dchar[], const(dchar)[], immutable(dchar)[] })
     {
         assert(translate(to!S("hello world"), cast(dchar[dchar])['h' : 'q', 'l' : '5']) ==
                to!S("qe55o wor5d"));
@@ -1984,9 +1984,9 @@ unittest
                to!S("hell0 o w0rld"));
         assert(translate(to!S("hello world"), cast(dchar[dchar])null) == to!S("hello world"));
 
-        foreach (T; TypeTuple!( char[], const( char)[], immutable( char)[],
-                               wchar[], const(wchar)[], immutable(wchar)[],
-                               dchar[], const(dchar)[], immutable(dchar)[]))
+        foreach (T; {  char[], const( char)[], immutable( char)[],
+                      wchar[], const(wchar)[], immutable(wchar)[],
+                      dchar[], const(dchar)[], immutable(dchar)[] })
         {
             assert(translate(to!S("hello world"),
                              cast(dchar[dchar])['h' : 'q', 'l' : '5'],
@@ -2026,9 +2026,9 @@ unittest
 {
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!( char[], const( char)[], immutable( char)[],
-                           wchar[], const(wchar)[], immutable(wchar)[],
-                           dchar[], const(dchar)[], immutable(dchar)[]))
+    foreach (S; {  char[], const( char)[], immutable( char)[],
+                  wchar[], const(wchar)[], immutable(wchar)[],
+                  dchar[], const(dchar)[], immutable(dchar)[] })
     {
         assert(translate(to!S("hello world"), ['h' : "yellow", 'l' : "42"]) ==
                to!S("yellowe4242o wor42d"));
@@ -2044,9 +2044,9 @@ unittest
                to!S("hello  world"));
         assert(translate(to!S("hello world"), cast(string[dchar])null) == to!S("hello world"));
 
-        foreach (T; TypeTuple!( char[], const( char)[], immutable( char)[],
-                               wchar[], const(wchar)[], immutable(wchar)[],
-                               dchar[], const(dchar)[], immutable(dchar)[]))
+        foreach (T; {  char[], const( char)[], immutable( char)[],
+                      wchar[], const(wchar)[], immutable(wchar)[],
+                      dchar[], const(dchar)[], immutable(dchar)[] })
         {
             assert(translate(to!S("hello world"), ['h' : "yellow", 'l' : "42"], to!T("r")) ==
                    to!S("yellowe4242o wo42d"));
@@ -2200,7 +2200,7 @@ unittest
 {
     assertCTFEable!(
     {
-    foreach (C; TypeTuple!(char, const char, immutable char))
+    foreach (C; { char, const char, immutable char })
     {
         assert(translate!C("hello world", makeTrans("hl", "q5")) == to!(C[])("qe55o wor5d"));
 
@@ -2209,7 +2209,7 @@ unittest
         static assert(is(typeof(s) == typeof(translate!C(s, transTable))));
     }
 
-    foreach (S; TypeTuple!(char[], const(char)[], immutable(char)[]))
+    foreach (S; { char[], const(char)[], immutable(char)[] })
     {
         assert(translate(to!S("hello world"), makeTrans("hl", "q5")) == to!S("qe55o wor5d"));
         assert(translate(to!S("hello \U00010143 world"), makeTrans("hl", "q5")) ==
@@ -2220,7 +2220,7 @@ unittest
         assert(translate(to!S("hello \U00010143 world"), makeTrans("12345", "67890")) ==
                to!S("hello \U00010143 world"));
 
-        foreach (T; TypeTuple!(char[], const(char)[], immutable(char)[]))
+        foreach (T; { char[], const(char)[], immutable(char)[] })
         {
             assert(translate(to!S("hello world"), makeTrans("hl", "q5"), to!T("r")) ==
                    to!S("qe55o wo5d"));
@@ -2955,13 +2955,13 @@ unittest
     import std.algorithm;
 
     // Complete list of test types; too slow to test'em all
-    // alias TestTypes = TypeTuple!(
+    // alias TestTypes = {
     //          char[], const( char)[], immutable( char)[],
     //         wchar[], const(wchar)[], immutable(wchar)[],
-    //         dchar[], const(dchar)[], immutable(dchar)[]);
+    //         dchar[], const(dchar)[], immutable(dchar)[] };
 
     // Reduced list of test types
-    alias TestTypes = TypeTuple!(char[], const(wchar)[], immutable(dchar)[]);
+    alias TestTypes = { char[], const(wchar)[], immutable(dchar)[] };
 
     assertCTFEable!(
     {
@@ -3791,7 +3791,7 @@ unittest
     static assert(ctfe_strip(" \t \r\n")   == "");
     static assert(ctfe_strip("")           == "");
 
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; { string, wstring, dstring })
     {
         enum S blank = "";
         assert(blank.outdent() == blank);

@@ -556,13 +556,13 @@ struct CustomFloat(
 
 unittest
 {
-    alias TypeTuple!(
+    alias {
         CustomFloat!(5, 10),
         CustomFloat!(5, 11, CustomFloatFlags.ieee ^ CustomFloatFlags.signed),
         CustomFloat!(1, 15, CustomFloatFlags.ieee ^ CustomFloatFlags.signed),
         CustomFloat!(4, 3, CustomFloatFlags.ieee | CustomFloatFlags.probability ^ CustomFloatFlags.signed)
 
-        ) FPTypes;
+        } FPTypes;
 
     foreach (F; FPTypes)
     {

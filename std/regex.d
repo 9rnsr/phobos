@@ -2913,7 +2913,7 @@ unittest
 
     @trusted void test_fixed(alias Kick)()
     {
-        foreach(i, v; TypeTuple!(char, wchar, dchar))
+        foreach(i, v; { char, wchar, dchar })
         {
             alias v Char;
             alias immutable(v)[] String;
@@ -2939,7 +2939,7 @@ unittest
     }
     @trusted void test_flex(alias Kick)()
     {
-        foreach(i, v;TypeTuple!(char, wchar, dchar))
+        foreach(i, v; { char, wchar, dchar })
         {
             alias v Char;
             alias immutable(v)[] String;
@@ -6601,7 +6601,7 @@ public auto matchAll(R, RegEx)(R input, RegEx re)
 // another set of tests just to cover the new API
 @system unittest
 {
-    foreach(String; TypeTuple!(string, wstring, const(dchar)[]))
+    foreach(String; { string, wstring, const(dchar)[] })
     {
         auto str1 = "blah-bleh".to!String();
         auto pat1 = "bl[ae]h".to!String();
@@ -6971,7 +6971,7 @@ public @trusted void replaceAllInto(alias fun, Sink, R, RegEx)
 @system unittest
 {
     // try and check first/all simple substitution
-    foreach(S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
+    foreach(S; { string, wstring, dstring, char[], wchar[], dchar[] })
     {
         S s1 = "curt trial".to!S();
         S s2 = "round dome".to!S();
@@ -7542,7 +7542,7 @@ unittest
     void run_tests(alias matchFn)()
     {
         int i;
-        foreach(Char; TypeTuple!( char, wchar, dchar))
+        foreach(Char; { char, wchar, dchar })
         {
             alias immutable(Char)[] String;
             String produceExpected(M,Range)(auto ref M m, Range fmt)
@@ -7606,7 +7606,7 @@ unittest
             alias Tests = Sequence!(185, 220);
         }
         else
-            alias Tests = TypeTuple!(Sequence!(0, 70), Sequence!(225, 232));
+            alias Tests = { Sequence!(0, 70), Sequence!(225, 232) };
         foreach(a, v; Tests)
         {
             enum tvd = tv[v];
@@ -7840,7 +7840,7 @@ unittest
     {
         import std.string : toUpper;
 
-        foreach(i, v; TypeTuple!(string, wstring, dstring))
+        foreach(i, v; { string, wstring, dstring })
         {
             auto baz(Cap)(Cap m)
             if (is(Cap == Captures!(Cap.String)))
@@ -7923,7 +7923,7 @@ unittest
 }
 unittest
 {// bugzilla 7679
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach(S; { string, wstring, dstring })
     {
         enum re = ctRegex!(to!S(r"\."));
         auto str = to!S("a.b");

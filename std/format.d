@@ -1621,7 +1621,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 
 /*@safe pure */unittest
 {
-    foreach (T; TypeTuple!(float, double, real))
+    foreach (T; { float, double, real })
     {
         formatTest( to!(          T)(5.5), "5.5" );
         formatTest( to!(    const T)(5.5), "5.5" );
@@ -1667,13 +1667,13 @@ if (is(Unqual!T : creal) && !is(T == enum) && !hasToString!(T, Char))
 
 /*@safe pure */unittest
 {
-    foreach (T; TypeTuple!(cfloat, cdouble, creal))
+    foreach (T; { cfloat, cdouble, creal })
     {
         formatTest( to!(          T)(1 + 1i), "1+1i" );
         formatTest( to!(    const T)(1 + 1i), "1+1i" );
         formatTest( to!(immutable T)(1 + 1i), "1+1i" );
     }
-    foreach (T; TypeTuple!(cfloat, cdouble, creal))
+    foreach (T; { cfloat, cdouble, creal })
     {
         formatTest( to!(          T)(0 - 3i), "0-3i" );
         formatTest( to!(    const T)(0 - 3i), "0-3i" );
@@ -1712,7 +1712,7 @@ if (is(Unqual!T : ireal) && !is(T == enum) && !hasToString!(T, Char))
 
 /*@safe pure */unittest
 {
-    foreach (T; TypeTuple!(ifloat, idouble, ireal))
+    foreach (T; { ifloat, idouble, ireal })
     {
         formatTest( to!(          T)(1i), "1i" );
         formatTest( to!(    const T)(1i), "1i" );
@@ -1982,7 +1982,7 @@ unittest
 unittest
 {
     // string literal from valid UTF sequence is encoding free.
-    foreach (StrType; TypeTuple!(string, wstring, dstring))
+    foreach (StrType; { string, wstring, dstring })
     {
         // Valid and printable (ASCII)
         formatTest( [cast(StrType)"hello"],
@@ -3611,8 +3611,8 @@ unittest
     // }
 
     auto stream = appender!(char[])();
-    alias TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong,
-            float, double, real) AllNumerics;
+    alias { byte, ubyte, short, ushort, int, uint, long, ulong,
+            float, double, real } AllNumerics;
     foreach (T; AllNumerics)
     {
         T value = 1;

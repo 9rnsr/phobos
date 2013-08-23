@@ -852,7 +852,7 @@ void main()
         auto deleteme = testFilename();
         std.file.write(deleteme, "hello\nworld\n");
         scope(exit) std.file.remove(deleteme);
-        foreach (String; TypeTuple!(string, char[], wstring, wchar[], dstring, dchar[]))
+        foreach (String; { string, char[], wstring, wchar[], dstring, dchar[] })
         {
             auto witness = [ "hello\n", "world\n" ];
             auto f = File(deleteme);
@@ -2088,7 +2088,7 @@ unittest
     // stdout.open(file, "w");
     // assert(stdout.isOpen);
     // writefln("Hello, %s world number %s!", "nice", 42);
-    // foreach (F ; TypeTuple!(ifloat, idouble, ireal))
+    // foreach (F; { ifloat, idouble, ireal })
     // {
     //     F a = 5i;
     //     F b = a % 2;
@@ -2205,12 +2205,12 @@ unittest
     {
         readln();
         readln('\t');
-        foreach (String; TypeTuple!(string, char[], wstring, wchar[], dstring, dchar[]))
+        foreach (String; { string, char[], wstring, wchar[], dstring, dchar[] })
         {
             readln!String();
             readln!String('\t');
         }
-        foreach (String; TypeTuple!(char[], wchar[], dchar[]))
+        foreach (String; { char[], wchar[], dchar[] })
         {
             String buf;
             readln(buf);
@@ -2432,8 +2432,8 @@ unittest
     scope(failure) printf("Failed test at line %d\n", __LINE__);
     auto deleteme = testFilename();
     scope(exit) { std.file.remove(deleteme); }
-    alias TypeTuple!(string, wstring, dstring,
-                     char[], wchar[], dchar[])
+    alias { string, wstring, dstring,
+            char[], wchar[], dchar[] }
         TestedWith;
     foreach (T; TestedWith) {
         // test looping with an empty file
@@ -2476,8 +2476,8 @@ unittest
 
     // test with ubyte[] inputs
     //@@@BUG 2612@@@
-    //alias TypeTuple!(immutable(ubyte)[], ubyte[]) TestedWith2;
-    alias TypeTuple!(immutable(ubyte)[], ubyte[]) TestedWith2;
+    //alias { immutable(ubyte)[], ubyte[] } TestedWith2;
+    alias { immutable(ubyte)[], ubyte[] } TestedWith2;
     foreach (T; TestedWith2) {
         // test looping with an empty file
         std.file.write(deleteme, "");
@@ -2519,7 +2519,7 @@ unittest
 
     }
 
-    foreach (T; TypeTuple!(ubyte[]))
+    foreach (T; { ubyte[] })
     {
         // test looping with a file with three lines, last without a newline
         // using a counter too this time
