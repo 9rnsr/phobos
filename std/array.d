@@ -197,7 +197,7 @@ unittest
         int i;
     }
 
-    foreach(T; TypeTuple!(S, const S, immutable S))
+    foreach(T; { S, const S, immutable S })
     {
         auto arr = [T(1), T(2), T(3), T(4)];
         assert(array(arr) == arr);
@@ -533,7 +533,7 @@ if (isNarrowString!(C[]))
 
 unittest
 {
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach (S; { string, wstring, dstring })
     {
         S s = "\xC2\xA9hello";
         s.popFront();
@@ -611,7 +611,7 @@ if (isNarrowString!(T[]))
 
 unittest
 {
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach (S; { string, wstring, dstring })
     {
         S s = "hello\xE2\x89\xA0";
         s.popBack();
@@ -1156,11 +1156,11 @@ unittest
                 new AssertError("testStr failure 3", file, line));
     }
 
-    foreach (T; TypeTuple!(char, wchar, dchar,
-        immutable(char), immutable(wchar), immutable(dchar)))
+    foreach (T; { char, wchar, dchar,
+        immutable(char), immutable(wchar), immutable(dchar) })
     {
-        foreach (U; TypeTuple!(char, wchar, dchar,
-            immutable(char), immutable(wchar), immutable(dchar)))
+        foreach (U; { char, wchar, dchar,
+            immutable(char), immutable(wchar), immutable(dchar) })
         {
             testStr!(T[], U[])();
         }
@@ -1282,7 +1282,7 @@ pure nothrow bool sameTail(T)(in T[] lhs, in T[] rhs)
 
 @safe pure nothrow unittest
 {
-    foreach(T; TypeTuple!(int[], const(int)[], immutable(int)[], const int[], immutable int[]))
+    foreach (T; { int[], const(int)[], immutable(int)[], const int[], immutable int[] })
     {
         T a = [1, 2, 3, 4, 5];
         T b = a;
@@ -1346,7 +1346,7 @@ unittest
 {
     debug(std_array) printf("array.replicate.unittest\n");
 
-    foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
+    foreach (S; { string, wstring, dstring, char[], wchar[], dchar[] })
     {
         S s;
         immutable S t = "abc";
@@ -1398,7 +1398,7 @@ S[] split(S)(S s) if (isSomeString!S)
 
 unittest
 {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; { string, wstring, dstring })
     {
         debug(std_array) printf("array.split1\n");
         S s = " \t\npeter paul\tjerry \n";
@@ -1432,7 +1432,7 @@ auto splitter(C)(C[] s)
 
 unittest
 {
-    foreach(S; TypeTuple!(string, wstring, dstring))
+    foreach (S; { string, wstring, dstring })
     {
         S a = " a     bcd   ef gh ";
         assert(equal(splitter(a), [to!S(""), to!S("a"), to!S("bcd"), to!S("ef"), to!S("gh")][]));
@@ -1462,11 +1462,11 @@ if (isForwardRange!(Unqual!S1) && isForwardRange!S2)
 unittest
 {
     debug(std_array) printf("array.split\n");
-    foreach (S; TypeTuple!(string, wstring, dstring,
+    foreach (S; { string, wstring, dstring,
                     immutable(string), immutable(wstring), immutable(dstring),
                     char[], wchar[], dchar[],
                     const(char)[], const(wchar)[], const(dchar)[],
-                    const(char[]), immutable(char[])))
+                    const(char[]), immutable(char[]) })
     {
         S s = to!S(",peter,paul,jerry,");
 
@@ -1611,7 +1611,7 @@ unittest
 {
     debug(std_array) printf("array.join.unittest\n");
 
-    foreach(R; TypeTuple!(string, wstring, dstring))
+    foreach (R; { string, wstring, dstring })
     {
         R word1 = "日本語";
         R word2 = "paul";
@@ -1628,7 +1628,7 @@ unittest
         auto filteredLenWordsArr = [filteredLenWord1, filteredLenWord2, filteredLenWord3];
         auto filteredWords    = filter!"true"(filteredWordsArr);
 
-        foreach(S; TypeTuple!(string, wstring, dstring))
+        foreach (S; { string, wstring, dstring })
         {
             assert(join(filteredWords, to!S(", ")) == "日本語, paul, jerry");
             assert(join(filteredWordsArr, to!S(", ")) == "日本語, paul, jerry");
@@ -1763,7 +1763,7 @@ unittest
 {
     debug(std_array) printf("array.replace.unittest\n");
 
-    foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
+    foreach (S; { string, wstring, dstring, char[], wchar[], dchar[] })
     {
         auto s = to!S("This is a foo foo list");
         auto from = to!S("foo");
@@ -1794,7 +1794,7 @@ unittest
         this(C[] arr){ desired = arr; }
         void put(C[] part){ assert(skipOver(desired, part)); }
     }
-    foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
+    foreach (S; { string, wstring, dstring, char[], wchar[], dchar[] })
     {
         alias ElementEncodingType!S Char;
         S s = to!S("yet another dummy text, yet another ...");
@@ -2075,8 +2075,8 @@ unittest
 {
     debug(std_array) printf("array.replaceFirst.unittest\n");
 
-    foreach(S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[],
-                          const(char[]), immutable(char[])))
+    foreach (S; { string, wstring, dstring, char[], wchar[], dchar[],
+                          const(char[]), immutable(char[]) })
     {
         alias Unqual!S T;
 
@@ -2632,7 +2632,7 @@ Appender!(E[]) appender(A : E[], E)(A array)
     catch (Exception) assert(0);
 
     // Issue 5663 & 9725 tests
-    foreach (S; TypeTuple!(char[], const(char)[], string))
+    foreach (S; { char[], const(char)[], string })
     {
         {
             Appender!S app5663i;

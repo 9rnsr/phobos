@@ -1283,7 +1283,7 @@ unittest
     assert (!typeid(S3).init().ptr);
     assert ( typeid(S4).init().ptr);
 
-    foreach(S; TypeTuple!(S1, S2, S3, S4))
+    foreach (S; { S1, S2, S3, S4 })
     {
         //initializeAll
         {
@@ -2086,10 +2086,10 @@ template forward(args...)
             alias fwd = arg;
         else
             @property fwd()(){ return move(arg); }
-        alias forward = TypeTuple!(fwd, forward!(args[1..$]));
+        alias forward = { fwd, forward!(args[1..$]) };
     }
     else
-        alias forward = TypeTuple!();
+        alias forward = {};
 }
 
 unittest
@@ -4032,7 +4032,7 @@ unittest
     assert(find(a, 5).empty);
     assert(find(a, 2) == [2, 3]);
 
-    foreach (T; TypeTuple!(int, double))
+    foreach (T; { int, double })
     {
         auto b = rndstuff!(T)();
         if (!b.length) continue;
@@ -4058,7 +4058,7 @@ unittest
     assert(find(std.range.retro(a), 5).empty);
     assert(equal(find(std.range.retro(a), 2), [ 2, 3, 2, 1 ][]));
 
-    foreach (T; TypeTuple!(int, double))
+    foreach (T; { int, double })
     {
         auto b = rndstuff!(T)();
         if (!b.length) continue;
@@ -5105,7 +5105,7 @@ unittest
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; { char[], wchar[], dchar[], string, wstring, dstring })
     {
         assert(!startsWith(to!S("abc"), 'c'));
         assert(startsWith(to!S("abc"), 'a', 'c') == 1);
@@ -5113,7 +5113,7 @@ unittest
         assert(startsWith(to!S("abc"), 'x', 'n', 'a') == 3);
         assert(startsWith(to!S("\uFF28abc"), 'a', '\uFF28', 'c') == 2);
 
-        foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+        foreach (T; { char[], wchar[], dchar[], string, wstring, dstring })
         {
             //Lots of strings
             assert(startsWith(to!S("abc"), to!T("")));
@@ -5155,7 +5155,7 @@ unittest
     assert(startsWith("abc".takeExactly(3), "abcd".takeExactly(3)));
     assert(startsWith("abc".takeExactly(3), "abcd".takeExactly(1)));
 
-    foreach (T; TypeTuple!(int, short))
+    foreach (T; { int, short })
     {
         immutable arr = cast(T[])[0, 1, 2, 3, 4, 5];
 
@@ -5404,7 +5404,7 @@ unittest
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
-    foreach (S; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+    foreach (S; { char[], wchar[], dchar[], string, wstring, dstring })
     {
         assert(!endsWith(to!S("abc"), 'a'));
         assert(endsWith(to!S("abc"), 'a', 'c') == 2);
@@ -5412,7 +5412,7 @@ unittest
         assert(endsWith(to!S("abc"), 'x', 'n', 'c') == 3);
         assert(endsWith(to!S("abc\uFF28"), 'a', '\uFF28', 'c') == 2);
 
-        foreach (T; TypeTuple!(char[], wchar[], dchar[], string, wstring, dstring))
+        foreach (T; { char[], wchar[], dchar[], string, wstring, dstring })
         {
             //Lots of strings
             assert(endsWith(to!S("abc"), to!T("")));
@@ -5446,7 +5446,7 @@ unittest
         }
     }
 
-    foreach (T; TypeTuple!(int, short))
+    foreach (T; { int, short })
     {
         immutable arr = cast(T[])[0, 1, 2, 3, 4, 5];
 
@@ -5589,11 +5589,11 @@ unittest
     assert(commonPrefix(cast(int[])null, [1, 2, 3]).empty);
     assert(commonPrefix(cast(int[])null, cast(int[])null).empty);
 
-    foreach (S; TypeTuple!(char[], const(char)[], string,
-                           wchar[], const(wchar)[], wstring,
-                           dchar[], const(dchar)[], dstring))
+    foreach (S; {  char[], const( char)[],  string,
+                  wchar[], const(wchar)[], wstring,
+                  dchar[], const(dchar)[], dstring))
     {
-        foreach(T; TypeTuple!(string, wstring, dstring))
+        foreach (T; { string, wstring, dstring })
         {
             assert(commonPrefix(to!S(""), to!T("")).empty);
             assert(commonPrefix(to!S(""), to!T("hello")).empty);
