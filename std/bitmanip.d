@@ -1577,7 +1577,7 @@ private ulong swapEndianImpl(ulong val) @trusted pure nothrow
 
 unittest
 {
-    foreach(T; TypeTuple!(bool, byte, ubyte, short, ushort, int, uint, long, ulong, char, wchar, dchar))
+    foreach(T; { bool, byte, ubyte, short, ushort, int, uint, long, ulong, char, wchar, dchar })
     {
         scope(failure) writefln("Failed type: %s", T.stringof);
         T val;
@@ -1703,8 +1703,8 @@ private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow
 
 unittest
 {
-    foreach(T; TypeTuple!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
-                          char, wchar, dchar
+    foreach(T; { bool, byte, ubyte, short, ushort, int, uint, long, ulong,
+                 char, wchar, dchar
         /* The trouble here is with floats and doubles being compared against nan
          * using a bit compare. There are two kinds of nans, quiet and signaling.
          * When a nan passes through the x87, it converts signaling to quiet.
@@ -1714,7 +1714,7 @@ unittest
          * the x87, meaning these will fail the 'is' bit compare under some circumstances.
          * I cannot think of a fix for this that makes consistent sense.
          */
-                          /*,float, double*/))
+                          /*,float, double*/ })
     {
         scope(failure) writefln("Failed type: %s", T.stringof);
         T val;
@@ -1898,9 +1898,9 @@ private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow
 
 unittest
 {
-    foreach(T; TypeTuple!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
+    foreach(T; { bool, byte, ubyte, short, ushort, int, uint, long, ulong,
                           char, wchar, dchar/*,
-                          float, double*/))
+                          float, double*/ })
     {
         scope(failure) writefln("Failed type: %s", T.stringof);
         T val;
@@ -2038,7 +2038,7 @@ private template isFloatOrDouble(T)
 
 unittest
 {
-    foreach(T; TypeTuple!(float, double))
+    foreach(T; { float, double })
     {
         static assert(isFloatOrDouble!(T));
         static assert(isFloatOrDouble!(const T));
@@ -2066,8 +2066,8 @@ private template canSwapEndianness(T)
 
 unittest
 {
-    foreach(T; TypeTuple!(bool, ubyte, byte, ushort, short, uint, int, ulong,
-                          long, char, wchar, dchar, float, double))
+    foreach(T; { bool, ubyte, byte, ushort, short, uint, int, ulong,
+                          long, char, wchar, dchar, float, double })
     {
         static assert(canSwapEndianness!(T));
         static assert(canSwapEndianness!(const T));
@@ -2078,7 +2078,7 @@ unittest
     }
 
     //!
-    foreach(T; TypeTuple!(real, string, wstring, dstring))
+    foreach(T; { real, string, wstring, dstring })
     {
         static assert(!canSwapEndianness!(T));
         static assert(!canSwapEndianness!(const T));
@@ -3245,10 +3245,10 @@ unittest
 {
     import std.string;
 
-    foreach(endianness; TypeTuple!(Endian.bigEndian, Endian.littleEndian))
+    foreach(endianness; { Endian.bigEndian, Endian.littleEndian ])
     {
         auto toWrite = appender!(ubyte[])();
-        alias TypeTuple!(uint, int, long, ulong, short, ubyte, ushort, byte, uint) Types;
+        alias { uint, int, long, ulong, short, ubyte, ushort, byte, uint } Types;
         ulong[] values = [42, -11, long.max, 1098911981329L, 16, 255, 19012, 2, 17];
         assert(Types.length == values.length);
 

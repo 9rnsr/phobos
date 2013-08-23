@@ -331,7 +331,7 @@ auto toLower(C)(C c)
 
 unittest
 {
-    foreach(C; TypeTuple!(char, wchar, dchar, immutable char, ubyte))
+    foreach(C; { char, wchar, dchar, immutable char, ubyte })
     {
         foreach(i, c; uppercase)
             assert(toLower(cast(C)c) == lowercase[i]);
@@ -378,7 +378,7 @@ auto toUpper(C)(C c)
 
 unittest
 {
-    foreach(C; TypeTuple!(char, wchar, dchar, immutable char, ubyte))
+    foreach(C; { char, wchar, dchar, immutable char, ubyte })
     {
         foreach(i, c; lowercase)
             assert(toUpper(cast(C)c) == uppercase[i]);
