@@ -576,7 +576,7 @@ unittest
 
     // single
     alias staticMap!(Unqual, const int) Single;
-    static assert(is(Single == TypeTuple!int));
+    static assert(is(Single == { int }));
 
     alias staticMap!(Unqual, int, const int, immutable int) T;
     static assert(is(T == { int, int, int }));

@@ -396,10 +396,10 @@ public struct UUID
             import std.exception;
             import std.typetuple;
 
-            foreach(S; TypeTuple!(char[], const(char)[], immutable(char)[],
-                                  wchar[], const(wchar)[], immutable(wchar)[],
-                                  dchar[], const(dchar)[], immutable(dchar)[],
-                                  immutable(char[]), immutable(wchar[]), immutable(dchar[])))
+            foreach(S; {  char[], const( char)[], immutable( char)[],
+                         wchar[], const(wchar)[], immutable(wchar)[],
+                         dchar[], const(dchar)[], immutable(dchar)[],
+                         immutable(char[]), immutable(wchar[]), immutable(dchar[])))
             {
                 //Test valid, working cases
                 assert(UUID(to!S("00000000-0000-0000-0000-000000000000")).empty);
@@ -1376,11 +1376,11 @@ unittest
             return parseUUID(to!T(input));
     }
 
-    foreach(S; TypeTuple!(char[], const(char)[], immutable(char)[],
-                          wchar[], const(wchar)[], immutable(wchar)[],
-                          dchar[], const(dchar)[], immutable(dchar)[],
-                          immutable(char[]), immutable(wchar[]), immutable(dchar[]),
-                          TestForwardRange, TestInputRange))
+    foreach(S; {  char[], const( char)[], immutable( char)[],
+                 wchar[], const(wchar)[], immutable(wchar)[],
+                 dchar[], const(dchar)[], immutable(dchar)[],
+                 immutable(char[]), immutable(wchar[]), immutable(dchar[]),
+                 TestForwardRange, TestInputRange })
     {
         //Verify examples.
         auto id = parseHelper!S("8AB3060E-2CBA-4F23-b74c-B52Db3BDFB46");

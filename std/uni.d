@@ -3043,7 +3043,7 @@ private:
         assert(u24 != u24_2);
     }
 
-    foreach(Policy; TypeTuple!(GcPolicy, ReallocPolicy))
+    foreach(Policy; { GcPolicy, ReallocPolicy })
     {
         alias typeof(Uint24Array!Policy.init[]) Range;
         alias Uint24Array!Policy U24A;
@@ -3081,7 +3081,7 @@ private:
 
 version(unittest)
 {
-    private alias TypeTuple!(InversionList!GcPolicy, InversionList!ReallocPolicy) AllSets;
+    private alias { InversionList!GcPolicy, InversionList!ReallocPolicy } AllSets;
 }
 
 @trusted unittest// core set primitives test
@@ -3272,7 +3272,7 @@ unittest// vs single dchar
 unittest// iteration & opIndex
 {
     import std.typecons;
-    foreach(CodeList; TypeTuple!(InversionList!(ReallocPolicy)))
+    foreach(CodeList; { InversionList!ReallocPolicy })
     {
         auto arr = "ABCDEFGHIJKLMabcdefghijklm"d;
         auto a = CodeList('A','N','a', 'n');
@@ -3727,10 +3727,10 @@ private:
 template GetBitSlicing(size_t top, sizes...)
 {
     static if(sizes.length > 0)
-        alias TypeTuple!(sliceBits!(top - sizes[0], top)
-            , GetBitSlicing!(top - sizes[0], sizes[1..$])) GetBitSlicing;
+        alias { sliceBits!(top - sizes[0], top)
+            , GetBitSlicing!(top - sizes[0], sizes[1..$]) } GetBitSlicing;
     else
-        alias TypeTuple!()  GetBitSlicing;
+        alias GetBitSlicing = { };
 }
 
 template callableWith(T)
@@ -4014,9 +4014,9 @@ public template buildTrie(Value, Key, Args...)
     {
         static if(n > 0)
             alias GetComparators =
-                TypeTuple!(GetComparators!(n-1), cmpK0!(Prefix[n-1]));
+                { GetComparators!(n-1), cmpK0!(Prefix[n-1]) };
         else
-            alias GetComparators = TypeTuple!();
+            alias GetComparators = { };
     }
 
     /*
@@ -4288,9 +4288,9 @@ static assert(bitSizeOf!(BitPacked!(uint, 2)) == 2);
 template Sequence(size_t start, size_t end)
 {
     static if(start < end)
-        alias TypeTuple!(start, Sequence!(start+1, end)) Sequence;
+        alias Sequence = { start, Sequence!(start+1, end) };
     else
-        alias TypeTuple!() Sequence;
+        alias Sequence = { };
 }
 
 //---- TRIE TESTS ----
@@ -4417,7 +4417,7 @@ template idxTypes(Key, size_t fullBits, Prefix...)
 {
     static if(Prefix.length == 1)
     {// the last level is value level, so no index once reduced to 1-level
-        alias TypeTuple!() idxTypes;
+        alias idxTypes = { };
     }
     else
     {
@@ -4426,10 +4426,10 @@ template idxTypes(Key, size_t fullBits, Prefix...)
         // The bottom level is known to hold full bit width
         // thus it's size in pages is full_bit_width - size_of_last_prefix
         // Recourse on this notion
-        alias TypeTuple!(
+        alias {
             idxTypes!(Key, fullBits - bitSizeOf!(Prefix[$-1]), Prefix[0..$-1]),
             BitPacked!(typeof(Prefix[$-2](Key.init)), fullBits - bitSizeOf!(Prefix[$-1]))
-        ) idxTypes;
+        } idxTypes;
     }
 }
 
@@ -5671,10 +5671,10 @@ unittest
 {
     assertCTFEable!(
     {
-    foreach(cfunc; TypeTuple!(icmp, sicmp))
+    foreach(cfunc; { icmp, sicmp })
     {
-        foreach(S1; TypeTuple!(string, wstring, dstring))
-        foreach(S2; TypeTuple!(string, wstring, dstring))
+        foreach(S1; { string, wstring, dstring })
+        foreach(S2; { string, wstring, dstring })
         {
             assert(cfunc("".to!S1(), "".to!S2()) == 0);
             assert(cfunc("A".to!S1(), "".to!S2()) > 0);
@@ -6526,8 +6526,8 @@ private dchar toTitlecase(dchar c)
     return c;
 }
 
-private alias UpperTriple = TypeTuple!(toUpperIndex, MAX_SIMPLE_UPPER, toUpperTab);
-private alias LowerTriple = TypeTuple!(toLowerIndex, MAX_SIMPLE_LOWER, toLowerTab);
+private alias UpperTriple = { toUpperIndex, MAX_SIMPLE_UPPER, toUpperTab };
+private alias LowerTriple = { toLowerIndex, MAX_SIMPLE_LOWER, toLowerTab };
 
 // generic toUpper/toLower on whole string, creates new or returns as is
 private S toCase(alias indexFn, uint maxIdx, alias tableFn, S)(S s) @trusted pure
@@ -7008,7 +7008,7 @@ unittest
         assert(upInp == trueUp,
             format(diff, cast(ubyte[])s, cast(ubyte[])upInp, cast(ubyte[])trueUp));
     }
-    foreach(S; TypeTuple!(dstring, wstring, string))
+    foreach(S; { dstring, wstring, string })
     {
 
         S easy = "123";
@@ -7019,7 +7019,7 @@ unittest
         S[] lower = ["123", "abcфеж", "\u0131\u023f\u03c9", "i\u0307\u1Fe2"];
         S[] upper = ["123", "ABCФЕЖ", "I\u2c7e\u2126", "\u0130\u03A5\u0308\u0300"];
 
-        foreach(val; TypeTuple!(easy, good))
+        foreach(val; { easy, good })
         {
             auto e = val.dup;
             auto g = e;

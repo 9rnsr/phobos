@@ -3457,20 +3457,20 @@ struct Curl
         copy.stopped = false;
 
         with (CurlOption) {
-            auto tt = TypeTuple!(file, writefunction, writeheader,
-                                 headerfunction, infile,
-                                 readfunction, ioctldata, ioctlfunction,
-                                 seekdata, seekfunction, sockoptdata,
-                                 sockoptfunction, opensocketdata,
-                                 opensocketfunction, noprogress,
-                                 progressdata, progressfunction,
-                                 debugdata, debugfunction,
-                                 ssl_ctx_function, interleavedata,
-                                 interleavefunction, chunk_data,
-                                 chunk_bgn_function, chunk_end_function,
-                                 fnmatch_data, fnmatch_function,
-                                 ssh_keydata, cookiejar, postfields);
-            foreach(option; tt)
+            auto tt = { file, writefunction, writeheader,
+                      { headerfunction, infile,
+                      { readfunction, ioctldata, ioctlfunction,
+                      { seekdata, seekfunction, sockoptdata,
+                      { sockoptfunction, opensocketdata,
+                      { opensocketfunction, noprogress,
+                      { progressdata, progressfunction,
+                      { debugdata, debugfunction,
+                      { ssl_ctx_function, interleavedata,
+                      { interleavefunction, chunk_data,
+                      { chunk_bgn_function, chunk_end_function,
+                      { fnmatch_data, fnmatch_function,
+                      { ssh_keydata, cookiejar, postfields };
+            foreach (option; tt)
                 copy.clear(option);
         }
 

@@ -103,25 +103,25 @@ template AssociativeArray(T : V[K], K, V)
 
 template This2Variant(V, T...)
 {
-    static if (T.length == 0) alias TypeTuple!() This2Variant;
+    static if (T.length == 0) alias This2Variant = { };
     else static if (is(AssociativeArray!(T[0]).Key == This))
     {
         static if (is(AssociativeArray!(T[0]).Value == This))
-            alias TypeTuple!(V[V],
-                    This2Variant!(V, T[1 .. $])) This2Variant;
+            alias { V[V],
+                    This2Variant!(V, T[1 .. $]) } This2Variant;
         else
-            alias TypeTuple!(AssociativeArray!(T[0]).Value[V],
-                    This2Variant!(V, T[1 .. $])) This2Variant;
+            alias { AssociativeArray!(T[0]).Value[V],
+                    This2Variant!(V, T[1 .. $]) } This2Variant;
     }
     else static if (is(AssociativeArray!(T[0]).Value == This))
-        alias TypeTuple!(V[AssociativeArray!(T[0]).Key],
-                This2Variant!(V, T[1 .. $])) This2Variant;
+        alias { V[AssociativeArray!(T[0]).Key],
+                This2Variant!(V, T[1 .. $]) } This2Variant;
     else static if (is(T[0] == This[]))
-        alias TypeTuple!(V[], This2Variant!(V, T[1 .. $])) This2Variant;
+        alias { V[], This2Variant!(V, T[1 .. $]) } This2Variant;
     else static if (is(T[0] == This*))
-        alias TypeTuple!(V*, This2Variant!(V, T[1 .. $])) This2Variant;
+        alias { V*, This2Variant!(V, T[1 .. $]) } This2Variant;
     else
-       alias TypeTuple!(T[0], This2Variant!(V, T[1 .. $])) This2Variant;
+       alias { T[0], This2Variant!(V, T[1 .. $]) } This2Variant;
 }
 
 /**
@@ -253,7 +253,7 @@ private:
         // by the incoming TypeInfo
         static bool tryPutting(A* src, TypeInfo targetType, void* target)
         {
-            alias TypeTuple!(A, ImplicitConversionTargets!A) AllTypes;
+            alias { A, ImplicitConversionTargets!A } AllTypes;
             foreach (T ; AllTypes)
             {
                 if (targetType != typeid(T) &&
@@ -1114,7 +1114,7 @@ unittest
     }
 
     static assert(S.sizeof >= Variant.sizeof);
-    alias TypeTuple!(string, int, S) Types;
+    alias { string, int, S } Types;
     alias VariantN!(maxSize!Types, Types) MyVariant;
 
     auto v = MyVariant(S.init);
@@ -1245,7 +1245,7 @@ static class VariantException : Exception
 unittest
 {
     alias This2Variant!(char, int, This[int]) W1;
-    alias TypeTuple!(int, char[int]) W2;
+    alias { int, char[int] } W2;
     static assert(is(W1 == W2));
 
     alias Algebraic!(void, string) var_t;

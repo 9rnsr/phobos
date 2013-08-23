@@ -346,7 +346,7 @@ template Tuple(Specs...)
         }
         else
         {
-            alias { spec.Type, spec.name } expandSpec;
+            alias TypeTuple!(spec.Type, spec.name) expandSpec;
         }
     }
 
@@ -1422,7 +1422,7 @@ unittest
             ni = other.ni;
         }
     }
-    foreach (S; TypeTuple!(S1, S2))
+    foreach (S; { S1, S2 })
     {
         S a;
         S b = a;
@@ -1616,7 +1616,7 @@ unittest
             ni = other.ni;
         }
     }
-    foreach (S; TypeTuple!(S1, S2))
+    foreach (S; { S1, S2 })
     {
         S a;
         S b = a;
@@ -1786,7 +1786,7 @@ unittest
             ni = other.ni;
         }
     }
-    foreach (S; TypeTuple!(S1, S2))
+    foreach (S; { S1, S2 })
     {
         S a;
         S b = a;
@@ -2062,12 +2062,12 @@ private static:
             alias staticFilter!(pred, lst[1 .. $]) tail;
             //
             static if (pred!(lst[0]))
-                alias TypeTuple!(lst[0], tail) staticFilter;
+                alias { lst[0], tail } staticFilter;
             else
                 alias tail staticFilter;
         }
         else
-            alias TypeTuple!() staticFilter;
+            alias staticFilter = { };
     }
 
     // Returns function overload sets in the class C, filtered with pred.
@@ -2081,12 +2081,12 @@ private static:
                 alias Impl!(names[1 .. $]) next;
 
                 static if (methods.length > 0)
-                    alias TypeTuple!(OverloadSet!(names[0], methods), next) Impl;
+                    alias { OverloadSet!(names[0], methods), next } Impl;
                 else
                     alias next Impl;
             }
             else
-                alias TypeTuple!() Impl;
+                alias Impl = { };
         }
 
         alias Impl!(__traits(allMembers, C)) enumerateOverloads;
@@ -2447,7 +2447,7 @@ private static:
         static if (n > 0)
             alias TypeTuple!(CountUp!(n - 1), n - 1) CountUp;
         else
-            alias TypeTuple!() CountUp;
+            alias CountUp = { };
     }
 
 
@@ -2747,17 +2747,17 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
         template Concat(size_t i = 0)
         {
             static if (i >= Targets.length)
-                alias Concat = TypeTuple!();
+                alias Concat = { };
             else
             {
-                alias Concat = TypeTuple!(GetOverloadedMethods!(Targets[i]), Concat!(i + 1));
+                alias Concat = { GetOverloadedMethods!(Targets[i]), Concat!(i + 1) };
             }
         }
         // Remove duplicated functions based on the identifier name and function type covariance
         template Uniq(members...)
         {
             static if (members.length == 0)
-                alias Uniq = TypeTuple!();
+                alias Uniq = { };
             else
             {
                 alias func = members[0];
@@ -2785,14 +2785,14 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
                                !is(DerivedFunctionType!(typex, remain[0].type) == void))
                     {
                         alias F = DerivedFunctionType!(typex, remain[0].type);
-                        alias Uniq = TypeTuple!(FuncInfo!(name, F), remain[1 .. $]);
+                        alias Uniq = { FuncInfo!(name, F), remain[1 .. $] };
                     }
                     else
-                        alias Uniq = TypeTuple!(FuncInfo!(name, typex), remain);
+                        alias Uniq = { FuncInfo!(name, typex), remain };
                 }
                 else
                 {
-                    alias Uniq = TypeTuple!(FuncInfo!(name, type), Uniq!(members[1 .. $]));
+                    alias Uniq = { FuncInfo!(name, type), Uniq!(members[1 .. $]) };
                 }
             }
         }
@@ -2846,7 +2846,7 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
                 }
                 static @property mod()
                 {
-                    alias TypeTuple!(TargetMembers[i].type)[0] type;
+                    alias { TargetMembers[i].type }[0] type;
                     string r;
                     static if (is(type == immutable))       r ~= " immutable";
                     else
@@ -3090,7 +3090,7 @@ private template GetOverloadedMethods(T)
     {
         static if (i >= allMembers.length)
         {
-            alias follows = TypeTuple!();
+            alias follows = { };
         }
         else static if (!__traits(compiles, mixin("T."~allMembers[i])))
         {
@@ -3309,7 +3309,7 @@ private template staticIota(int beg, int end, int step = 1) if (step != 0)
     {
         static if (beg >= end)
         {
-            alias TypeTuple!() staticIota;
+            alias staticIota = { };
         }
         else
         {
@@ -3319,7 +3319,7 @@ private template staticIota(int beg, int end, int step = 1) if (step != 0)
     else
     {
         enum mid = beg + (end - beg) / 2;
-        alias staticIota = TypeTuple!(staticIota!(beg, mid), staticIota!(mid, end));
+        alias staticIota = { staticIota!(beg, mid), staticIota!(mid, end) };
     }
 }
 
@@ -3796,7 +3796,7 @@ unittest
         static immutable arr = [1,2,3];
     }
 
-    foreach (T; TypeTuple!(MyInt, const MyInt, immutable MyInt))
+    foreach (T; { MyInt, const MyInt, immutable MyInt })
     {
         T m = 10;
         static assert(!__traits(compiles, { int x = m; }));
@@ -3841,7 +3841,7 @@ unittest
         this(immutable int[] arr) immutable { value = arr; }
     }
 
-    foreach (T; TypeTuple!(MyArray, const MyArray, immutable MyArray))
+    foreach (T; { MyArray, const MyArray, immutable MyArray })
     {
       static if (is(T == immutable) && !is(typeof({ T a = [1,2,3,4]; })))
         T a = [1,2,3,4].idup;   // workaround until qualified ctor is properly supported

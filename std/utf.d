@@ -256,7 +256,7 @@ unittest
     test("hello\U00010143\u0100\U00010143", '\u0100', 9);
     test("hello\U00010143\u0100\U00010143", '\U00010143', 11);
 
-    foreach (S; TypeTuple!(char[], const char[], string))
+    foreach (S; { char[], const char[], string })
     {
         enum str = to!S("hello world");
         static assert(isSafe!({ stride(str, 0); }));
@@ -396,7 +396,7 @@ unittest
     test("\U00010143\u0100\U00010143hello", '\u0100', 6);
     test("\U00010143\u0100\U00010143hello", '\U00010143', 4);
 
-    foreach (S; TypeTuple!(char[], const char[], string))
+    foreach (S; { char[], const char[], string })
     {
         enum str = to!S("hello world");
         static assert(isSafe!({ strideBack(str, 0); }));
@@ -508,7 +508,7 @@ uint stride(S)(auto ref S str)
     test("hello\U00010143\u0100\U00010143", '\u0100', 7);
     test("hello\U00010143\u0100\U00010143", '\U00010143', 8);
 
-    foreach (S; TypeTuple!(wchar[], const wchar[], wstring))
+    foreach (S; { wchar[], const wchar[], wstring })
     {
         enum str = to!S("hello world");
         static assert(isSafe!({ stride(str, 0); }));
@@ -624,7 +624,7 @@ unittest
     test("\U00010143\u0100\U00010143hello", '\u0100', 3);
     test("\U00010143\u0100\U00010143hello", '\U00010143', 2);
 
-    foreach (S; TypeTuple!(wchar[], const wchar[], wstring))
+    foreach (S; { wchar[], const wchar[], wstring })
     {
         enum str = to!S("hello world");
         static assert(isSafe!({ strideBack(str, 0); }));
@@ -711,7 +711,7 @@ unittest
     test("hello\U00010143\u0100\U00010143", '\u0100', 6);
     test("hello\U00010143\u0100\U00010143", '\U00010143', 7);
 
-    foreach (S; TypeTuple!(dchar[], const dchar[], dstring))
+    foreach (S; { dchar[], const dchar[], dstring })
     {
         enum str = to!S("hello world");
         static assert(isSafe!({ stride(str, 0); }));
@@ -808,7 +808,7 @@ unittest
     test("\U00010143\u0100\U00010143hello", '\u0100', 2);
     test("\U00010143\u0100\U00010143hello", '\U00010143', 1);
 
-    foreach (S; TypeTuple!(dchar[], const dchar[], dstring))
+    foreach (S; { dchar[], const dchar[], dstring })
     {
         enum str = to!S("hello world");
         static assert(isSafe!({ strideBack(str, 0); }));
@@ -1515,9 +1515,9 @@ unittest
 {
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!( char[], const( char)[],  string,
-                           wchar[], const(wchar)[], wstring,
-                           dchar[], const(dchar)[], dstring))
+    foreach (S; {  char[], const( char)[],  string,
+                  wchar[], const(wchar)[], wstring,
+                  dchar[], const(dchar)[], dstring })
     {
         static assert(isSafe!({ S str; size_t i = 0; decode(str, i);      }));
         static assert(isSafe!({ S str; size_t i = 0; decodeFront(str, i); }));
@@ -1935,11 +1935,11 @@ unittest
 {
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!( char[], const  char[],  string,
-                           wchar[], const wchar[], wstring,
-                           dchar[], const dchar[], dstring))
+    foreach (S; {  char[], const  char[],  string,
+                  wchar[], const wchar[], wstring,
+                  dchar[], const dchar[], dstring })
     {
-        foreach (C; TypeTuple!(char, wchar, dchar))
+        foreach (C; { char, wchar, dchar })
         {
             assert(codeLength!C(to!S("Walter Bright")) == to!(C[])("Walter Bright").length);
             assert(codeLength!C(to!S(`言語`)) == to!(C[])(`言語`).length);
@@ -2380,7 +2380,7 @@ unittest
 
     assertCTFEable!(
     {
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; { string, wstring, dstring })
     {
         alias C = Unqual!(ElementEncodingType!S);
 
@@ -2392,7 +2392,7 @@ unittest
         auto s2 = assumeUnique(temp);
         assert(s1 == s2);
 
-        foreach (P; TypeTuple!(C*, const(C)*, immutable(C)*))
+        foreach (P; { C*, const(C)*, immutable(C)* })
         {
             auto p1 = toUTFz!P(s1);
             assert(p1[0 .. s1.length] == s1);
@@ -2416,30 +2416,30 @@ unittest
 
     assertCTFEable!(
     {
-    foreach (P; TypeTuple!(wchar*, const(wchar)*, immutable(wchar)*,
-                           dchar*, const(dchar)*, immutable(dchar)*))
+    foreach (P; { wchar*, const(wchar)*, immutable(wchar)*,
+                  dchar*, const(dchar)*, immutable(dchar)* })
     {
         test!P("hello\U00010143\u0100\U00010143");
     }
-    foreach (P; TypeTuple!( char*, const( char)*, immutable( char)*,
-                           dchar*, const(dchar)*, immutable(dchar)*))
+    foreach (P; {  char*, const( char)*, immutable( char)*,
+                  dchar*, const(dchar)*, immutable(dchar)* })
     {
         test!P("hello\U00010143\u0100\U00010143"w);
     }
-    foreach (P; TypeTuple!( char*, const( char)*, immutable( char)*,
-                           wchar*, const(wchar)*, immutable(wchar)*))
+    foreach (P; {  char*, const( char)*, immutable( char)*,
+                  wchar*, const(wchar)*, immutable(wchar)* })
     {
         test!P("hello\U00010143\u0100\U00010143"d);
     }
-    foreach (S; TypeTuple!( char[], const( char)[],
-                           wchar[], const(wchar)[],
-                           dchar[], const(dchar)[]))
+    foreach (S; {  char[], const( char)[],
+                  wchar[], const(wchar)[],
+                  dchar[], const(dchar)[] })
     {
         auto s = to!S("hello\U00010143\u0100\U00010143");
 
-        foreach (P; TypeTuple!( char*, const( char)*, immutable( char)*,
-                               wchar*, const(wchar)*, immutable(wchar)*,
-                               dchar*, const(dchar)*, immutable(dchar)*))
+        foreach (P; {  char*, const( char)*, immutable( char)*,
+                      wchar*, const(wchar)*, immutable(wchar)*,
+                      dchar*, const(dchar)*, immutable(dchar)* })
         {
             test!P(s);
         }
@@ -2465,7 +2465,7 @@ unittest
 {
     //toUTFz is already thoroughly tested, so this will just verify that
     //toUTF16z compiles properly for the various string types.
-    foreach (S; TypeTuple!(string, wstring, dstring))
+    foreach (S; { string, wstring, dstring })
         static assert(__traits(compiles, toUTF16z(to!S("hello world"))));
 }
 
