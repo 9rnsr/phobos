@@ -3245,7 +3245,7 @@ unittest
 {
     import std.string;
 
-    foreach(endianness; { Endian.bigEndian, Endian.littleEndian ])
+    foreach(endianness; { Endian.bigEndian, Endian.littleEndian })
     {
         auto toWrite = appender!(ubyte[])();
         alias { uint, int, long, ulong, short, ubyte, ushort, byte, uint } Types;

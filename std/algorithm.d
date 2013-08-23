@@ -5591,7 +5591,7 @@ unittest
 
     foreach (S; {  char[], const( char)[],  string,
                   wchar[], const(wchar)[], wstring,
-                  dchar[], const(dchar)[], dstring))
+                  dchar[], const(dchar)[], dstring })
     {
         foreach (T; { string, wstring, dstring })
         {

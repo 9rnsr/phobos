@@ -400,11 +400,11 @@ unittest
 {
     import std.typetuple;
 
-    foreach (EncloseSafe; TypeTuple!(false, true))
-    foreach (EnclosePure; TypeTuple!(false, true))
+    foreach (EncloseSafe; { false, true })
+    foreach (EnclosePure; { false, true })
     {
-        foreach (BodySafe; TypeTuple!(false, true))
-        foreach (BodyPure; TypeTuple!(false, true))
+        foreach (BodySafe; { false, true })
+        foreach (BodyPure; { false, true })
         {
             enum code =
                 "delegate void() " ~

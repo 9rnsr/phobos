@@ -1136,7 +1136,7 @@ private
 
             static if( isImplicitlyConvertible!(T[0], Duration) )
             {
-                alias TypeTuple!(T[1 .. $]) Ops;
+                alias T[1 .. $] Ops;
                 alias vals[1 .. $] ops;
                 assert( vals[0] >= dur!"msecs"(0) );
                 enum timedWait = true;
@@ -1144,7 +1144,7 @@ private
             }
             else
             {
-                alias TypeTuple!(T) Ops;
+                alias T = Ops;
                 alias vals[0 .. $] ops;
                 enum timedWait = false;
             }

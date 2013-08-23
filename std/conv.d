@@ -308,12 +308,12 @@ template to(T)
 // Tests for issue 8729: do NOT skip leading WS
 @safe pure unittest
 {
-    foreach (T; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    foreach (T; { byte, ubyte, short, ushort, int, uint, long, ulong })
     {
         assertThrown!ConvException(to!T(" 0"));
         assertThrown!ConvException(to!T(" 0", 8));
     }
-    foreach (T; TypeTuple!(float, double, real))
+    foreach (T; { float, double, real })
     {
         assertThrown!ConvException(to!T(" 0"));
     }
@@ -378,12 +378,12 @@ T toImpl(T, S)(S value)
 @safe pure unittest
 {
     // Conversion between same size
-    foreach (S; TypeTuple!(byte, short, int, long))
+    foreach (S; { byte, short, int, long })
     {
         alias Unsigned!S U;
 
-        foreach (Sint; TypeTuple!(S, const S, immutable S))
-        foreach (Uint; TypeTuple!(U, const U, immutable U))
+        foreach (Sint; { S, const S, immutable S })
+        foreach (Uint; { U, const U, immutable U })
         {
             // positive overflow
             Uint un = Uint.max;
@@ -398,8 +398,8 @@ T toImpl(T, S)(S value)
     }
 
     // Conversion between different size
-    foreach (i, S1; TypeTuple!(byte, short, int, long))
-    foreach (   S2; TypeTuple!(byte, short, int, long)[i+1..$])
+    foreach (i, S1; { byte, short, int, long })
+    foreach (   S2; { byte, short, int, long }[i+1..$])
     {
         alias Unsigned!S1 U1;
         alias Unsigned!S2 U2;
@@ -407,8 +407,8 @@ T toImpl(T, S)(S value)
         static assert(U1.sizeof < S2.sizeof);
 
         // small unsigned to big signed
-        foreach (Uint; TypeTuple!(U1, const U1, immutable U1))
-        foreach (Sint; TypeTuple!(S2, const S2, immutable S2))
+        foreach (Uint; { U1, const U1, immutable U1 })
+        foreach (Sint; { S2, const S2, immutable S2 })
         {
             Uint un = Uint.max;
             assertNotThrown(to!Sint(un));
@@ -416,8 +416,8 @@ T toImpl(T, S)(S value)
         }
 
         // big unsigned to small signed
-        foreach (Uint; TypeTuple!(U2, const U2, immutable U2))
-        foreach (Sint; TypeTuple!(S1, const S1, immutable S1))
+        foreach (Uint; { U2, const U2, immutable U2 })
+        foreach (Sint; { S1, const S1, immutable S1 })
         {
             Uint un = Uint.max;
             assertThrown(to!Sint(un));
@@ -426,16 +426,16 @@ T toImpl(T, S)(S value)
         static assert(S1.sizeof < U2.sizeof);
 
         // small signed to big unsigned
-        foreach (Sint; TypeTuple!(S1, const S1, immutable S1))
-        foreach (Uint; TypeTuple!(U2, const U2, immutable U2))
+        foreach (Sint; { S1, const S1, immutable S1 })
+        foreach (Uint; { U2, const U2, immutable U2 })
         {
             Sint sn = -1;
             assertThrown!ConvOverflowException(to!Uint(sn));
         }
 
         // big signed to small unsigned
-        foreach (Sint; TypeTuple!(S2, const S2, immutable S2))
-        foreach (Uint; TypeTuple!(U1, const U1, immutable U1))
+        foreach (Sint; { S2, const S2, immutable S2 })
+        foreach (Uint; { U1, const U1, immutable U1 })
         {
             Sint sn = -1;
             assertThrown!ConvOverflowException(to!Uint(sn));
@@ -705,8 +705,8 @@ T toImpl(T, S)(S value)
     class C : B, I, J {}
     class D : I {}
 
-    foreach (m1; TypeTuple!(0,1,2,3,4)) // enumerate modifiers
-    foreach (m2; TypeTuple!(0,1,2,3,4)) // ditto
+    foreach (m1; { 0,1,2,3,4 }) // enumerate modifiers
+    foreach (m2; { 0,1,2,3,4 }) // ditto
     {
         alias AddModifier!m1 srcmod;
         alias AddModifier!m2 tgtmod;
@@ -836,16 +836,15 @@ T toImpl(T, S)(S value)
     // string to string conversion
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
 
-    alias TypeTuple!(char, wchar, dchar) Chars;
+    alias { char, wchar, dchar } Chars;
     foreach (LhsC; Chars)
     {
-        alias TypeTuple!(LhsC[], const(LhsC)[], immutable(LhsC)[]) LhStrings;
+        alias { LhsC[], const(LhsC)[], immutable(LhsC)[] } LhStrings;
         foreach (Lhs; LhStrings)
         {
             foreach (RhsC; Chars)
             {
-                alias TypeTuple!(RhsC[], const(RhsC)[], immutable(RhsC)[])
-                    RhStrings;
+                alias { RhsC[], const(RhsC)[], immutable(RhsC)[] } RhStrings;
                 foreach (Rhs; RhStrings)
                 {
                     Lhs s1 = to!Lhs("wyda");
@@ -911,10 +910,10 @@ T toImpl(T, S)(S value)
     // Conversion representing character value with string
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
 
-    alias TypeTuple!(
+    alias {
          char, const( char), immutable( char),
         wchar, const(wchar), immutable(wchar),
-        dchar, const(dchar), immutable(dchar)) AllChars;
+        dchar, const(dchar), immutable(dchar) } AllChars;
     foreach (Char1; AllChars)
     {
         foreach (Char2; AllChars)
@@ -940,7 +939,7 @@ T toImpl(T, S)(S value)
 {
     // Conversion representing integer values with string
 
-    foreach (Int; TypeTuple!(ubyte, ushort, uint, ulong))
+    foreach (Int; { ubyte, ushort, uint, ulong })
     {
         debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
         debug(conv) printf("string.to!string(%.*s).unittest\n", Int.stringof.length, Int.stringof.ptr);
@@ -950,7 +949,7 @@ T toImpl(T, S)(S value)
         assert(to!string(to!Int(123)) == "123");
     }
 
-    foreach (Int; TypeTuple!(byte, short, int, long))
+    foreach (Int; { byte, short, int, long })
     {
         debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
         debug(conv) printf("string.to!string(%.*s).unittest\n", Int.stringof.length, Int.stringof.ptr);
@@ -1062,7 +1061,7 @@ unittest
     enum EC : char { a = 'x', b = 'y' }
     enum ES : string { a = "aaa", b = "bbb" }
 
-    foreach (E; TypeTuple!(EB, EU, EI, EF, EC, ES))
+    foreach (E; { EB, EU, EI, EF, EC, ES })
     {
         assert(to! string(E.a) == "a"c);
         assert(to!wstring(E.a) == "a"w);
@@ -1152,7 +1151,7 @@ body
 
 @safe pure unittest
 {
-    foreach (Int; TypeTuple!(uint, ulong))
+    foreach (Int; { uint, ulong })
     {
         debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
         debug(conv) printf("string.to!string(%.*s, uint).unittest\n", Int.stringof.length, Int.stringof.ptr);
@@ -1165,7 +1164,7 @@ body
         assert(to!string(to!Int(0x1234AF), 16u, LetterCase.lower) == "1234af");
     }
 
-    foreach (Int; TypeTuple!(int, long))
+    foreach (Int; { int, long })
     {
         debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
         debug(conv) printf("string.to!string(%.*s, uint).unittest\n", Int.stringof.length, Int.stringof.ptr);
@@ -1563,9 +1562,9 @@ private void testFloatingToIntegral(Floating, Integral)()
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
 
-    alias AllInts = TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong);
-    alias AllFloats = TypeTuple!(float, double, real);
-    alias AllNumerics = TypeTuple!(AllInts, AllFloats);
+    alias AllInts = { byte, ubyte, short, ushort, int, uint, long, ulong };
+    alias AllFloats = { float, double, real };
+    alias AllNumerics = { AllInts, AllFloats };
     // test with same type
     {
         foreach (T; AllNumerics)
@@ -1639,9 +1638,9 @@ private void testFloatingToIntegral(Floating, Integral)()
 }
 /*@safe pure */unittest
 {
-    alias AllInts = TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong);
-    alias AllFloats = TypeTuple!(float, double, real);
-    alias AllNumerics = TypeTuple!(AllInts, AllFloats);
+    alias AllInts = { byte, ubyte, short, ushort, int, uint, long, ulong };
+    alias AllFloats = { float, double, real };
+    alias AllNumerics = { AllInts, AllFloats };
     // test conversions to string
     {
         foreach (T; AllNumerics)
@@ -1717,7 +1716,7 @@ T toImpl(T, S)(S value, uint radix)
 @safe pure unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-    foreach (Str; TypeTuple!(string, wstring, dstring))
+    foreach (Str; { string, wstring, dstring })
     {
         Str a = "123";
         assert(to!int(a) == 123);
@@ -1803,7 +1802,7 @@ unittest
     assert(roundTo!(const int)(to!(const double)(-3.999)) == -4);
 
     // boundary values
-    foreach (Int; TypeTuple!(byte, ubyte, short, ushort, int, uint))
+    foreach (Int; { byte, ubyte, short, ushort, int, uint })
     {
         assert(roundTo!Int(Int.min - 0.4L) == Int.min);
         assert(roundTo!Int(Int.max + 0.4L) == Int.max);
@@ -1913,7 +1912,7 @@ Lerr:
 
 @safe pure unittest
 {
-    foreach (Int; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    foreach (Int; { byte, ubyte, short, ushort, int, uint, long, ulong })
     {
         debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
         debug(conv) printf("conv.to!%.*s.unittest\n", Int.stringof.length, Int.stringof.ptr);
@@ -2011,7 +2010,7 @@ Lerr:
 @safe pure unittest
 {
     // parsing error check
-    foreach (Int; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    foreach (Int; { byte, ubyte, short, ushort, int, uint, long, ulong })
     {
         debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
         debug(conv) printf("conv.to!%.*s.unittest (error)\n", Int.stringof.length, Int.stringof.ptr);
@@ -2049,7 +2048,7 @@ Lerr:
     }
 
     // positive overflow check
-    foreach (i, Int; TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong))
+    foreach (i, Int; { byte, ubyte, short, ushort, int, uint, long, ulong })
     {
         debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
         debug(conv) printf("conv.to!%.*s.unittest (pos overflow)\n", Int.stringof.length, Int.stringof.ptr);
@@ -2070,7 +2069,7 @@ Lerr:
     }
 
     // negative overflow check
-    foreach (i, Int; TypeTuple!(byte, short, int, long))
+    foreach (i, Int; { byte, short, int, long })
     {
         debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
         debug(conv) printf("conv.to!%.*s.unittest (neg overflow)\n", Int.stringof.length, Int.stringof.ptr);
@@ -2230,7 +2229,7 @@ unittest
     enum EC : char { a = 'a', b = 'b', c = 'c' }
     enum ES : string { a = "aaa", b = "bbb", c = "ccc" }
 
-    foreach (E; TypeTuple!(EB, EU, EI, EF, EC, ES))
+    foreach (E; { EB, EU, EI, EF, EC, ES })
     {
         assert(to!E("a"c) == E.a);
         assert(to!E("b"w) == E.b);
@@ -2592,7 +2591,7 @@ unittest
         return f;
     }
 
-    foreach (Float; TypeTuple!(float, double, real))
+    foreach (Float; { float, double, real })
     {
         debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
         debug(conv) printf("conv.to!%.*s.unittest\n", Float.stringof.length, Float.stringof.ptr);
@@ -2749,9 +2748,9 @@ Target parse(Target, Source)(ref Source s)
 
 @safe pure unittest
 {
-    foreach (Str; TypeTuple!(string, wstring, dstring))
+    foreach (Str; { string, wstring, dstring })
     {
-        foreach (Char; TypeTuple!(char, wchar, dchar))
+        foreach (Char; { char, wchar, dchar })
         {
             static if (is(Unqual!Char == dchar) ||
                        Char.sizeof == ElementEncodingType!Str.sizeof)
@@ -4013,28 +4012,28 @@ unittest
 
 unittest
 {
-    foreach(T; TypeTuple!(byte, ubyte))
+    foreach(T; { byte, ubyte })
     {
         static assert(is(typeof(unsigned(cast(T)1)) == ubyte));
         static assert(is(typeof(unsigned(cast(const T)1)) == ubyte));
         static assert(is(typeof(unsigned(cast(immutable T)1)) == ubyte));
     }
 
-    foreach(T; TypeTuple!(short, ushort))
+    foreach(T; { short, ushort })
     {
         static assert(is(typeof(unsigned(cast(T)1)) == ushort));
         static assert(is(typeof(unsigned(cast(const T)1)) == ushort));
         static assert(is(typeof(unsigned(cast(immutable T)1)) == ushort));
     }
 
-    foreach(T; TypeTuple!(int, uint))
+    foreach(T; { int, uint })
     {
         static assert(is(typeof(unsigned(cast(T)1)) == uint));
         static assert(is(typeof(unsigned(cast(const T)1)) == uint));
         static assert(is(typeof(unsigned(cast(immutable T)1)) == uint));
     }
 
-    foreach(T; TypeTuple!(long, ulong))
+    foreach(T; { long, ulong })
     {
         static assert(is(typeof(unsigned(cast(T)1)) == ulong));
         static assert(is(typeof(unsigned(cast(const T)1)) == ulong));
@@ -4051,7 +4050,7 @@ auto unsigned(T)(T x) if (isSomeChar!T)
 
 unittest
 {
-    foreach(T; TypeTuple!(char, wchar, dchar))
+    foreach(T; { char, wchar, dchar })
     {
         static assert(is(typeof(unsigned(cast(T)'A')) == T));
         static assert(is(typeof(unsigned(cast(const T)'A')) == T));
@@ -4085,28 +4084,28 @@ unittest
 
 unittest
 {
-    foreach(T; TypeTuple!(byte, ubyte))
+    foreach(T; { byte, ubyte })
     {
         static assert(is(typeof(signed(cast(T)1)) == byte));
         static assert(is(typeof(signed(cast(const T)1)) == byte));
         static assert(is(typeof(signed(cast(immutable T)1)) == byte));
     }
 
-    foreach(T; TypeTuple!(short, ushort))
+    foreach(T; { short, ushort })
     {
         static assert(is(typeof(signed(cast(T)1)) == short));
         static assert(is(typeof(signed(cast(const T)1)) == short));
         static assert(is(typeof(signed(cast(immutable T)1)) == short));
     }
 
-    foreach(T; TypeTuple!(int, uint))
+    foreach(T; { int, uint })
     {
         static assert(is(typeof(signed(cast(T)1)) == int));
         static assert(is(typeof(signed(cast(const T)1)) == int));
         static assert(is(typeof(signed(cast(immutable T)1)) == int));
     }
 
-    foreach(T; TypeTuple!(long, ulong))
+    foreach(T; { long, ulong })
     {
         static assert(is(typeof(signed(cast(T)1)) == long));
         static assert(is(typeof(signed(cast(const T)1)) == long));
