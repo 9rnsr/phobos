@@ -2579,7 +2579,7 @@ private static:
             /* Declare keywords: args, self and parent. */
             string preamble;
 
-            preamble ~= "alias {" ~ enumerateParameters!(nparams) ~ "} args;\n";
+            preamble ~= "alias args = {" ~ enumerateParameters!(nparams) ~ "};\n";
             if (!isCtor)
             {
                 preamble ~= "alias " ~ name ~ " self;\n";
