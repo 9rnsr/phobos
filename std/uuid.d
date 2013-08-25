@@ -399,7 +399,7 @@ public struct UUID
             foreach(S; {  char[], const( char)[], immutable( char)[],
                          wchar[], const(wchar)[], immutable(wchar)[],
                          dchar[], const(dchar)[], immutable(dchar)[],
-                         immutable(char[]), immutable(wchar[]), immutable(dchar[])))
+                         immutable(char[]), immutable(wchar[]), immutable(dchar[]) })
             {
                 //Test valid, working cases
                 assert(UUID(to!S("00000000-0000-0000-0000-000000000000")).empty);

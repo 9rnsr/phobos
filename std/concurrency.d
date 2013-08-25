@@ -1144,7 +1144,7 @@ private
             }
             else
             {
-                alias T = Ops;
+                alias {T} Ops;
                 alias vals[0 .. $] ops;
                 enum timedWait = false;
             }

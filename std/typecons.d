@@ -346,7 +346,7 @@ template Tuple(Specs...)
         }
         else
         {
-            alias TypeTuple!(spec.Type, spec.name) expandSpec;
+            alias {spec.Type, spec.name} expandSpec;
         }
     }
 
@@ -2445,7 +2445,7 @@ private static:
     template CountUp(size_t n)
     {
         static if (n > 0)
-            alias TypeTuple!(CountUp!(n - 1), n - 1) CountUp;
+            alias {CountUp!(n - 1), n - 1} CountUp;
         else
             alias CountUp = { };
     }
@@ -2579,7 +2579,7 @@ private static:
             /* Declare keywords: args, self and parent. */
             string preamble;
 
-            preamble ~= "alias TypeTuple!(" ~ enumerateParameters!(nparams) ~ ") args;\n";
+            preamble ~= "alias {" ~ enumerateParameters!(nparams) ~ "} args;\n";
             if (!isCtor)
             {
                 preamble ~= "alias " ~ name ~ " self;\n";
@@ -3085,7 +3085,7 @@ unittest
 // Make a tuple of non-static function symbols
 private template GetOverloadedMethods(T)
 {
-    alias allMembers = TypeTuple!(__traits(allMembers, T));
+    alias allMembers = {__traits(allMembers, T)};
     template follows(size_t i = 0)
     {
         static if (i >= allMembers.length)
@@ -3107,9 +3107,9 @@ private template GetOverloadedMethods(T)
                 else
                     enum isMethod = false;
             }
-            alias follows = TypeTuple!(
+            alias follows = {
                 std.typetuple.Filter!(isMethod, __traits(getOverloads, T, name)),
-                follows!(i + 1));
+                follows!(i + 1)};
         }
     }
     alias GetOverloadedMethods = follows!();
@@ -3313,7 +3313,7 @@ private template staticIota(int beg, int end, int step = 1) if (step != 0)
         }
         else
         {
-            alias TypeTuple!(+beg) staticIota;
+            alias {+beg} staticIota;
         }
     }
     else
@@ -4211,7 +4211,7 @@ unittest // Issue 6580 testcase
             byte[size] arr;
             alignmentTest();
         }
-        foreach(i; TypeTuple!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
+        foreach(i; {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10})
             test!i();
     }
 }

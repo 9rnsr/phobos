@@ -612,11 +612,11 @@ enum RegexOption: uint {
     multiline = 0x10,
     singleline = 0x20
 }
-alias TypeTuple!('g', 'i', 'x', 'U', 'm', 's') RegexOptionNames;//do not reorder this list
+alias {'g', 'i', 'x', 'U', 'm', 's'} RegexOptionNames;//do not reorder this list
 static assert( RegexOption.max < 0x80);
 enum RegexInfo : uint { oneShot = 0x80 }
-alias Escapables = TypeTuple!('[', ']', '\\', '^', '$', '.', '|', '?', ',', '-',
-    ';', ':', '#', '&', '%', '/', '<', '>', '`',  '*', '+', '(', ')', '{', '}',  '~');
+alias Escapables = {'[', ']', '\\', '^', '$', '.', '|', '?', ',', '-',
+    ';', ':', '#', '&', '%', '/', '<', '>', '`',  '*', '+', '(', ')', '{', '}',  '~'};
 
 private enum NEL = '\u0085', LS = '\u2028', PS = '\u2029';
 
@@ -4098,7 +4098,7 @@ template BacktrackingMatcher(bool CTregex)
 //generate code for TypeTuple(S, S+1, S+2, ... E)
 @system string ctGenSeq(int S, int E)
 {
-    string s = "alias TypeTuple!(";
+    string s = "alias {";
     if(S < E)
         s ~= to!string(S);
     for(int i = S+1; i < E;i++)
@@ -4106,7 +4106,7 @@ template BacktrackingMatcher(bool CTregex)
         s ~= ", ";
         s ~= to!string(i);
     }
-    return s ~") Sequence;";
+    return s ~"} Sequence;";
 }
 
 //alias to TypeTuple(S, S+1, S+2, ... E)

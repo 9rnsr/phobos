@@ -338,8 +338,8 @@ private template fullyQualifiedNameImplForTypes(T,
         _inout = 3
     }
 
-    alias TypeTuple!(is(T == const), is(T == immutable), is(T == shared), is(T == inout)) qualifiers;
-    alias TypeTuple!(false, false, false, false) noQualifiers;
+    alias {is(T == const), is(T == immutable), is(T == shared), is(T == inout)} qualifiers;
+    alias {false, false, false, false} noQualifiers;
 
     string storageClassesString(uint psc)() @property
     {
@@ -768,10 +768,10 @@ template ParameterStorageClassTuple(func...)
             enum skip = mangledName!(Params[i]).length; // for bypassing Type
             enum rest = demang.rest;
 
-            alias TypeTuple!(
+            alias {
                     demang.value + 0, // workaround: "not evaluatable at ..."
                     demangleNextParameter!(rest[skip .. $], i + 1)
-                ) demangleNextParameter;
+                } demangleNextParameter;
         }
         else // went thru all the parameters
         {
@@ -985,20 +985,20 @@ unittest
     static assert(PDVT!bar.length == 2);
     static assert(PDVT!bar[0] == 1);
     static assert(PDVT!bar[1] == "hello");
-    static assert(is(typeof(PDVT!bar) == typeof(TypeTuple!(1, "hello"))));
+    static assert(is(typeof(PDVT!bar) == typeof({1, "hello"})));
 
     void baz(int x, int n = 1, string s = "hello"){}
     static assert(PDVT!baz.length == 3);
     static assert(is(PDVT!baz[0] == void));
     static assert(   PDVT!baz[1] == 1);
     static assert(   PDVT!baz[2] == "hello");
-    static assert(is(typeof(PDVT!baz) == typeof(TypeTuple!(void, 1, "hello"))));
+    static assert(is(typeof(PDVT!baz) == typeof({void, 1, "hello"})));
 
     // bug 10800 - property functions return empty string
     @property void foo(int x = 3) { }
     static assert(PDVT!foo.length == 1);
     static assert(PDVT!foo[0] == 3);
-    static assert(is(typeof(PDVT!foo) == typeof(TypeTuple!(3))));
+    static assert(is(typeof(PDVT!foo) == typeof({3})));
 
     struct Colour
     {
@@ -1531,7 +1531,7 @@ unittest
         int  test();
         int  test() @property;
     }
-    alias TypeTuple!(__traits(getVirtualFunctions, Overloads, "test")) ov;
+    alias {__traits(getVirtualFunctions, Overloads, "test")} ov;
     alias FunctionTypeOf!(ov[0]) F_ov0;
     alias FunctionTypeOf!(ov[1]) F_ov1;
     alias FunctionTypeOf!(ov[2]) F_ov2;
@@ -1670,7 +1670,7 @@ unittest
             // Check that all linkage types work (D-style variadics require D linkage).
             static if (variadicFunctionStyle!T != Variadic.d)
             {
-                foreach (newLinkage; TypeTuple!("D", "C", "Windows", "Pascal", "C++"))
+                foreach (newLinkage; {"D", "C", "Windows", "Pascal", "C++"})
                 {
                     alias SetFunctionAttributes!(T, newLinkage, attrs) New;
                     static assert(functionLinkage!New == newLinkage,
@@ -1793,12 +1793,12 @@ template FieldTypeTuple(T)
     else static if (is(T == class))
         alias typeof(T.tupleof) FieldTypeTuple;
     else
-        alias TypeTuple!T FieldTypeTuple;
+        alias {T} FieldTypeTuple;
 }
 
 unittest
 {
-    static assert(is(FieldTypeTuple!int == TypeTuple!int));
+    static assert(is(FieldTypeTuple!int == {int}));
 
     static struct StaticStruct1 { }
     static assert(is(FieldTypeTuple!StaticStruct1 == {}));
@@ -1812,10 +1812,10 @@ unittest
     static assert(is(FieldTypeTuple!NestedStruct1 == { }));
 
     struct NestedStruct2 { int a; void f() { ++i; } }
-    static assert(is(FieldTypeTuple!NestedStruct2 == TypeTuple!int));
+    static assert(is(FieldTypeTuple!NestedStruct2 == {int}));
 
     class NestedClass { int a; void f() { ++i; } }
-    static assert(is(FieldTypeTuple!NestedClass == TypeTuple!int));
+    static assert(is(FieldTypeTuple!NestedClass == {int}));
 }
 
 
@@ -1840,7 +1840,7 @@ unittest
 //         else
 //         {
 //             private enum size_t mySize = T[0].sizeof;
-//             alias TypeTuple!myOffset Head;
+//             alias {myOffset} Head;
 //             static if (is(T == union))
 //             {
 //                 alias FieldOffsetsTupleImpl!(myOffset, T[1 .. $]).Result
@@ -1964,12 +1964,12 @@ template RepresentationTypeTuple(T)
 unittest
 {
     alias RepresentationTypeTuple!int S1;
-    static assert(is(S1 == TypeTuple!int));
+    static assert(is(S1 == {int}));
 
     struct S2 { int a; }
     struct S3 { int a; char b; }
     struct S4 { S1 a; int b; S3 c; }
-    static assert(is(RepresentationTypeTuple!S2 == TypeTuple!int));
+    static assert(is(RepresentationTypeTuple!S2 == {int}));
     static assert(is(RepresentationTypeTuple!S3 == { int, char }));
     static assert(is(RepresentationTypeTuple!S4 == { int, int, int, char }));
 
@@ -2022,7 +2022,7 @@ RepresentationOffsets
 //         }
 //         else
 //         {
-//             alias TypeTuple!myOffset Head;
+//             alias {myOffset} Head;
 //         }
 //         alias { Head, RepresentationOffsetsImpl!(
 //                              myOffset + T[0].sizeof, T[1 .. $]).Result }
@@ -3458,7 +3458,7 @@ template MemberFunctionsTuple(C, string name)
             static if (__traits(hasMember, Node, name) && __traits(compiles, __traits(getMember, Node, name)))
             {
                 // Get all overloads in sight (not hidden).
-                alias TypeTuple!(__traits(getVirtualFunctions, Node, name)) inSight;
+                alias {__traits(getVirtualFunctions, Node, name)} inSight;
 
                 // And collect all overloads in ancestor classes to reveal hidden
                 // methods.  The result may contain duplicates.
@@ -3476,7 +3476,7 @@ template MemberFunctionsTuple(C, string name)
                 static if (is(Node Parents == super))
                     alias { inSight, walkThru!Parents } CollectOverloads;
                 else
-                    alias TypeTuple!inSight CollectOverloads;
+                    alias {inSight} CollectOverloads;
             }
             else
                 alias CollectOverloads = { }; // no overloads in this hierarchy
@@ -3511,7 +3511,7 @@ template MemberFunctionsTuple(C, string name)
                           } shrinkOne;
             }
             else
-                alias TypeTuple!target shrinkOne; // done
+                alias {target} shrinkOne; // done
         }
 
         /*
@@ -3718,7 +3718,7 @@ template ImplicitConversionTargets(T)
         alias { double, real }
             ImplicitConversionTargets;
     else static if (is(T == double))
-        alias TypeTuple!real
+        alias {real}
             ImplicitConversionTargets;
     else static if (is(T == char))
         alias { wchar, dchar, byte, ubyte, short, ushort,
@@ -4101,7 +4101,7 @@ template BooleanTypeOf(T)
 unittest
 {
     // unexpected failure, maybe dmd type-merging bug
-    foreach (T; TypeTuple!bool)
+    foreach (T; {bool})
     foreach (Q; TypeQualifierList)
     {
         static assert( is(Q!T == BooleanTypeOf!(            Q!T  )));
@@ -4352,8 +4352,8 @@ unittest
         static assert(is( Q!(P!(T[1])) == StaticArrayTypeOf!( Q!(SubTypeOf!(P!(T[1]))) ) ));
       }
     }
-    foreach (T; TypeTuple!void)
-    foreach (Q; TypeTuple!TypeQualifierList)
+    foreach (T; {void})
+    foreach (Q; {TypeQualifierList})
     {
         static assert(is( StaticArrayTypeOf!( Q!(void[1]) ) == Q!(void[1]) ));
     }

@@ -121,13 +121,13 @@ private template CustomFloatParams(uint bits)
 
 private template CustomFloatParams(uint precision, uint exponentWidth, CustomFloatFlags flags)
 {
-    alias TypeTuple!(
+    alias {
         precision,
         exponentWidth,
         flags,
         (1 << (exponentWidth - ((flags & flags.probability) == 0)))
          - ((flags & (flags.nan | flags.infinity)) != 0) - ((flags & flags.probability) != 0)
-    ) CustomFloatParams; // ((flags & CustomFloatFlags.probability) == 0)
+    } CustomFloatParams; // ((flags & CustomFloatFlags.probability) == 0)
 }
 
 /**
