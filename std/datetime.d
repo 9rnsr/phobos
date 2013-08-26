@@ -2496,78 +2496,84 @@ assert(st4 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
         }
     }
 
-    //Test add!"years"() with AllowDayOverlow.yes
+    //Test add!"years"() with AllowDayOverflow.yes and no
+    version(testStdDateTime)
     unittest
     {
-        version(testStdDateTime)
+        foreach (ovf; [true, false])
         {
+            auto allowDayOverflow = ovf ? AllowDayOverflow.yes : AllowDayOverflow.no;
+
             //Test A.D.
             {
                 auto sysTime = SysTime(Date(1999, 7, 6));
-                sysTime.add!"years"(7);
+                sysTime.add!"years"(7, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(2006, 7, 6)));
-                sysTime.add!"years"(-9);
+                sysTime.add!"years"(-9, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(1997, 7, 6)));
             }
 
             {
                 auto sysTime = SysTime(Date(1999, 2, 28));
-                sysTime.add!"years"(1);
+                sysTime.add!"years"(1, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(2000, 2, 28)));
             }
 
             {
                 auto sysTime = SysTime(Date(2000, 2, 29));
-                sysTime.add!"years"(-1);
-                _assertPred!"=="(sysTime, SysTime(Date(1999, 3, 1)));
+                sysTime.add!"years"(-1, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(1999, 3,  1)
+                                                      : Date(1999, 2, 28)));
             }
 
             {
                 auto sysTime = SysTime(DateTime(1999, 7, 6, 12, 7, 3), FracSec.from!"msecs"(234));
-                sysTime.add!"years"(7);
+                sysTime.add!"years"(7, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(DateTime(2006, 7, 6, 12, 7, 3), FracSec.from!"msecs"(234)));
-                sysTime.add!"years"(-9);
+                sysTime.add!"years"(-9, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(DateTime(1997, 7, 6, 12, 7, 3), FracSec.from!"msecs"(234)));
             }
 
             {
                 auto sysTime = SysTime(DateTime(1999, 2, 28, 0, 7, 2), FracSec.from!"usecs"(1207));
-                sysTime.add!"years"(1);
+                sysTime.add!"years"(1, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(DateTime(2000, 2, 28, 0, 7, 2), FracSec.from!"usecs"(1207)));
             }
 
             {
                 auto sysTime = SysTime(DateTime(2000, 2, 29, 0, 7, 2), FracSec.from!"usecs"(1207));
-                sysTime.add!"years"(-1);
-                _assertPred!"=="(sysTime, SysTime(DateTime(1999, 3, 1, 0, 7, 2), FracSec.from!"usecs"(1207)));
+                sysTime.add!"years"(-1, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? DateTime(1999, 3,  1, 0, 7, 2)
+                                                      : DateTime(1999, 2, 28, 0, 7, 2), FracSec.from!"usecs"(1207)));
             }
 
             //Test B.C.
             {
                 auto sysTime = SysTime(Date(-1999, 7, 6));
-                sysTime.add!"years"(-7);
+                sysTime.add!"years"(-7, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(-2006, 7, 6)));
-                sysTime.add!"years"(9);
+                sysTime.add!"years"(9, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(-1997, 7, 6)));
             }
 
             {
                 auto sysTime = SysTime(Date(-1999, 2, 28));
-                sysTime.add!"years"(-1);
+                sysTime.add!"years"(-1, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(-2000, 2, 28)));
             }
 
             {
                 auto sysTime = SysTime(Date(-2000, 2, 29));
-                sysTime.add!"years"(1);
-                _assertPred!"=="(sysTime, SysTime(Date(-1999, 3, 1)));
+                sysTime.add!"years"(1, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(-1999, 3,  1)
+                                                      : Date(-1999, 2, 28)));
             }
 
             {
                 auto sysTime = SysTime(DateTime(-1999, 7, 6, 12, 7, 3), FracSec.from!"msecs"(234));
-                sysTime.add!"years"(-7);
+                sysTime.add!"years"(-7, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(DateTime(-2006, 7, 6, 12, 7, 3), FracSec.from!"msecs"(234)));
-                sysTime.add!"years"(9);
+                sysTime.add!"years"(9, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(DateTime(-1997, 7, 6, 12, 7, 3), FracSec.from!"msecs"(234)));
             }
 
@@ -2579,113 +2585,118 @@ assert(st4 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
 
             {
                 auto sysTime = SysTime(DateTime(-2000, 2, 29, 3, 3, 3), FracSec.from!"hnsecs"(3));
-                sysTime.add!"years"(1);
-                _assertPred!"=="(sysTime, SysTime(DateTime(-1999, 3, 1, 3, 3, 3), FracSec.from!"hnsecs"(3)));
+                sysTime.add!"years"(1, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? DateTime(-1999, 3,  1, 3, 3, 3)
+                                                      : DateTime(-1999, 2, 28, 3, 3, 3), FracSec.from!"hnsecs"(3)));
             }
 
             //Test Both
             {
                 auto sysTime = SysTime(Date(4, 7, 6));
-                sysTime.add!"years"(-5);
+                sysTime.add!"years"(-5, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(-1, 7, 6)));
-                sysTime.add!"years"(5);
-                _assertPred!"=="(sysTime, SysTime(Date(4, 7, 6)));
+                sysTime.add!"years"(5, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(Date( 4, 7, 6)));
             }
 
             {
                 auto sysTime = SysTime(Date(-4, 7, 6));
-                sysTime.add!"years"(5);
-                _assertPred!"=="(sysTime, SysTime(Date(1, 7, 6)));
-                sysTime.add!"years"(-5);
+                sysTime.add!"years"(5, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(Date( 1, 7, 6)));
+                sysTime.add!"years"(-5, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(-4, 7, 6)));
             }
 
             {
                 auto sysTime = SysTime(Date(4, 7, 6));
-                sysTime.add!"years"(-8);
+                sysTime.add!"years"(-8, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(-4, 7, 6)));
-                sysTime.add!"years"(8);
-                _assertPred!"=="(sysTime, SysTime(Date(4, 7, 6)));
+                sysTime.add!"years"(8, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(Date( 4, 7, 6)));
             }
 
             {
                 auto sysTime = SysTime(Date(-4, 7, 6));
-                sysTime.add!"years"(8);
-                _assertPred!"=="(sysTime, SysTime(Date(4, 7, 6)));
-                sysTime.add!"years"(-8);
+                sysTime.add!"years"(8, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(Date( 4, 7, 6)));
+                sysTime.add!"years"(-8, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(-4, 7, 6)));
             }
 
             {
                 auto sysTime = SysTime(Date(-4, 2, 29));
-                sysTime.add!"years"(5);
-                _assertPred!"=="(sysTime, SysTime(Date(1, 3, 1)));
+                sysTime.add!"years"(5, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(1, 3,  1)
+                                                      : Date(1, 2, 28)));
             }
 
             {
                 auto sysTime = SysTime(Date(4, 2, 29));
-                sysTime.add!"years"(-5);
-                _assertPred!"=="(sysTime, SysTime(Date(-1, 3, 1)));
+                sysTime.add!"years"(-5, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(-1, 3,  1)
+                                                      : Date(-1, 2, 28)));
             }
 
             {
                 auto sysTime = SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0));
-                sysTime.add!"years"(-1);
+                sysTime.add!"years"(-1, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)));
-                sysTime.add!"years"(1);
+                sysTime.add!"years"(1, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)));
             }
 
             {
                 auto sysTime = SysTime(DateTime(1, 1, 1, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999));
-                sysTime.add!"years"(-1);
+                sysTime.add!"years"(-1, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(DateTime(0, 1, 1, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
-                sysTime.add!"years"(1);
+                sysTime.add!"years"(1, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(DateTime(1, 1, 1, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
             }
 
             {
                 auto sysTime = SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0));
-                sysTime.add!"years"(1);
+                sysTime.add!"years"(1, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)));
-                sysTime.add!"years"(-1);
+                sysTime.add!"years"(-1, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)));
             }
 
             {
                 auto sysTime = SysTime(DateTime(0, 1, 1, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999));
-                sysTime.add!"years"(1);
+                sysTime.add!"years"(1, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(DateTime(1, 1, 1, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
-                sysTime.add!"years"(-1);
+                sysTime.add!"years"(-1, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(DateTime(0, 1, 1, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
             }
 
             {
                 auto sysTime = SysTime(DateTime(4, 7, 6, 14, 7, 1), FracSec.from!"usecs"(54329));
-                sysTime.add!"years"(-5);
+                sysTime.add!"years"(-5, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(DateTime(-1, 7, 6, 14, 7, 1), FracSec.from!"usecs"(54329)));
-                sysTime.add!"years"(5);
-                _assertPred!"=="(sysTime, SysTime(DateTime(4, 7, 6, 14, 7, 1), FracSec.from!"usecs"(54329)));
+                sysTime.add!"years"(5, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(DateTime( 4, 7, 6, 14, 7, 1), FracSec.from!"usecs"(54329)));
             }
 
             {
                 auto sysTime = SysTime(DateTime(-4, 7, 6, 14, 7, 1), FracSec.from!"usecs"(54329));
-                sysTime.add!"years"(5);
-                _assertPred!"=="(sysTime, SysTime(DateTime(1, 7, 6, 14, 7, 1), FracSec.from!"usecs"(54329)));
-                sysTime.add!"years"(-5);
+                sysTime.add!"years"(5, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(DateTime( 1, 7, 6, 14, 7, 1), FracSec.from!"usecs"(54329)));
+                sysTime.add!"years"(-5, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(DateTime(-4, 7, 6, 14, 7, 1), FracSec.from!"usecs"(54329)));
             }
 
             {
                 auto sysTime = SysTime(DateTime(-4, 2, 29, 5, 5, 5), FracSec.from!"msecs"(555));
-                sysTime.add!"years"(5);
-                _assertPred!"=="(sysTime, SysTime(DateTime(1, 3, 1, 5, 5, 5), FracSec.from!"msecs"(555)));
+                sysTime.add!"years"(5, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? DateTime(1, 3,  1, 5, 5, 5)
+                                                      : DateTime(1, 2, 28, 5, 5, 5), FracSec.from!"msecs"(555)));
             }
 
             {
                 auto sysTime = SysTime(DateTime(4, 2, 29, 5, 5, 5), FracSec.from!"msecs"(555));
-                sysTime.add!"years"(-5);
-                _assertPred!"=="(sysTime, SysTime(DateTime(-1, 3, 1, 5, 5, 5), FracSec.from!"msecs"(555)));
+                sysTime.add!"years"(-5, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? DateTime(-1, 3,  1, 5, 5, 5)
+                                                      : DateTime(-1, 2, 28, 5, 5, 5), FracSec.from!"msecs"(555)));
             }
 
             const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -2695,886 +2706,389 @@ assert(st4 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
         }
     }
 
-    //Test add!"years"() with AllowDayOverlow.no
+    //Test add!"months"() with AllowDayOverflow.yes
+    version(testStdDateTime)
     unittest
     {
-        version(testStdDateTime)
+        foreach (ovf; [true, false])
         {
+            auto allowDayOverflow = ovf ? AllowDayOverflow.yes : AllowDayOverflow.no;
+
             //Test A.D.
             {
                 auto sysTime = SysTime(Date(1999, 7, 6));
-                sysTime.add!"years"(7, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(2006, 7, 6)));
-                sysTime.add!"years"(-9, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(1997, 7, 6)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(1999, 2, 28));
-                sysTime.add!"years"(1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(2000, 2, 28)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(2000, 2, 29));
-                sysTime.add!"years"(-1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(1999, 2, 28)));
-            }
-
-            {
-                auto sysTime = SysTime(DateTime(1999, 7, 6, 12, 7, 3), FracSec.from!"msecs"(234));
-                sysTime.add!"years"(7, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(2006, 7, 6, 12, 7, 3), FracSec.from!"msecs"(234)));
-                sysTime.add!"years"(-9, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(1997, 7, 6, 12, 7, 3), FracSec.from!"msecs"(234)));
-            }
-
-            {
-                auto sysTime = SysTime(DateTime(1999, 2, 28, 0, 7, 2), FracSec.from!"usecs"(1207));
-                sysTime.add!"years"(1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(2000, 2, 28, 0, 7, 2), FracSec.from!"usecs"(1207)));
-            }
-
-            {
-                auto sysTime = SysTime(DateTime(2000, 2, 29, 0, 7, 2), FracSec.from!"usecs"(1207));
-                sysTime.add!"years"(-1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(1999, 2, 28, 0, 7, 2), FracSec.from!"usecs"(1207)));
-            }
-
-            //Test B.C.
-            {
-                auto sysTime = SysTime(Date(-1999, 7, 6));
-                sysTime.add!"years"(-7, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-2006, 7, 6)));
-                sysTime.add!"years"(9, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-1997, 7, 6)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(-1999, 2, 28));
-                sysTime.add!"years"(-1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-2000, 2, 28)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(-2000, 2, 29));
-                sysTime.add!"years"(1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-1999, 2, 28)));
-            }
-
-            {
-                auto sysTime = SysTime(DateTime(-1999, 7, 6, 12, 7, 3), FracSec.from!"msecs"(234));
-                sysTime.add!"years"(-7, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(-2006, 7, 6, 12, 7, 3), FracSec.from!"msecs"(234)));
-                sysTime.add!"years"(9, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(-1997, 7, 6, 12, 7, 3), FracSec.from!"msecs"(234)));
-            }
-
-            {
-                auto sysTime = SysTime(DateTime(-1999, 2, 28, 3, 3, 3), FracSec.from!"hnsecs"(3));
-                sysTime.add!"years"(-1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(-2000, 2, 28, 3, 3, 3), FracSec.from!"hnsecs"(3)));
-            }
-
-            {
-                auto sysTime = SysTime(DateTime(-2000, 2, 29, 3, 3, 3), FracSec.from!"hnsecs"(3));
-                sysTime.add!"years"(1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(-1999, 2, 28, 3, 3, 3), FracSec.from!"hnsecs"(3)));
-            }
-
-            //Test Both
-            {
-                auto sysTime = SysTime(Date(4, 7, 6));
-                sysTime.add!"years"(-5, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-1, 7, 6)));
-                sysTime.add!"years"(5, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(4, 7, 6)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(-4, 7, 6));
-                sysTime.add!"years"(5, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(1, 7, 6)));
-                sysTime.add!"years"(-5, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-4, 7, 6)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(4, 7, 6));
-                sysTime.add!"years"(-8, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-4, 7, 6)));
-                sysTime.add!"years"(8, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(4, 7, 6)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(-4, 7, 6));
-                sysTime.add!"years"(8, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(4, 7, 6)));
-                sysTime.add!"years"(-8, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-4, 7, 6)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(-4, 2, 29));
-                sysTime.add!"years"(5, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(1, 2, 28)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(4, 2, 29));
-                sysTime.add!"years"(-5, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-1, 2, 28)));
-            }
-
-            {
-                auto sysTime = SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0));
-                sysTime.add!"years"(-1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)));
-                sysTime.add!"years"(1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)));
-            }
-
-            {
-                auto sysTime = SysTime(DateTime(1, 1, 1, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999));
-                sysTime.add!"years"(-1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(0, 1, 1, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
-                sysTime.add!"years"(1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(1, 1, 1, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
-            }
-
-            {
-                auto sysTime = SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0));
-                sysTime.add!"years"(1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)));
-                sysTime.add!"years"(-1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(0, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)));
-            }
-
-            {
-                auto sysTime = SysTime(DateTime(0, 1, 1, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999));
-                sysTime.add!"years"(1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(1, 1, 1, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
-                sysTime.add!"years"(-1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(0, 1, 1, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
-            }
-
-            {
-                auto sysTime = SysTime(DateTime(4, 7, 6, 14, 7, 1), FracSec.from!"usecs"(54329));
-                sysTime.add!"years"(-5);
-                _assertPred!"=="(sysTime, SysTime(DateTime(-1, 7, 6, 14, 7, 1), FracSec.from!"usecs"(54329)));
-                sysTime.add!"years"(5);
-                _assertPred!"=="(sysTime, SysTime(DateTime(4, 7, 6, 14, 7, 1), FracSec.from!"usecs"(54329)));
-            }
-
-            {
-                auto sysTime = SysTime(DateTime(4, 7, 6, 14, 7, 1), FracSec.from!"usecs"(54329));
-                sysTime.add!"years"(-5, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(-1, 7, 6, 14, 7, 1), FracSec.from!"usecs"(54329)));
-                sysTime.add!"years"(5, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(4, 7, 6, 14, 7, 1), FracSec.from!"usecs"(54329)));
-            }
-
-            {
-                auto sysTime = SysTime(DateTime(-4, 7, 6, 14, 7, 1), FracSec.from!"usecs"(54329));
-                sysTime.add!"years"(5, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(1, 7, 6, 14, 7, 1), FracSec.from!"usecs"(54329)));
-                sysTime.add!"years"(-5, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(-4, 7, 6, 14, 7, 1), FracSec.from!"usecs"(54329)));
-            }
-
-            {
-                auto sysTime = SysTime(DateTime(-4, 2, 29, 5, 5, 5), FracSec.from!"msecs"(555));
-                sysTime.add!"years"(5, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(1, 2, 28, 5, 5, 5), FracSec.from!"msecs"(555)));
-            }
-
-            {
-                auto sysTime = SysTime(DateTime(4, 2, 29, 5, 5, 5), FracSec.from!"msecs"(555));
-                sysTime.add!"years"(-5, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(-1, 2, 28, 5, 5, 5), FracSec.from!"msecs"(555)));
-            }
-        }
-    }
-
-    //Test add!"months"() with AllowDayOverlow.yes
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            {
-                auto sysTime = SysTime(Date(1999, 7, 6));
-                sysTime.add!"months"(3);
+                sysTime.add!"months"(3, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(1999, 10, 6)));
-                sysTime.add!"months"(-4);
+                sysTime.add!"months"(-4, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(1999, 6, 6)));
             }
 
             {
                 auto sysTime = SysTime(Date(1999, 7, 6));
-                sysTime.add!"months"(6);
+                sysTime.add!"months"(6, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(2000, 1, 6)));
-                sysTime.add!"months"(-6);
+                sysTime.add!"months"(-6, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(1999, 7, 6)));
             }
 
             {
                 auto sysTime = SysTime(Date(1999, 7, 6));
-                sysTime.add!"months"(27);
+                sysTime.add!"months"(27, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(2001, 10, 6)));
-                sysTime.add!"months"(-28);
+                sysTime.add!"months"(-28, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(1999, 6, 6)));
             }
 
             {
                 auto sysTime = SysTime(Date(1999, 5, 31));
-                sysTime.add!"months"(1);
-                _assertPred!"=="(sysTime, SysTime(Date(1999, 7, 1)));
+                sysTime.add!"months"(1, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(1999, 7,  1)
+                                                      : Date(1999, 6, 30)));
             }
 
             {
                 auto sysTime = SysTime(Date(1999, 5, 31));
-                sysTime.add!"months"(-1);
-                _assertPred!"=="(sysTime, SysTime(Date(1999, 5, 1)));
+                sysTime.add!"months"(-1, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(1999, 5,  1)
+                                                      : Date(1999, 4, 30)));
             }
 
             {
                 auto sysTime = SysTime(Date(1999, 2, 28));
-                sysTime.add!"months"(12);
+                sysTime.add!"months"(12, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(2000, 2, 28)));
             }
 
             {
                 auto sysTime = SysTime(Date(2000, 2, 29));
-                sysTime.add!"months"(12);
-                _assertPred!"=="(sysTime, SysTime(Date(2001, 3, 1)));
+                sysTime.add!"months"(12, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(2001, 3,  1)
+                                                      : Date(2001, 2, 28)));
             }
 
             {
                 auto sysTime = SysTime(Date(1999, 7, 31));
-                sysTime.add!"months"(1);
+                sysTime.add!"months"(1, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(1999, 8, 31)));
-                sysTime.add!"months"(1);
-                _assertPred!"=="(sysTime, SysTime(Date(1999, 10, 1)));
+                sysTime.add!"months"(1, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(1999, 10,  1)
+                                                      : Date(1999,  9, 30)));
             }
 
             {
                 auto sysTime = SysTime(Date(1998, 8, 31));
-                sysTime.add!"months"(13);
-                _assertPred!"=="(sysTime, SysTime(Date(1999, 10, 1)));
-                sysTime.add!"months"(-13);
-                _assertPred!"=="(sysTime, SysTime(Date(1998, 9, 1)));
+                sysTime.add!"months"(13, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(1999, 10,  1)
+                                                      : Date(1999,  9, 30)));
+                sysTime.add!"months"(-13, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(1998,  9,  1)
+                                                      : Date(1998,  8, 30)));
             }
 
             {
                 auto sysTime = SysTime(Date(1997, 12, 31));
-                sysTime.add!"months"(13);
-                _assertPred!"=="(sysTime, SysTime(Date(1999, 1, 31)));
-                sysTime.add!"months"(-13);
+                sysTime.add!"months"(13, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(Date(1999,  1, 31)));
+                sysTime.add!"months"(-13, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(1997, 12, 31)));
             }
 
             {
                 auto sysTime = SysTime(Date(1997, 12, 31));
-                sysTime.add!"months"(14);
-                _assertPred!"=="(sysTime, SysTime(Date(1999, 3, 3)));
-                sysTime.add!"months"(-14);
-                _assertPred!"=="(sysTime, SysTime(Date(1998, 1, 3)));
+                sysTime.add!"months"(14, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(1999,  3,  3)
+                                                      : Date(1999,  2, 28)));
+                sysTime.add!"months"(-14, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(1998,  1,  3)
+                                                      : Date(1997, 12, 28)));
             }
 
             {
                 auto sysTime = SysTime(Date(1998, 12, 31));
-                sysTime.add!"months"(14);
-                _assertPred!"=="(sysTime, SysTime(Date(2000, 3, 2)));
-                sysTime.add!"months"(-14);
-                _assertPred!"=="(sysTime, SysTime(Date(1999, 1, 2)));
+                sysTime.add!"months"(14, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(2000,  3,  2)
+                                                      : Date(2000,  2, 29)));
+                sysTime.add!"months"(-14, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(1999,  1,  2)
+                                                      : Date(1998, 12, 29)));
             }
 
             {
                 auto sysTime = SysTime(Date(1999, 12, 31));
-                sysTime.add!"months"(14);
-                _assertPred!"=="(sysTime, SysTime(Date(2001, 3, 3)));
-                sysTime.add!"months"(-14);
-                _assertPred!"=="(sysTime, SysTime(Date(2000, 1, 3)));
+                sysTime.add!"months"(14, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(2001,  3,  3)
+                                                      : Date(2001,  2, 28)));
+                sysTime.add!"months"(-14, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(2000,  1,  3)
+                                                      : Date(1999, 12, 28)));
             }
 
             {
                 auto sysTime = SysTime(DateTime(1999, 7, 6, 12, 2, 7), FracSec.from!"usecs"(5007));
-                sysTime.add!"months"(3);
+                sysTime.add!"months"(3, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(DateTime(1999, 10, 6, 12, 2, 7), FracSec.from!"usecs"(5007)));
-                sysTime.add!"months"(-4);
-                _assertPred!"=="(sysTime, SysTime(DateTime(1999, 6, 6, 12, 2, 7), FracSec.from!"usecs"(5007)));
+                sysTime.add!"months"(-4, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(DateTime(1999,  6, 6, 12, 2, 7), FracSec.from!"usecs"(5007)));
             }
 
             {
                 auto sysTime = SysTime(DateTime(1998, 12, 31, 7, 7, 7), FracSec.from!"hnsecs"(422202));
-                sysTime.add!"months"(14);
-                _assertPred!"=="(sysTime, SysTime(DateTime(2000, 3, 2, 7, 7, 7), FracSec.from!"hnsecs"(422202)));
-                sysTime.add!"months"(-14);
-                _assertPred!"=="(sysTime, SysTime(DateTime(1999, 1, 2, 7, 7, 7), FracSec.from!"hnsecs"(422202)));
+                sysTime.add!"months"(14, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? DateTime(2000,  3,  2, 7, 7, 7)
+                                                      : DateTime(2000,  2, 29, 7, 7, 7), FracSec.from!"hnsecs"(422202)));
+                sysTime.add!"months"(-14, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? DateTime(1999,  1,  2, 7, 7, 7)
+                                                      : DateTime(1998, 12, 29, 7, 7, 7), FracSec.from!"hnsecs"(422202)));
             }
 
             {
                 auto sysTime = SysTime(DateTime(1999, 12, 31, 7, 7, 7), FracSec.from!"hnsecs"(422202));
-                sysTime.add!"months"(14);
-                _assertPred!"=="(sysTime, SysTime(DateTime(2001, 3, 3, 7, 7, 7), FracSec.from!"hnsecs"(422202)));
-                sysTime.add!"months"(-14);
-                _assertPred!"=="(sysTime, SysTime(DateTime(2000, 1, 3, 7, 7, 7), FracSec.from!"hnsecs"(422202)));
+                sysTime.add!"months"(14, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? DateTime(2001,  3,  3, 7, 7, 7)
+                                                      : DateTime(2001,  2, 28, 7, 7, 7), FracSec.from!"hnsecs"(422202)));
+                sysTime.add!"months"(-14, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? DateTime(2000,  1,  3, 7, 7, 7)
+                                                      : DateTime(1999, 12, 28, 7, 7, 7), FracSec.from!"hnsecs"(422202)));
             }
 
             //Test B.C.
             {
                 auto sysTime = SysTime(Date(-1999, 7, 6));
-                sysTime.add!"months"(3);
+                sysTime.add!"months"(3, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(-1999, 10, 6)));
-                sysTime.add!"months"(-4);
+                sysTime.add!"months"(-4, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(-1999, 6, 6)));
             }
 
             {
                 auto sysTime = SysTime(Date(-1999, 7, 6));
-                sysTime.add!"months"(6);
+                sysTime.add!"months"(6, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(-1998, 1, 6)));
-                sysTime.add!"months"(-6);
+                sysTime.add!"months"(-6, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(-1999, 7, 6)));
             }
 
             {
                 auto sysTime = SysTime(Date(-1999, 7, 6));
-                sysTime.add!"months"(-27);
+                sysTime.add!"months"(-27, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(-2001, 4, 6)));
-                sysTime.add!"months"(28);
+                sysTime.add!"months"(28, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(-1999, 8, 6)));
             }
 
             {
                 auto sysTime = SysTime(Date(-1999, 5, 31));
-                sysTime.add!"months"(1);
-                _assertPred!"=="(sysTime, SysTime(Date(-1999, 7, 1)));
+                sysTime.add!"months"(1, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(-1999, 7,  1)
+                                                      : Date(-1999, 6, 30)));
             }
 
             {
                 auto sysTime = SysTime(Date(-1999, 5, 31));
-                sysTime.add!"months"(-1);
-                _assertPred!"=="(sysTime, SysTime(Date(-1999, 5, 1)));
+                sysTime.add!"months"(-1, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(-1999, 5,  1)
+                                                      : Date(-1999, 4, 30)));
             }
 
             {
                 auto sysTime = SysTime(Date(-1999, 2, 28));
-                sysTime.add!"months"(-12);
+                sysTime.add!"months"(-12, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(-2000, 2, 28)));
             }
 
             {
                 auto sysTime = SysTime(Date(-2000, 2, 29));
-                sysTime.add!"months"(-12);
-                _assertPred!"=="(sysTime, SysTime(Date(-2001, 3, 1)));
+                sysTime.add!"months"(-12, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(-2001, 3,  1)
+                                                      : Date(-2001, 2, 28)));
             }
 
             {
                 auto sysTime = SysTime(Date(-1999, 7, 31));
-                sysTime.add!"months"(1);
+                sysTime.add!"months"(1, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(-1999, 8, 31)));
-                sysTime.add!"months"(1);
-                _assertPred!"=="(sysTime, SysTime(Date(-1999, 10, 1)));
+                sysTime.add!"months"(1, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(-1999, 10,  1)
+                                                      : Date(-1999,  9, 30)));
             }
 
             {
                 auto sysTime = SysTime(Date(-1998, 8, 31));
-                sysTime.add!"months"(13);
-                _assertPred!"=="(sysTime, SysTime(Date(-1997, 10, 1)));
-                sysTime.add!"months"(-13);
-                _assertPred!"=="(sysTime, SysTime(Date(-1998, 9, 1)));
+                sysTime.add!"months"(13, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(-1997, 10,  1)
+                                                      : Date(-1997,  9, 30)));
+                sysTime.add!"months"(-13, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(-1998,  9,  1)
+                                                      : Date(-1998,  8, 30)));
             }
 
             {
                 auto sysTime = SysTime(Date(-1997, 12, 31));
-                sysTime.add!"months"(13);
+                sysTime.add!"months"(13, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(-1995, 1, 31)));
-                sysTime.add!"months"(-13);
+                sysTime.add!"months"(-13, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(-1997, 12, 31)));
             }
 
             {
                 auto sysTime = SysTime(Date(-1997, 12, 31));
-                sysTime.add!"months"(14);
-                _assertPred!"=="(sysTime, SysTime(Date(-1995, 3, 3)));
-                sysTime.add!"months"(-14);
-                _assertPred!"=="(sysTime, SysTime(Date(-1996, 1, 3)));
+                sysTime.add!"months"(14, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(-1995,  3,  3)
+                                                      : Date(-1995,  2, 28)));
+                sysTime.add!"months"(-14, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(-1996,  1,  3)
+                                                      : Date(-1997, 12, 28)));
             }
 
             {
                 auto sysTime = SysTime(Date(-2002, 12, 31));
-                sysTime.add!"months"(14);
-                _assertPred!"=="(sysTime, SysTime(Date(-2000, 3, 2)));
-                sysTime.add!"months"(-14);
-                _assertPred!"=="(sysTime, SysTime(Date(-2001, 1, 2)));
+                sysTime.add!"months"(14, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(-2000,  3,  2)
+                                                      : Date(-2000,  2, 29)));
+                sysTime.add!"months"(-14, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(-2001,  1,  2)
+                                                      : Date(-2002, 12, 29)));
             }
 
             {
                 auto sysTime = SysTime(Date(-2001, 12, 31));
-                sysTime.add!"months"(14);
-                _assertPred!"=="(sysTime, SysTime(Date(-1999, 3, 3)));
-                sysTime.add!"months"(-14);
-                _assertPred!"=="(sysTime, SysTime(Date(-2000, 1, 3)));
+                sysTime.add!"months"(14, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(-1999,  3,  3)
+                                                      : Date(-1999,  2, 28)));
+                sysTime.add!"months"(-14, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(-2000,  1,  3)
+                                                      : Date(-2001, 12, 28)));
             }
 
             {
                 auto sysTime = SysTime(DateTime(-1999, 7, 6, 12, 2, 7), FracSec.from!"usecs"(5007));
-                sysTime.add!"months"(3);
+                sysTime.add!"months"(3, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(DateTime(-1999, 10, 6, 12, 2, 7), FracSec.from!"usecs"(5007)));
-                sysTime.add!"months"(-4);
-                _assertPred!"=="(sysTime, SysTime(DateTime(-1999, 6, 6, 12, 2, 7), FracSec.from!"usecs"(5007)));
+                sysTime.add!"months"(-4, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(DateTime(-1999,  6, 6, 12, 2, 7), FracSec.from!"usecs"(5007)));
             }
 
             {
                 auto sysTime = SysTime(DateTime(-2002, 12, 31, 7, 7, 7), FracSec.from!"hnsecs"(422202));
-                sysTime.add!"months"(14);
-                _assertPred!"=="(sysTime, SysTime(DateTime(-2000, 3, 2, 7, 7, 7), FracSec.from!"hnsecs"(422202)));
-                sysTime.add!"months"(-14);
-                _assertPred!"=="(sysTime, SysTime(DateTime(-2001, 1, 2, 7, 7, 7), FracSec.from!"hnsecs"(422202)));
+                sysTime.add!"months"(14, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? DateTime(-2000,  3,  2, 7, 7, 7)
+                                                      : DateTime(-2000,  2, 29, 7, 7, 7), FracSec.from!"hnsecs"(422202)));
+                sysTime.add!"months"(-14, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? DateTime(-2001,  1,  2, 7, 7, 7)
+                                                      : DateTime(-2002, 12, 29, 7, 7, 7), FracSec.from!"hnsecs"(422202)));
             }
 
             {
                 auto sysTime = SysTime(DateTime(-2001, 12, 31, 7, 7, 7), FracSec.from!"hnsecs"(422202));
-                sysTime.add!"months"(14);
-                _assertPred!"=="(sysTime, SysTime(DateTime(-1999, 3, 3, 7, 7, 7), FracSec.from!"hnsecs"(422202)));
-                sysTime.add!"months"(-14);
-                _assertPred!"=="(sysTime, SysTime(DateTime(-2000, 1, 3, 7, 7, 7), FracSec.from!"hnsecs"(422202)));
+                sysTime.add!"months"(14, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? DateTime(-1999,  3,  3, 7, 7, 7)
+                                                      : DateTime(-1999,  2, 28, 7, 7, 7), FracSec.from!"hnsecs"(422202)));
+                sysTime.add!"months"(-14, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? DateTime(-2000,  1,  3, 7, 7, 7)
+                                                      : DateTime(-2001, 12, 28, 7, 7, 7), FracSec.from!"hnsecs"(422202)));
             }
 
             //Test Both
             {
                 auto sysTime = SysTime(Date(1, 1, 1));
-                sysTime.add!"months"(-1);
+                sysTime.add!"months"(-1, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(0, 12, 1)));
-                sysTime.add!"months"(1);
+                sysTime.add!"months"(1, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(1, 1, 1)));
             }
 
             {
                 auto sysTime = SysTime(Date(4, 1, 1));
-                sysTime.add!"months"(-48);
+                sysTime.add!"months"(-48, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(0, 1, 1)));
-                sysTime.add!"months"(48);
+                sysTime.add!"months"(48, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(Date(4, 1, 1)));
             }
 
             {
                 auto sysTime = SysTime(Date(4, 3, 31));
-                sysTime.add!"months"(-49);
-                _assertPred!"=="(sysTime, SysTime(Date(0, 3, 2)));
-                sysTime.add!"months"(49);
-                _assertPred!"=="(sysTime, SysTime(Date(4, 4, 2)));
+                sysTime.add!"months"(-49, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(0, 3,  2)
+                                                      : Date(0, 2, 29)));
+                sysTime.add!"months"(49, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(4, 4,  2)
+                                                      : Date(4, 3, 29)));
             }
 
             {
                 auto sysTime = SysTime(Date(4, 3, 31));
-                sysTime.add!"months"(-85);
-                _assertPred!"=="(sysTime, SysTime(Date(-3, 3, 3)));
-                sysTime.add!"months"(85);
-                _assertPred!"=="(sysTime, SysTime(Date(4, 4, 3)));
+                sysTime.add!"months"(-85, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date(-3, 3, 3)
+                                                      : Date(-3, 2, 28)));
+                sysTime.add!"months"(85, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? Date( 4, 4,  3)
+                                                      : Date( 4, 3, 28)));
             }
 
             {
                 auto sysTime = SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0));
-                sysTime.add!"months"(-1);
+                sysTime.add!"months"(-1, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(DateTime(0, 12, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)));
-                sysTime.add!"months"(1);
-                _assertPred!"=="(sysTime, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)));
+                sysTime.add!"months"(1, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(DateTime(1,  1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)));
             }
 
             {
                 auto sysTime = SysTime(DateTime(1, 1, 1, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999));
-                sysTime.add!"months"(-1);
+                sysTime.add!"months"(-1, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(DateTime(0, 12, 1, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
-                sysTime.add!"months"(1);
-                _assertPred!"=="(sysTime, SysTime(DateTime(1, 1, 1, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
+                sysTime.add!"months"(1, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(DateTime(1,  1, 1, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
             }
 
             {
                 auto sysTime = SysTime(DateTime(0, 12, 1, 0, 0, 0), FracSec.from!"hnsecs"(0));
-                sysTime.add!"months"(1);
-                _assertPred!"=="(sysTime, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)));
-                sysTime.add!"months"(-1);
+                sysTime.add!"months"(1, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(DateTime(1,  1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)));
+                sysTime.add!"months"(-1, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(DateTime(0, 12, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)));
             }
 
             {
                 auto sysTime = SysTime(DateTime(0, 12, 1, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999));
-                sysTime.add!"months"(1);
-                _assertPred!"=="(sysTime, SysTime(DateTime(1, 1, 1, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
-                sysTime.add!"months"(-1);
+                sysTime.add!"months"(1, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(DateTime(1,  1, 1, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
+                sysTime.add!"months"(-1, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(DateTime(0, 12, 1, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
             }
 
             {
                 auto sysTime = SysTime(DateTime(1, 1, 1, 0, 7, 9), FracSec.from!"hnsecs"(17));
-                sysTime.add!"months"(-1);
+                sysTime.add!"months"(-1, allowDayOverflow);
                 _assertPred!"=="(sysTime, SysTime(DateTime(0, 12, 1, 0, 7, 9), FracSec.from!"hnsecs"(17)));
-                sysTime.add!"months"(1);
-                _assertPred!"=="(sysTime, SysTime(DateTime(1, 1, 1, 0, 7, 9), FracSec.from!"hnsecs"(17)));
+                sysTime.add!"months"(1, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(DateTime(1,  1, 1, 0, 7, 9), FracSec.from!"hnsecs"(17)));
             }
 
             {
                 auto sysTime = SysTime(DateTime(4, 3, 31, 12, 11, 10), FracSec.from!"msecs"(9));
-                sysTime.add!"months"(-85);
-                _assertPred!"=="(sysTime, SysTime(DateTime(-3, 3, 3, 12, 11, 10), FracSec.from!"msecs"(9)));
-                sysTime.add!"months"(85);
-                _assertPred!"=="(sysTime, SysTime(DateTime(4, 4, 3, 12, 11, 10), FracSec.from!"msecs"(9)));
+                sysTime.add!"months"(-85, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? DateTime(-3, 3,  3, 12, 11, 10)
+                                                      : DateTime(-3, 2, 28, 12, 11, 10), FracSec.from!"msecs"(9)));
+                sysTime.add!"months"(85, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? DateTime( 4, 4,  3, 12, 11, 10)
+                                                      : DateTime( 4, 3, 28, 12, 11, 10), FracSec.from!"msecs"(9)));
             }
 
             {
                 auto sysTime = SysTime(DateTime(-3, 3, 31, 12, 11, 10), FracSec.from!"msecs"(9));
-                sysTime.add!"months"(85);
-                _assertPred!"=="(sysTime, SysTime(DateTime(4, 5, 1, 12, 11, 10), FracSec.from!"msecs"(9)));
-                sysTime.add!"months"(-85);
-                _assertPred!"=="(sysTime, SysTime(DateTime(-3, 4, 1, 12, 11, 10), FracSec.from!"msecs"(9)));
+                sysTime.add!"months"(85, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? DateTime( 4, 5,  1, 12, 11, 10)
+                                                      : DateTime( 4, 4, 30, 12, 11, 10), FracSec.from!"msecs"(9)));
+                sysTime.add!"months"(-85, allowDayOverflow);
+                _assertPred!"=="(sysTime, SysTime(ovf ? DateTime(-3, 4,  1, 12, 11, 10)
+                                                      : DateTime(-3, 3, 30, 12, 11, 10), FracSec.from!"msecs"(9)));
             }
 
             const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
             //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
             static assert(!__traits(compiles, cst.add!"months"(4)));
             //static assert(!__traits(compiles, ist.add!"months"(4)));
-        }
-    }
-
-    //Test add!"months"() with AllowDayOverlow.no
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            {
-                auto sysTime = SysTime(Date(1999, 7, 6));
-                sysTime.add!"months"(3, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(1999, 10, 6)));
-                sysTime.add!"months"(-4, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(1999, 6, 6)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(1999, 7, 6));
-                sysTime.add!"months"(6, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(2000, 1, 6)));
-                sysTime.add!"months"(-6, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(1999, 7, 6)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(1999, 7, 6));
-                sysTime.add!"months"(27, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(2001, 10, 6)));
-                sysTime.add!"months"(-28, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(1999, 6, 6)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(1999, 5, 31));
-                sysTime.add!"months"(1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(1999, 6, 30)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(1999, 5, 31));
-                sysTime.add!"months"(-1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(1999, 4, 30)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(1999, 2, 28));
-                sysTime.add!"months"(12, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(2000, 2, 28)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(2000, 2, 29));
-                sysTime.add!"months"(12, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(2001, 2, 28)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(1999, 7, 31));
-                sysTime.add!"months"(1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(1999, 8, 31)));
-                sysTime.add!"months"(1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(1999, 9, 30)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(1998, 8, 31));
-                sysTime.add!"months"(13, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(1999, 9, 30)));
-                sysTime.add!"months"(-13, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(1998, 8, 30)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(1997, 12, 31));
-                sysTime.add!"months"(13, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(1999, 1, 31)));
-                sysTime.add!"months"(-13, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(1997, 12, 31)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(1997, 12, 31));
-                sysTime.add!"months"(14, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(1999, 2, 28)));
-                sysTime.add!"months"(-14, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(1997, 12, 28)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(1998, 12, 31));
-                sysTime.add!"months"(14, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(2000, 2, 29)));
-                sysTime.add!"months"(-14, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(1998, 12, 29)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(1999, 12, 31));
-                sysTime.add!"months"(14, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(2001, 2, 28)));
-                sysTime.add!"months"(-14, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(1999, 12, 28)));
-            }
-
-            {
-                auto sysTime = SysTime(DateTime(1999, 7, 6, 12, 2, 7), FracSec.from!"usecs"(5007));
-                sysTime.add!"months"(3, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(1999, 10, 6, 12, 2, 7), FracSec.from!"usecs"(5007)));
-                sysTime.add!"months"(-4, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(1999, 6, 6, 12, 2, 7), FracSec.from!"usecs"(5007)));
-            }
-
-            {
-                auto sysTime = SysTime(DateTime(1998, 12, 31, 7, 7, 7), FracSec.from!"hnsecs"(422202));
-                sysTime.add!"months"(14, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(2000, 2, 29, 7, 7, 7), FracSec.from!"hnsecs"(422202)));
-                sysTime.add!"months"(-14, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(1998, 12, 29, 7, 7, 7), FracSec.from!"hnsecs"(422202)));
-            }
-
-            {
-                auto sysTime = SysTime(DateTime(1999, 12, 31, 7, 7, 7), FracSec.from!"hnsecs"(422202));
-                sysTime.add!"months"(14, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(2001, 2, 28, 7, 7, 7), FracSec.from!"hnsecs"(422202)));
-                sysTime.add!"months"(-14, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(1999, 12, 28, 7, 7, 7), FracSec.from!"hnsecs"(422202)));
-            }
-
-            //Test B.C.
-            {
-                auto sysTime = SysTime(Date(-1999, 7, 6));
-                sysTime.add!"months"(3, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-1999, 10, 6)));
-                sysTime.add!"months"(-4, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-1999, 6, 6)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(-1999, 7, 6));
-                sysTime.add!"months"(6, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-1998, 1, 6)));
-                sysTime.add!"months"(-6, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-1999, 7, 6)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(-1999, 7, 6));
-                sysTime.add!"months"(-27, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-2001, 4, 6)));
-                sysTime.add!"months"(28, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-1999, 8, 6)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(-1999, 5, 31));
-                sysTime.add!"months"(1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-1999, 6, 30)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(-1999, 5, 31));
-                sysTime.add!"months"(-1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-1999, 4, 30)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(-1999, 2, 28));
-                sysTime.add!"months"(-12, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-2000, 2, 28)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(-2000, 2, 29));
-                sysTime.add!"months"(-12, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-2001, 2, 28)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(-1999, 7, 31));
-                sysTime.add!"months"(1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-1999, 8, 31)));
-                sysTime.add!"months"(1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-1999, 9, 30)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(-1998, 8, 31));
-                sysTime.add!"months"(13, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-1997, 9, 30)));
-                sysTime.add!"months"(-13, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-1998, 8, 30)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(-1997, 12, 31));
-                sysTime.add!"months"(13, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-1995, 1, 31)));
-                sysTime.add!"months"(-13, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-1997, 12, 31)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(-1997, 12, 31));
-                sysTime.add!"months"(14, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-1995, 2, 28)));
-                sysTime.add!"months"(-14, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-1997, 12, 28)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(-2002, 12, 31));
-                sysTime.add!"months"(14, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-2000, 2, 29)));
-                sysTime.add!"months"(-14, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-2002, 12, 29)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(-2001, 12, 31));
-                sysTime.add!"months"(14, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-1999, 2, 28)));
-                sysTime.add!"months"(-14, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-2001, 12, 28)));
-            }
-
-            {
-                auto sysTime = SysTime(DateTime(-1999, 7, 6, 12, 2, 7), FracSec.from!"usecs"(5007));
-                sysTime.add!"months"(3, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(-1999, 10, 6, 12, 2, 7), FracSec.from!"usecs"(5007)));
-                sysTime.add!"months"(-4, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(-1999, 6, 6, 12, 2, 7), FracSec.from!"usecs"(5007)));
-            }
-
-            {
-                auto sysTime = SysTime(DateTime(-2002, 12, 31, 7, 7, 7), FracSec.from!"hnsecs"(422202));
-                sysTime.add!"months"(14, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(-2000, 2, 29, 7, 7, 7), FracSec.from!"hnsecs"(422202)));
-                sysTime.add!"months"(-14, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(-2002, 12, 29, 7, 7, 7), FracSec.from!"hnsecs"(422202)));
-            }
-
-            {
-                auto sysTime = SysTime(DateTime(-2001, 12, 31, 7, 7, 7), FracSec.from!"hnsecs"(422202));
-                sysTime.add!"months"(14, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(-1999, 2, 28, 7, 7, 7), FracSec.from!"hnsecs"(422202)));
-                sysTime.add!"months"(-14, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(-2001, 12, 28, 7, 7, 7), FracSec.from!"hnsecs"(422202)));
-            }
-
-            //Test Both
-            {
-                auto sysTime = SysTime(Date(1, 1, 1));
-                sysTime.add!"months"(-1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(0, 12, 1)));
-                sysTime.add!"months"(1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(1, 1, 1)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(4, 1, 1));
-                sysTime.add!"months"(-48, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(0, 1, 1)));
-                sysTime.add!"months"(48, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(4, 1, 1)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(4, 3, 31));
-                sysTime.add!"months"(-49, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(0, 2, 29)));
-                sysTime.add!"months"(49, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(4, 3, 29)));
-            }
-
-            {
-                auto sysTime = SysTime(Date(4, 3, 31));
-                sysTime.add!"months"(-85, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(-3, 2, 28)));
-                sysTime.add!"months"(85, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(Date(4, 3, 28)));
-            }
-
-            {
-                auto sysTime = SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0));
-                sysTime.add!"months"(-1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(0, 12, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)));
-                sysTime.add!"months"(1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)));
-            }
-
-            {
-                auto sysTime = SysTime(DateTime(1, 1, 1, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999));
-                sysTime.add!"months"(-1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(0, 12, 1, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
-                sysTime.add!"months"(1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(1, 1, 1, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
-            }
-
-            {
-                auto sysTime = SysTime(DateTime(0, 12, 1, 0, 0, 0), FracSec.from!"hnsecs"(0));
-                sysTime.add!"months"(1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(1, 1, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)));
-                sysTime.add!"months"(-1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(0, 12, 1, 0, 0, 0), FracSec.from!"hnsecs"(0)));
-            }
-
-            {
-                auto sysTime = SysTime(DateTime(0, 12, 1, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999));
-                sysTime.add!"months"(1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(1, 1, 1, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
-                sysTime.add!"months"(-1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(0, 12, 1, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)));
-            }
-
-            {
-                auto sysTime = SysTime(DateTime(1, 1, 1, 0, 7, 9), FracSec.from!"hnsecs"(17));
-                sysTime.add!"months"(-1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(0, 12, 1, 0, 7, 9), FracSec.from!"hnsecs"(17)));
-                sysTime.add!"months"(1, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(1, 1, 1, 0, 7, 9), FracSec.from!"hnsecs"(17)));
-            }
-
-            {
-                auto sysTime = SysTime(DateTime(4, 3, 31, 12, 11, 10), FracSec.from!"msecs"(9));
-                sysTime.add!"months"(-85, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(-3, 2, 28, 12, 11, 10), FracSec.from!"msecs"(9)));
-                sysTime.add!"months"(85, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(4, 3, 28, 12, 11, 10), FracSec.from!"msecs"(9)));
-            }
-
-            {
-                auto sysTime = SysTime(DateTime(-3, 3, 31, 12, 11, 10), FracSec.from!"msecs"(9));
-                sysTime.add!"months"(85, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(4, 4, 30, 12, 11, 10), FracSec.from!"msecs"(9)));
-                sysTime.add!"months"(-85, AllowDayOverflow.no);
-                _assertPred!"=="(sysTime, SysTime(DateTime(-3, 3, 30, 12, 11, 10), FracSec.from!"msecs"(9)));
-            }
         }
     }
 
@@ -3704,7 +3218,7 @@ assert(st6 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
         adjTime = newDaysHNSecs + hnsecs;
     }
 
-    //Test roll!"months"() with AllowDayOverlow.yes
+    //Test roll!"months"() with AllowDayOverflow.yes
     unittest
     {
         version(testStdDateTime)
