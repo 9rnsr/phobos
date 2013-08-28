@@ -21,9 +21,9 @@ static import std.c.stdio;
 import std.stdiobase;
 import core.stdc.errno, core.stdc.stddef, core.stdc.stdlib, core.memory,
     core.stdc.string, core.stdc.wchar_, core.exception;
-import std.algorithm, std.array, std.conv, std.exception, std.format,
+import std.algorithm, std.array, std.conv, std.exception,
     std.range, std.traits, std.typecons,
-    std.typetuple, std.utf;
+    std.typetuple;
 version(unittest) import std.file;
 
 version (DigitalMars)
@@ -215,6 +215,9 @@ public:
     /// Ditto
     void popFront()
     {
+        import std.string : chomp;
+        import std.format : formattedRead;
+
         enforce(file.isOpen);
         file.readln(line);
         if (!line.length)
@@ -746,7 +749,9 @@ Throws: $(D Exception) if the file is not opened.
             alias typeof(arg) A;
             static if (isAggregateType!A || is(A == enum))
             {
-                std.format.formattedWrite(w, "%s", arg);
+                import std.format : formattedWrite;
+
+                formattedWrite(w, "%s", arg);
             }
             else static if (isSomeString!A)
             {
@@ -766,8 +771,10 @@ Throws: $(D Exception) if the file is not opened.
             }
             else
             {
+                import std.format : formattedWrite;
+
                 // Most general case
-                std.format.formattedWrite(w, "%s", arg);
+                formattedWrite(w, "%s", arg);
             }
         }
     }
@@ -792,6 +799,8 @@ Throws: $(D Exception) if the file is not opened.
 */
     void writef(Char, A...)(in Char[] fmt, A args)
     {
+        import std.format : formattedWrite;
+
         std.format.formattedWrite(lockingTextWriter(), fmt, args);
     }
 
@@ -804,6 +813,8 @@ Throws: $(D Exception) if the file is not opened.
 */
     void writefln(Char, A...)(in Char[] fmt, A args)
     {
+        import std.format : formattedWrite;
+
         auto w = lockingTextWriter();
         std.format.formattedWrite(w, fmt, args);
         w.put('\n');
@@ -1000,6 +1011,8 @@ for every line.
      */
     uint readf(Data...)(in char[] format, Data data)
     {
+        import std.format : formattedRead;
+
         assert(isOpen);
         auto input = LockingTextReader(this);
         return formattedRead(input, format, data);
@@ -1552,10 +1565,12 @@ $(D Range) that locks the file and allows fast writing to it.
         }
 
         // @@@BUG@@@ 2340
-        //void front(C)(C c) if (is(C : dchar)) {
+        //void front(C)(C c) if (is(C : dchar))
         /// ditto
         void put(C)(C c) if (is(C : const(dchar)))
         {
+            //import std.utf;
+
             static if (c.sizeof == 1)
             {
                 // simple char
@@ -1564,6 +1579,8 @@ $(D Range) that locks the file and allows fast writing to it.
             }
             else static if (c.sizeof == 2)
             {
+                import std.utf : toUTF8;
+
                 if (orientation <= 0)
                 {
                     if (c <= 0x7F)
@@ -1585,6 +1602,8 @@ $(D Range) that locks the file and allows fast writing to it.
             }
             else // 32-bit characters
             {
+                import std.utf : toUTF8, isValidDchar;
+
                 if (orientation <= 0)
                 {
                     if (c <= 0x7F)
@@ -1750,6 +1769,9 @@ unittest
 private
 void writefx(FILE* fps, TypeInfo[] arguments, void* argptr, int newline=false)
 {
+    import std.format : doFormat;
+    import std.utf : toUTF8, isValidDchar;
+
     int orientation = fwide(fps, 0);    // move this inside the lock?
 
     /* Do the file stream locking at the outermost level
@@ -2228,7 +2250,11 @@ unittest
 private FILE* fopen(in char[] name, in char[] mode = "r")
 {
     version(Windows)
+    {
+        import std.utf : toUTF16z;
+
         return _wfopen(toUTF16z(name), toUTF16z(mode));
+    }
     else version(Posix)
     {
         /*
@@ -2927,8 +2953,11 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
 version (GCC_IO)
 private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
 {
+    import std.utf : encode;
+
     if (fwide(fps, 0) > 0)
-    {   /* Stream is in wide characters.
+    {
+        /* Stream is in wide characters.
          * Read them and convert to chars.
          */
         FLOCK(fps);
@@ -3012,6 +3041,8 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
 version (GENERIC_IO)
 private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
 {
+    import std.utf : encode;
+
     FLOCK(fps);
     scope(exit) FUNLOCK(fps);
     auto fp = cast(_iobuf*)fps;

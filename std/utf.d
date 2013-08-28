@@ -48,7 +48,7 @@ class UTFException : Exception
     @safe pure nothrow
     UTFException setSequence(uint[] data...)
     {
-        import std.algorithm;
+        import std.algorithm : min;
 
         assert(data.length <= 4);
 

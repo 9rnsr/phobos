@@ -326,17 +326,19 @@ Authors: $(WEB erdani.com, Andrei Alexandrescu)
 Source: $(PHOBOSSRC std/_algorithm.d)
  */
 module std.algorithm;
-//debug = std_algorithm;
 
-import std.range;
-import std.functional;
+public import std.range;
+public import std.typecons : Tuple, tuple;
+
+import std.functional : unaryFun, binaryFun;
 import std.traits;
-import std.typecons : Tuple, tuple;
 import std.typetuple : TypeTuple, staticMap, allSatisfy;
 
 version(unittest)
 {
     mixin(dummyRanges);
+
+    //debug = std_algorithm;
     debug(std_algorithm) import std.stdio : writeln;
 }
 
@@ -385,6 +387,8 @@ template map(fun...) if (fun.length >= 1)
 {
     auto map(Range)(Range r) if (isInputRange!(Unqual!Range))
     {
+        import std.functional : adjoin;
+
         static if (fun.length > 1)
         {
             alias adjoin!(staticMap!(unaryFun, fun)) _fun;
@@ -512,6 +516,7 @@ private struct MapResult(alias fun, Range)
 unittest
 {
     import std.conv : to;
+    import std.functional : adjoin;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -778,6 +783,8 @@ template reduce(fun...) if (fun.length >= 1)
                 }
                 else
                 {
+                    import std.functional : adjoin;
+
                     static assert(fun.length > 1);
                     Unqual!(typeof(r.front)) seed = r.front;
                     typeof(adjoin!(staticMap!(binaryFun, fun))(seed, seed))
@@ -821,6 +828,8 @@ template reduce(fun...) if (fun.length >= 1)
             }
             else
             {
+                import std.functional : adjoin;
+
                 typeof(adjoin!(staticMap!(binaryFun, fun))(E.init, E.init))
                     result = void;
                 bool initialized = false;
@@ -1492,6 +1501,8 @@ unittest
 
 unittest
 {
+    import std.functional : compose, pipe;
+
     assert(equal(compose!(map!"2 * a", filter!"a & 1")([1,2,3,4,5]),
                     [2,6,10]));
     assert(equal(pipe!(filter!"a & 1", map!"2 * a")([1,2,3,4,5]),
@@ -10169,6 +10180,8 @@ assert(!all!"a & 1"([1, 2, 3, 5, 7, 9]));
 bool all(alias pred, R)(R range)
 if (isInputRange!R && is(typeof(unaryFun!pred(range.front))))
 {
+    import std.functional : not;
+
     return find!(not!(unaryFun!pred))(range).empty;
 }
 
