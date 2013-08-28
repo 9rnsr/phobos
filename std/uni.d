@@ -1390,7 +1390,7 @@ private:
     T* arr;
 }
 
-static assert(isRandomAccessRange!(SliceOverIndexed!(int[])));
+//static assert(isRandomAccessRange!(SliceOverIndexed!(int[])));
 
 // BUG? forward reference to return type of sliceOverIndexed!Grapheme
 SliceOverIndexed!(const(T)) sliceOverIndexed(T)(size_t a, size_t b, const(T)* x)
@@ -1555,8 +1555,8 @@ template sharMethod(alias uniLowerBound)
     }
 }
 
-alias sharMethod!uniformLowerBound sharLowerBound;
-alias sharMethod!switchUniformLowerBound sharSwitchLowerBound;
+//alias sharMethod!uniformLowerBound sharLowerBound;
+//alias sharMethod!switchUniformLowerBound sharSwitchLowerBound;
 
 unittest
 {
@@ -1729,8 +1729,8 @@ unittest
     }
 }
 
-//build hack
-alias Uint24Array!ReallocPolicy _RealArray;
+//build hack 
+//alias Uint24Array!ReallocPolicy _RealArray;
 
 unittest
 {
@@ -4275,7 +4275,7 @@ struct sliceBits(size_t from, size_t to)
         return (x >> from) & ((1<<(to-from))-1);
     }
 }
-
+/+
 uint low_8(uint x) { return x&0xFF; }
 @safe pure nothrow uint midlow_8(uint x){ return (x&0xFF00)>>8; }
 alias assumeSize!(low_8, 8) lo8;
@@ -4284,7 +4284,7 @@ alias assumeSize!(midlow_8, 8) mlo8;
 static assert(bitSizeOf!lo8 == 8);
 static assert(bitSizeOf!(sliceBits!(4, 7)) == 3);
 static assert(bitSizeOf!(BitPacked!(uint, 2)) == 2);
-
++/
 template Sequence(size_t start, size_t end)
 {
     static if(start < end)
@@ -4578,8 +4578,8 @@ unittest
     @property DecompressedIntervals save() { return this; }
 }
 
-static assert(isInputRange!DecompressedIntervals);
-static assert(isForwardRange!DecompressedIntervals);
+//static assert(isInputRange!DecompressedIntervals);
+//static assert(isForwardRange!DecompressedIntervals);
 //============================================================================
 
 version(std_uni_bootstrap){}
@@ -5211,7 +5211,7 @@ unittest
     ---
     $(P See also $(LREF decodeGrapheme), $(LREF graphemeStride). )
 +/
-@trusted struct Grapheme
+@trusted struct Grapheme()
 {
 public:
     this(C)(in C[] chars...)
@@ -5430,7 +5430,7 @@ private:
     }
 }
 
-static assert(Grapheme.sizeof == size_t.sizeof*4);
+//static assert(Grapheme.sizeof == size_t.sizeof*4);
 
 // verify the example
 unittest
@@ -5933,7 +5933,7 @@ public:
     assert(decomposeHangul('\uD4DB')[].equal("\u1111\u1171\u11B6"));
     ---
 */
-Grapheme decomposeHangul(dchar ch)
+Grapheme!() decomposeHangul()(dchar ch)
 {
     int idxS = cast(int)ch - jamoSBase;
     if(idxS < 0 || idxS >= jamoSCount) return Grapheme(ch);
