@@ -20,7 +20,6 @@ private
 {
     import core.memory;
     import std.algorithm;
-    import std.string;
     import std.c.stdio;
     import std.c.stdlib;
     import std.c.stdarg;
@@ -255,6 +254,8 @@ class OutBuffer
 
     void vprintf(string format, va_list args)
     {
+        import std.string : toStringz;
+
         char[128] buffer;
         int count;
 

@@ -13,8 +13,8 @@ Source: $(PHOBOSSRC std/_array.d)
 module std.array;
 
 import core.memory, core.bitop;
-import std.algorithm, std.ascii, std.conv, std.exception, std.range, std.string,
-       std.traits, std.typecons, std.typetuple, std.uni, std.utf;
+import std.algorithm, std.ascii, std.conv, std.exception, std.range,
+       std.traits, std.typecons, std.typetuple, std.utf;
 import std.c.string : memcpy;
 version(unittest) import core.exception, std.stdio;
 
@@ -1427,6 +1427,8 @@ assert(equal(splitter(a), ["", "a", "bcd", "ef", "gh"][]));
 auto splitter(C)(C[] s)
     if(isSomeString!(C[]))
 {
+    import std.uni : isWhite;
+
     return std.algorithm.splitter!(std.uni.isWhite)(s);
 }
 

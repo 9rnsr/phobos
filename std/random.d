@@ -59,7 +59,6 @@ module std.random;
 import std.algorithm, std.c.time, std.conv, std.exception,
        std.math, std.numeric, std.range, std.traits,
        core.thread, core.time;
-import std.string : format;
 
 version(unittest) import std.typetuple;
 
@@ -612,6 +611,8 @@ Parameter for the generator.
  */
     void seed(T)(T range) if(isInputRange!T && is(Unqual!(ElementType!T) == UIntType))
     {
+        import std.string : format;
+
         size_t j;
         for(j = 0; j < n && !range.empty; ++j, range.popFront())
         {

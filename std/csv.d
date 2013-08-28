@@ -85,7 +85,6 @@ import std.array;
 import std.conv;
 import std.exception;
 import std.range;
-import std.string;
 import std.traits;
 
 /**
@@ -1164,6 +1163,8 @@ public:
      */
     void popFront()
     {
+        import std.string : format;
+
         // Skip last of record when header is depleted.
         if(_popCount && _popCount.empty)
             while(!recordEnd())
@@ -1323,6 +1324,8 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
                              && is(ElementType!Range == dchar)
                              && isOutputRange!(Output, dchar))
 {
+    import std.string : format;
+
     bool quoted = startQuoted;
     bool escQuote;
     if(input.empty)

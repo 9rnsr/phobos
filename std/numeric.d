@@ -31,7 +31,6 @@ import std.math;
 import std.traits;
 import std.exception;
 import std.random;
-import std.string;
 import std.range;
 import std.c.stdlib;
 import std.functional;

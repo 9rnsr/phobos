@@ -44,7 +44,7 @@
  +/
 module std.exception;
 
-import std.array, std.c.string, std.conv, std.range, std.string, std.traits;
+import std.array, std.c.string, std.conv, std.range, std.traits;
 import core.exception, core.stdc.errno;
 
 /++
@@ -70,6 +70,8 @@ void assertNotThrown(T : Throwable = Exception, E)
                      string file = __FILE__,
                      size_t line = __LINE__)
 {
+    import std.string : format;
+
     try
     {
         expression();
@@ -86,6 +88,8 @@ void assertNotThrown(T : Throwable = Exception, E)
 ///
 unittest
 {
+    import std.string : StringException;
+
     assertNotThrown!StringException(enforceEx!StringException(true, "Error!"));
 
     //Exception is the default.
@@ -97,6 +101,8 @@ unittest
 }
 unittest
 {
+    import std.string : StringException;
+
     assert(collectExceptionMsg!AssertError(assertNotThrown!StringException(
                enforceEx!StringException(false, ""), "Error!")) ==
            `assertNotThrown failed: StringException was thrown: Error!`);
@@ -205,6 +211,8 @@ void assertThrown(T : Throwable = Exception, E)
                   string file = __FILE__,
                   size_t line = __LINE__)
 {
+    import std.string : format;
+
     bool thrown = false;
 
     try
@@ -228,6 +236,8 @@ void assertThrown(T : Throwable = Exception, E)
 ///
 unittest
 {
+    import std.string : StringException;
+
     assertThrown!StringException(enforceEx!StringException(false, "Error!"));
 
     //Exception is the default.
@@ -1257,6 +1267,8 @@ CommonType!(T1, T2) ifThrown(T1, T2)(lazy scope T1 expression, scope T2 delegate
 //Verify Examples
 unittest
 {
+    import std.string : format;
+
     //Revert to a default value upon an error:
     assert("x".to!int().ifThrown(0) == 0);
 
@@ -1287,6 +1299,8 @@ unittest
 
 unittest
 {
+    import std.string : StringException;
+
     //Basic behaviour - all versions.
     assert("1".to!int().ifThrown(0) == 1);
     assert("x".to!int().ifThrown(0) == 0);

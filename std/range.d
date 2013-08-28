@@ -289,7 +289,7 @@ module std.range;
 public import std.array;
 import core.bitop, core.exception;
 import std.algorithm, std.conv, std.exception,  std.functional,
-    std.traits, std.typecons, std.typetuple, std.string;
+    std.traits, std.typecons, std.typetuple;
 
 // For testing only.  This code is included in a string literal to be included
 // in whatever module it's needed in, so that each module that uses it can be
@@ -3207,6 +3207,8 @@ unittest
 
 unittest
 {
+    import std.string : format;
+
     string genInput()
     {
         return "@property bool empty() { return _arr.empty; }" ~
@@ -4653,6 +4655,8 @@ unittest
 */
 private string lockstepMixin(Ranges...)(bool withIndex)
 {
+    import std.string : format, outdent;
+
     string[] params;
     string[] emptyChecks;
     string[] dgArgs;

@@ -88,7 +88,6 @@ pragma(msg, "std.md5 is scheduled for deprecation. Please use "
 //debug=md5;            // uncomment to turn on debugging printf's
 
 import std.ascii;
-import std.string;
 import std.exception;
 debug(md5) import std.c.stdio : printf;
 

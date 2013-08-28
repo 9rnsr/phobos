@@ -105,7 +105,6 @@ import std.conv;
 import std.exception;
 import std.path;
 import std.stdio;
-import std.string;
 import std.internal.processinit;
 
 
@@ -356,6 +355,7 @@ private Pid spawnProcessImpl(in char[][] args,
     @trusted // TODO: Should be @safe
 {
     import core.exception: RangeError;
+    import std.string : toStringz;
 
     if (args.empty) throw new RangeError();
     const(char)[] name = args[0];
@@ -599,6 +599,8 @@ version (Windows)
 private LPVOID createEnv(const string[string] childEnv,
                          bool mergeWithParentEnv)
 {
+    import std.string : toUpper;
+
     if (mergeWithParentEnv && childEnv.length == 0) return null;
 
     auto envz = appender!(wchar[])();
@@ -660,6 +662,8 @@ private string searchPathFor(in char[] executable)
 version (Posix)
 private bool isExecutable(in char[] path) @trusted //TODO: @safe nothrow
 {
+    import std.string : toStringz;
+
     return (access(toStringz(path), X_OK) == 0);
 }
 
@@ -756,6 +760,8 @@ unittest // Environment variables in spawnProcess().
 
 unittest // Stream redirection in spawnProcess().
 {
+    import std.string : chomp, stripRight;
+
     version (Windows) TestScript prog =
        "set /p INPUT=
         echo %INPUT% output %~1
@@ -1513,6 +1519,8 @@ private:
 
 unittest
 {
+    import std.string : chomp;
+
     auto p = pipe();
     p.writeEnd.writeln("Hello World");
     p.writeEnd.flush();
@@ -1720,6 +1728,8 @@ enum Redirect
 
 unittest
 {
+    import std.string : chomp, stripRight;
+
     version (Windows) TestScript prog =
        "call :sub %~1 %~2 0
         call :sub %~1 %~2 1
@@ -1979,6 +1989,8 @@ private auto executeImpl(alias pipeFunc, Cmd)(
 
 unittest
 {
+    import std.string : stripRight;
+
     // To avoid printing the newline characters, we use the echo|set trick on
     // Windows, and printf on POSIX (neither echo -n nor echo \c are portable).
     version (Windows) TestScript prog =
@@ -1999,6 +2011,8 @@ unittest
 
 unittest
 {
+    import std.string : chomp, stripRight;
+
     auto r1 = executeShell("echo foo");
     assert (r1.status == 0);
     assert (r1.output.chomp() == "foo");
@@ -2098,6 +2112,7 @@ private struct TestScript
     this(string code)
     {
         import std.ascii, std.file;
+
         version (Windows)
         {
             auto ext = ".cmd";
@@ -2113,6 +2128,7 @@ private struct TestScript
         version (Posix)
         {
             import core.sys.posix.sys.stat;
+            import std.string : toStringz;
             chmod(toStringz(path), octal!777);
         }
     }
@@ -2627,6 +2643,7 @@ static:
     {
         version (Posix)
         {
+            import std.string : toStringz;
             if (core.sys.posix.stdlib.setenv(toStringz(name), toStringz(value), 1) != -1)
             {
                 return value;
@@ -2658,8 +2675,15 @@ static:
     */
     void remove(in char[] name) @trusted // TODO: @safe nothrow
     {
-        version (Windows)    SetEnvironmentVariableW(toUTF16z(name), null);
-        else version (Posix) core.sys.posix.stdlib.unsetenv(toStringz(name));
+        version (Windows)
+        {
+            SetEnvironmentVariableW(toUTF16z(name), null);
+        }
+        else version (Posix)
+        {
+            import std.string : toStringz;
+            core.sys.posix.stdlib.unsetenv(toStringz(name));
+        }
         else static assert(0);
     }
 
@@ -2699,6 +2723,8 @@ static:
         }
         else version (Windows)
         {
+            import std.string : toUpper;
+
             auto envBlock = GetEnvironmentStringsW();
             enforce(envBlock, "Failed to retrieve environment variables.");
             scope(exit) FreeEnvironmentStringsW(envBlock);
@@ -2753,6 +2779,7 @@ private:
         }
         else version (Posix)
         {
+            import std.string : toStringz;
             const vz = core.sys.posix.stdlib.getenv(toStringz(name));
             if (vz == null) return false;
             auto v = vz[0 .. strlen(vz)];
@@ -2882,7 +2909,10 @@ version (unittest)
 
 int system(string command)
 {
-    if (!command) return std.c.process.system(null);
+    import std.string : toStringz;
+
+    if (!command)
+        return std.c.process.system(null);
     const commandz = toStringz(command);
     immutable status = std.c.process.system(commandz);
     if (status == -1) return status;
@@ -2902,6 +2932,8 @@ int system(string command)
 
 private void toAStringz(in string[] a, const(char)**az)
 {
+    import std.string : toStringz;
+
     foreach(string s; a)
     {
         *az++ = toStringz(s);
@@ -2931,6 +2963,8 @@ alias std.c.process._P_NOWAIT P_NOWAIT;
 
 int spawnvp(int mode, string pathname, string[] argv)
 {
+    import std.string : toStringz;
+
     auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
 
     toAStringz(argv, argv_);
@@ -3034,6 +3068,8 @@ private
 
 int execv(in string pathname, in string[] argv)
 {
+    import std.string : toStringz;
+
     auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
 
     toAStringz(argv, argv_);
@@ -3044,6 +3080,8 @@ int execv(in string pathname, in string[] argv)
 /** ditto */
 int execve(in string pathname, in string[] argv, in string[] envp)
 {
+    import std.string : toStringz;
+
     auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
     auto envp_ = cast(const(char)**)alloca((char*).sizeof * (1 + envp.length));
 
@@ -3056,6 +3094,8 @@ int execve(in string pathname, in string[] argv, in string[] envp)
 /** ditto */
 int execvp(in string pathname, in string[] argv)
 {
+    import std.string : toStringz;
+
     auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
 
     toAStringz(argv, argv_);
@@ -3101,6 +3141,8 @@ version(Posix)
 }
 else version(Windows)
 {
+    import std.string : toStringz;
+
     auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
     auto envp_ = cast(const(char)**)alloca((char*).sizeof * (1 + envp.length));
 
@@ -3208,6 +3250,8 @@ internally.
 
 string getenv(in char[] name)
 {
+    import std.string : toStringz;
+
     // Cache the last call's result
     static string lastResult;
     auto p = core.stdc.stdlib.getenv(toStringz(name));
@@ -3230,6 +3274,8 @@ std.c.stdlib._setenv) internally.
 version(StdDdoc) void setenv(in char[] name, in char[] value, bool overwrite);
 else version(Posix) void setenv(in char[] name, in char[] value, bool overwrite)
 {
+    import std.string : toStringz;
+
     errnoEnforce(
         std.c.stdlib.setenv(toStringz(name), toStringz(value), overwrite) == 0);
 }
@@ -3244,6 +3290,8 @@ std_c_stdlib.html#_unsetenv, std.c.stdlib._unsetenv) internally.
 version(StdDdoc) void unsetenv(in char[] name);
 else version(Posix) void unsetenv(in char[] name)
 {
+    import std.string : toStringz;
+
     errnoEnforce(std.c.stdlib.unsetenv(toStringz(name)) == 0);
 }
 
@@ -3317,6 +3365,8 @@ version (Windows)
 
     void browse(string url)
     {
+        import std.string : toStringz;
+
         ShellExecuteA(null, "open", toStringz(url), null, null, SW_SHOWNORMAL);
     }
 }
@@ -3328,6 +3378,8 @@ else version (OSX)
 
     void browse(string url)
     {
+        import std.string : toStringz;
+
         const(char)*[5] args;
 
         const(char)* browser = core.stdc.stdlib.getenv("BROWSER");
@@ -3363,6 +3415,8 @@ else version (Posix)
 
     void browse(string url)
     {
+        import std.string : toStringz;
+
         const(char)*[3] args;
 
         const(char)* browser = core.stdc.stdlib.getenv("BROWSER");

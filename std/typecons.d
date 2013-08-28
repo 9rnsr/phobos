@@ -45,7 +45,7 @@ Authors:   $(WEB erdani.org, Andrei Alexandrescu),
 module std.typecons;
 import core.memory, core.stdc.stdlib;
 import std.algorithm, std.array, std.conv, std.exception, std.format,
-    std.string, std.traits, std.typetuple, std.range;
+    std.traits, std.typetuple, std.range;
 
 debug(Unique) import std.stdio;
 
@@ -318,6 +318,7 @@ template Tuple(Specs...)
     //       variable) and can't be aliased directly.
     string injectNamedFields()
     {
+        import std.string : format;
         string decl = "";
         foreach (i, name; staticMap!(extractName, fieldSpecs))
         {
@@ -2050,6 +2051,8 @@ private template AutoImplement_Helper(string myName, string baseName,
         Base, alias generateMethodBody, alias cherrypickMethod)
 {
 private static:
+    import std.string : format;
+
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
     // Internal stuffs
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
@@ -2415,6 +2418,8 @@ template GeneratingPolicy()
 package template MemberFunctionGenerator(alias Policy)
 {
 private static:
+    import std.string : format;
+
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
     // Internal stuffs
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://

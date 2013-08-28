@@ -24,9 +24,8 @@ module std.conv;
 import std.math : ldexp;
 import core.stdc.string;
 import std.algorithm, std.array, std.ascii, std.exception, std.math, std.range,
-    std.string, std.traits, std.typecons, std.typetuple, std.uni,
+    std.traits, std.typecons, std.typetuple,
     std.utf;
-import std.format;
 
 //debug=conv;           // uncomment to turn on debugging printf's
 
@@ -102,6 +101,8 @@ private
     T toStr(T, S)(S src)
         if (isSomeString!T)
     {
+        import std.format : FormatSpec, formatValue;
+
         auto w = appender!T();
         FormatSpec!(ElementEncodingType!T) f;
         formatValue(w, src, f);
@@ -1740,6 +1741,8 @@ T toImpl(T, S)(S value)
         && is(typeof(value == OriginalType!T.init))
         && !isFloatingPoint!(OriginalType!T) && !isSomeString!(OriginalType!T))
 {
+    import std.string : format;
+
     foreach (Member; EnumMembers!T)
     {
         if (Member == value)
@@ -2780,6 +2783,8 @@ Target parse(Target, Source)(ref Source s)
     if (isExactSomeString!Source &&
         is(Unqual!Target == bool))
 {
+    import std.string : icmp;
+
     if (s.length >= 4 && icmp(s[0 .. 4], "true") == 0)
     {
         s = s[4 .. $];
@@ -2827,6 +2832,8 @@ Target parse(Target, Source)(ref Source s)
     if (isExactSomeString!Source &&
         is(Unqual!Target == typeof(null)))
 {
+    import std.string : icmp;
+
     if (s.length >= 4 && icmp(s[0 .. 4], "null") == 0)
     {
         s = s[4 .. $];
@@ -3826,6 +3833,8 @@ unittest
 
 private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName)
 {
+    import std.string : format;
+
     enforceEx!ConvException(chunk.length >= typeSize,
         format("emplace: Chunk size too small: %s < %s size = %s",
         chunk.length, typeName, typeSize));

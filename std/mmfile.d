@@ -23,7 +23,6 @@ private import core.stdc.stdio;
 private import core.stdc.stdlib;
 private import core.stdc.errno;
 private import std.path;
-private import std.string;
 import std.conv, std.exception, std.stdio;
 
 //debug = MMFILE;

@@ -73,7 +73,6 @@ private
     import std.datetime;
     import std.exception;
     import std.range;
-    import std.string;
     import std.traits;
     import std.typecons;
     import std.typetuple;
@@ -728,6 +727,8 @@ private template receiveOnlyRet(T...)
  */
 receiveOnlyRet!(T) receiveOnly(T...)()
 {
+    import std.string : format;
+
     Tuple!(T) ret;
 
     mbox.get( ( T val )

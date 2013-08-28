@@ -32,7 +32,7 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.getopt;
 
-private import std.array, std.string, std.conv, std.traits,
+private import std.array, std.conv, std.traits,
     std.algorithm, std.ascii, std.exception;
 
 version (unittest)

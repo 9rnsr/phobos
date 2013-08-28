@@ -23,7 +23,7 @@ module std.format;
 import core.stdc.stdio, core.stdc.stdlib, core.stdc.string, core.vararg;
 import std.algorithm, std.array, std.ascii, std.conv,
     std.exception, std.functional, std.math, std.range,
-    std.string, std.system, std.traits, std.typecons, std.typetuple,
+    std.system, std.traits, std.typecons, std.typetuple,
     std.utf;
 version(unittest) {
     import std.stdio;
@@ -1278,6 +1278,8 @@ unittest
 
 unittest
 {
+    import std.string : format;
+
     string t1 = format("[%6s] [%6s] [%-6s]", true, false, true);
     assert(t1 == "[  true] [ false] [true  ]");
 
@@ -2471,6 +2473,8 @@ void enforceValidFormatSpec(T, Char)(ref FormatSpec!Char f)
 {
     static if (!isInputRange!T && hasToString!(T, Char) != 4)
     {
+        import std.string : format;
+
         enforceFmt(f.spec == 's',
             format("Expected '%%s' format specifier for type '%s'", T.stringof));
     }
@@ -2478,6 +2482,8 @@ void enforceValidFormatSpec(T, Char)(ref FormatSpec!Char f)
 
 unittest
 {
+    import std.string : format;
+
     static interface IF1 { }
     class CIF1 : IF1 { }
     static struct SF1 { }
@@ -2946,6 +2952,8 @@ unittest
 
 unittest
 {
+    import std.string : format;
+
     // Test for issue 9336
     shared int i;
     format("%s", &i);

@@ -55,7 +55,6 @@ import std.array;
 import std.conv;
 import std.file: getcwd;
 import std.range;
-import std.string;
 import std.traits;
 
 version(Posix)

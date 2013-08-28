@@ -22,7 +22,7 @@ module std.functional;
 
 import std.traits, std.typecons, std.typetuple;
 // for making various functions visible in *naryFun
-import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
+import std.algorithm, std.conv, std.exception, std.math, std.range;
 
 /**
 Transforms a string representing an expression into a unary
@@ -40,6 +40,9 @@ template unaryFun(alias fun, bool byRef = false, string parmName = "a")
 {
     static if (is(typeof(fun) : string))
     {
+        import std.traits, std.typecons, std.typetuple;
+        import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
+
         static if (byRef)
         {
             auto unaryFun(ElementType)(ref ElementType __a)
@@ -98,6 +101,9 @@ template binaryFun(alias fun, string parm1Name = "a",
 {
     static if (is(typeof(fun) : string))
     {
+        import std.traits, std.typecons, std.typetuple;
+        import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
+
         auto binaryFun(ElementType1, ElementType2)
             (ElementType1 __a, ElementType2 __b)
         {
