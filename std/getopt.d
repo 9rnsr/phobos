@@ -584,6 +584,8 @@ private struct configuration
 private bool optMatch(string arg, string optPattern, ref string value,
     configuration cfg)
 {
+    import std.string : toUpper;
+
     //writeln("optMatch:\n  ", arg, "\n  ", optPattern, "\n  ", value);
     //scope(success) writeln("optMatch result: ", value);
     if (!arg.length || arg[0] != optionChar) return false;

@@ -463,6 +463,8 @@ class Protocol
     /** Returns: false on failure */
     bool getProtocolByName(in char[] name)
     {
+        import std.string : toStringz;
+
         protoent* proto;
         proto = getprotobyname(toStringz(name));
         if(!proto)
@@ -565,6 +567,8 @@ class Service
      */
     bool getServiceByName(in char[] name, in char[] protocolName = null)
     {
+        import std.string : toStringz;
+
         servent* serv;
         serv = getservbyname(toStringz(name), protocolName !is null ? toStringz(protocolName) : null);
         if(!serv)
@@ -577,6 +581,8 @@ class Service
     /// ditto
     bool getServiceByPort(ushort port, in char[] protocolName = null)
     {
+        import std.string : toStringz;
+
         servent* serv;
         serv = getservbyport(port, protocolName !is null ? toStringz(protocolName) : null);
         if(!serv)
@@ -770,6 +776,8 @@ class InternetHost
         static if (is(typeof(gethostbyname_r)))
         {
             return getHostNoSync!q{
+                import std.string : toStringz;
+
                 hostent he_v;
                 hostent* he;
                 ubyte[256] buffer_v = void;
@@ -789,6 +797,8 @@ class InternetHost
         else
         {
             return getHost!q{
+                import std.string : toStringz;
+
                 auto he = gethostbyname(toStringz(param));
             }(name);
         }
@@ -817,6 +827,8 @@ class InternetHost
      */
     bool getHostByAddr(in char[] addr)
     {
+        import std.string : toStringz;
+
         return getHost!q{
             auto x = inet_addr(std.string.toStringz(param));
             enforce(x != INADDR_NONE,
@@ -986,6 +998,8 @@ AddressInfo[] getAddressInfo(T...)(in char[] node, T options)
 
 private AddressInfo[] getAddressInfoImpl(in char[] node, in char[] service, addrinfo* hints)
 {
+    import std.string : toStringz;
+
     if (getaddrinfoPointer && freeaddrinfoPointer)
     {
         addrinfo* ai_res;
@@ -1052,6 +1066,8 @@ unittest
 
 private ushort serviceToPort(in char[] service)
 {
+    import std.string : isNumeric;
+
     if (service == "")
         return InternetAddress.PORT_ANY;
     else
@@ -1404,6 +1420,8 @@ abstract class Address
     /// Human readable string representing this address.
     override string toString() const
     {
+        import std.string : indexOf;
+
         try
         {
             string host = toAddrString();
@@ -1637,6 +1655,8 @@ public:
      */
     static uint parse(in char[] addr)
     {
+        import std.string : toStringz;
+
         return ntohl(inet_addr(std.string.toStringz(addr)));
     }
 
@@ -1915,19 +1935,20 @@ static if (is(sockaddr_un))
     unittest
     {
         import core.stdc.stdio : remove;
-    
+        import std.string : toStringz;
+
         immutable ubyte[] data = [1, 2, 3, 4];
         Socket[2] pair;
-        
+
         auto name = "unix-address-family-unittest-socket-name";
         auto address = new UnixAddress(name);
-        
+
         auto listener = new Socket(AddressFamily.UNIX, SocketType.STREAM);
         scope(exit) listener.close();
-        
+
         listener.bind(address);
         scope(exit) remove(toStringz(name));
-        
+
         listener.listen(1);
 
         pair[0] = new Socket(AddressFamily.UNIX, SocketType.STREAM);
@@ -2388,6 +2409,8 @@ public:
     /// ditto
     this(AddressFamily af, SocketType type, in char[] protocolName)
     {
+        import std.string : toStringz;
+
         protoent* proto;
         proto = getprotobyname(toStringz(protocolName));
         if(!proto)
