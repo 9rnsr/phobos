@@ -25,7 +25,6 @@ module std.numeric;
 
 import std.algorithm;
 import std.array;
-import std.bitmanip;
 import std.conv;
 import std.typecons;
 import std.math;
@@ -179,6 +178,8 @@ struct CustomFloat(
     if(( (flags & flags.signed)  + precision + exponentWidth) % 8 == 0 &&
        precision + exponentWidth > 0)
 {
+    private import std.bitmanip : bitfields;
+
     private:
         // get the correct unsigned bitfield type to support > 32 bits
         template uType(uint bits) {

@@ -21,7 +21,7 @@ module std.format;
 //debug=format;                // uncomment to turn on debugging printf's
 
 import core.stdc.stdio, core.stdc.stdlib, core.stdc.string, core.vararg;
-import std.algorithm, std.array, std.ascii, std.bitmanip, std.conv,
+import std.algorithm, std.array, std.ascii, std.conv,
     std.exception, std.functional, std.math, std.range,
     std.string, std.system, std.traits, std.typecons, std.typetuple,
     std.utf;
@@ -629,6 +629,8 @@ template FormatSpec(Char)
 struct FormatSpec(Char)
     if (is(Unqual!Char == Char))
 {
+    private import std.bitmanip;
+
     /**
        Minimum _width, default $(D 0).
      */

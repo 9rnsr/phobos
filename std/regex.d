@@ -256,7 +256,7 @@ module std.regex;
 import std.internal.uni, std.internal.uni_tab;//Unicode property tables
 import std.array, std.algorithm, std.range,
        std.conv, std.exception, std.traits, std.typetuple,
-       std.utf, std.format, std.typecons, std.bitmanip,
+       std.utf, std.format, std.typecons,
        std.functional, std.exception;
 
 import core.bitop, core.stdc.string, core.stdc.stdlib;
