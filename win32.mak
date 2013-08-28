@@ -89,6 +89,8 @@ ZLIB=etc\c\zlib\zlib.lib
 
 LIB=phobos.lib
 
+RESULTS_DIR=test_results
+
 targets : $(LIB)
 
 test : test.exe
@@ -366,7 +368,11 @@ UNITTEST_OBJS= unittest1.obj unittest2.obj unittest2a.obj \
 		unittest3.obj unittest3a.obj unittest3b.obj unittest4.obj \
 		unittest5.obj unittest6.obj unittest7.obj unittest8.obj
 
-unittest : $(LIB)
+unittest :
+	$(MAKE) -f win$(MODEL).mak unittestX
+	$(MAKE) -f win$(MODEL).mak unittestY
+
+unittestX : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest1.obj $(SRC_STD_1_HEAVY)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRC_STD_2_HEAVY)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2a.obj $(SRC_STD_2a_HEAVY)
@@ -381,6 +387,17 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(UNITTEST_OBJS) \
 		$(ZLIB) $(DRUNTIMELIB)
 	unittest
+
+#unittestY : $(LIB)
+unittestY :
+	$(MAKE) -f win$(MODEL).mak d_do_test.exe
+	mkdir test\$(RESULTS_DIR)
+	cd test
+	d_do_test.exe compilable test10631 d
+	cd ..
+
+d_do_test.exe : test\d_do_test.d
+	$(DMD) -m$(MODEL) -g -oftest\d_do_test.exe test\d_do_test.d
 
 #unittest : unittest.exe
 #	unittest
