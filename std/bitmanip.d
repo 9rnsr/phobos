@@ -27,9 +27,9 @@ module std.bitmanip;
 //debug = bitarray;                // uncomment to turn on debugging printf's
 
 import core.bitop;
-import std.format;
+//import std.format;
 import std.range;
-import std.string;
+//import std.string;
 import std.system;
 import std.traits;
 
@@ -1439,8 +1439,8 @@ struct BitArray
      * $(LI $(B %b) which prints the bits as 8-bit byte packets)
      * separated with an underscore.
      */
-    void toString(scope void delegate(const(char)[]) sink,
-                  FormatSpec!char fmt) const
+    void toString(C)(scope void delegate(const(C)[]) sink,
+                  FormatSpec!C fmt) const
     {
         switch(fmt.spec)
         {
@@ -1456,6 +1456,8 @@ struct BitArray
     ///
     unittest
     {
+        import std.string : format;
+
         BitArray b;
         b.init([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]);
 
@@ -1466,7 +1468,7 @@ struct BitArray
         assert(s2 == "00001111_00001111");
     }
 
-    private void formatBitString(scope void delegate(const(char)[]) sink) const
+    private void formatBitString(C)(scope void delegate(const(C)[]) sink) const
     {
         if (!length)
             return;
@@ -1494,7 +1496,7 @@ struct BitArray
         }
     }
 
-    private void formatBitArray(scope void delegate(const(char)[]) sink) const
+    private void formatBitArray(C)(scope void delegate(const(C)[]) sink) const
     {
         sink("[");
         foreach (idx; 0 .. len)
@@ -1510,6 +1512,8 @@ struct BitArray
 
 unittest
 {
+    import std.string : format;
+
     BitArray b;
 
     b.init([]);

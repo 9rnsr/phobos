@@ -330,12 +330,12 @@ module std.algorithm;
 
 import std.c.string, core.bitop;
 import std.array, std.ascii, std.container, std.conv, std.exception,
-    std.functional, std.math, std.random, std.range, std.string,
+    std.functional, std.math, std.range, std.string,
     std.traits, std.typecons, std.typetuple, std.uni, std.utf;
 
 version(unittest)
 {
-    import std.stdio;
+    import std.random, std.stdio, std.string;
     mixin(dummyRanges);
 }
 
