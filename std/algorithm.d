@@ -328,15 +328,16 @@ Source: $(PHOBOSSRC std/_algorithm.d)
 module std.algorithm;
 //debug = std_algorithm;
 
-import std.c.string, core.bitop;
-import std.array, std.ascii, std.container, std.conv, std.exception,
-    std.functional, std.math, std.range, std.string,
-    std.traits, std.typecons, std.typetuple, std.uni, std.utf;
+import std.range;
+import std.functional;
+import std.traits;
+import std.typecons : Tuple, tuple;
+import std.typetuple : TypeTuple, staticMap, allSatisfy;
 
 version(unittest)
 {
-    import std.random, std.stdio, std.string;
     mixin(dummyRanges);
+    debug(std_algorithm) import std.stdio : writeln;
 }
 
 private T* addressOf(T)(ref T val) { return &val; }
@@ -510,6 +511,8 @@ private struct MapResult(alias fun, Range)
 
 unittest
 {
+    import std.conv : to;
+
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     alias map!(to!string) stringize;
@@ -525,6 +528,8 @@ unittest
 
 unittest
 {
+    import std.ascii;
+
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] arr1 = [ 1, 2, 3, 4 ];
@@ -734,6 +739,9 @@ template reduce(fun...) if (fun.length >= 1)
     auto reduce(Args...)(Args args)
     if (Args.length > 0 && Args.length <= 2 && isIterable!(Args[$ - 1]))
     {
+        import std.exception : enforce;
+        import std.conv : emplace;
+
         static if (isInputRange!(Args[$ - 1]))
         {
             static if (Args.length == 2)
@@ -978,6 +986,8 @@ void fill(Range, Value)(Range range, Value filler)
 
 unittest
 {
+    import std.conv : text;
+
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 3 ];
@@ -1073,6 +1083,8 @@ void fill(Range1, Range2)(Range1 range, Range2 filler)
     }
     else
     {
+        import std.exception : enforce;
+
         enforce(!filler.empty, "Cannot fill range with an empty filler");
 
         static if (hasLength!Range1 && hasLength!Range2
@@ -1117,6 +1129,8 @@ void fill(Range1, Range2)(Range1 range, Range2 filler)
 
 unittest
 {
+    import std.exception : assertThrown;
+
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 3, 4, 5 ];
@@ -1166,6 +1180,8 @@ void uninitializedFill(Range, Value)(Range range, Value filler)
     alias ElementType!Range T;
     static if (hasElaborateAssign!T)
     {
+        import std.conv : emplace;
+
         // Must construct stuff by the book
         for (; !range.empty; range.popFront())
             emplace(addressOf(range.front), filler);
@@ -1205,6 +1221,8 @@ void initializeAll(Range)(Range range)
     alias ElementType!Range T;
     static if (hasElaborateAssign!T)
     {
+        import core.stdc.string : memcpy, memset;
+
         //Elaborate opAssign. Must go the memcpy road.
         //We avoid calling emplace here, because our goal is to initialize to
         //the static state of T.init,
@@ -1595,6 +1613,8 @@ $(D &source == &target || !pointsTo(source, source))
 */
 void move(T)(ref T source, ref T target)
 {
+    import std.exception : pointsTo;
+
     assert(!pointsTo(source, source));
     static if (is(T == struct))
     {
@@ -1846,6 +1866,8 @@ Range2 moveAll(Range1, Range2)(Range1 src, Range2 tgt)
 if (isInputRange!Range1 && isInputRange!Range2
         && is(typeof(move(src.front, tgt.front))))
 {
+    import std.exception : enforce;
+
     static if (isRandomAccessRange!Range1 && hasLength!Range1 && hasLength!Range2
          && hasSlicing!Range2 && isRandomAccessRange!Range2)
     {
@@ -1888,6 +1910,8 @@ Tuple!(Range1, Range2) moveSome(Range1, Range2)(Range1 src, Range2 tgt)
 if (isInputRange!Range1 && isInputRange!Range2
         && is(typeof(move(src.front, tgt.front))))
 {
+    import std.exception : enforce;
+
     for (; !src.empty && !tgt.empty; src.popFront(), tgt.popFront())
     {
         enforce(!tgt.empty);
@@ -1921,7 +1945,11 @@ if (isMutable!T && !is(typeof(T.init.proxySwap(T.init))))
 {
     static if (hasElaborateAssign!T)
     {
-      if (&lhs != &rhs) {
+        import std.exception : pointsTo;
+
+        if (&lhs == &rhs)
+            return;
+
         // For structs with non-trivial assignment, move memory directly
         // First check for undue aliasing
         assert(!pointsTo(lhs, rhs) && !pointsTo(rhs, lhs)
@@ -1933,7 +1961,6 @@ if (isMutable!T && !is(typeof(T.init.proxySwap(T.init))))
         t[] = a[];
         a[] = b[];
         b[] = t[];
-      }
     }
     else
     {
@@ -2195,6 +2222,8 @@ auto splitter(Range, Separator)(Range r, Separator s)
 if (is(typeof(ElementType!Range.init == Separator.init))
         && ((hasSlicing!Range && hasLength!Range) || isNarrowString!Range))
 {
+    import std.conv : unsigned;
+
     static struct Result
     {
     private:
@@ -2227,6 +2256,8 @@ if (is(typeof(ElementType!Range.init == Separator.init))
     public:
         this(Range input, Separator separator)
         {
+            import std.utf : codeLength;
+
             _input = input;
             _separator = separator;
 
@@ -2422,6 +2453,8 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
         && isForwardRange!Separator
         && (hasLength!Separator || isNarrowString!Separator))
 {
+    import std.conv : unsigned;
+
     static struct Result
     {
     private:
@@ -2566,6 +2599,8 @@ if (is(typeof(Range.init.front == Separator.init.front) : bool)
 
 unittest
 {
+    import std.conv : text;
+
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto s = ",abc, de, fg,hi,";
@@ -2784,11 +2819,16 @@ unittest
 auto splitter(Range)(Range input)
 if (isSomeString!Range)
 {
+    import std.uni : isWhite;
+
     return splitter!(std.uni.isWhite)(input);
 }
 
 unittest
 {
+    import std.string : strip;
+    import std.conv : to;
+
     // TDPL example, page 8
     uint[string] dictionary;
     char[][3] lines;
@@ -2965,6 +3005,8 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
 
 unittest
 {
+    import std.conv ; text;
+
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     static assert(isInputRange!(typeof(joiner([""], ""))));
@@ -3270,6 +3312,8 @@ unittest
 // Issue 8061
 unittest
 {
+    import std.conv : to;
+
     auto r = joiner([inputRangeObject("ab"), inputRangeObject("cd")]);
     assert(isForwardRange!(typeof(r)));
 
@@ -3601,6 +3645,8 @@ if (isInputRange!R &&
 {
     static if (isNarrowString!R && isSomeChar!E && is(typeof(pred == "a == b")) && pred == "a == b")
     {
+        import std.utf : encode;
+
         alias Unqual!(ElementEncodingType!R) EEType;
         EEType[EEType.sizeof == 1 ? 4 : 2] buf;
 
@@ -3619,6 +3665,8 @@ if (isInputRange!R &&
 
 unittest
 {
+    import std.container : SList;
+
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto lst = SList!int(1, 2, 5, 7, 3);
@@ -3683,6 +3731,8 @@ if (isForwardRange!R1 && isForwardRange!R2
 
 unittest
 {
+    import std.container : SList;
+
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto lst = SList!int(1, 2, 5, 7, 3);
@@ -3828,6 +3878,8 @@ if (isRandomAccessRange!R1 && isForwardRange!R2 && !isBidirectionalRange!R2 &&
 
 unittest
 {
+    import std.container : SList;
+
     assert(find([ 1, 2, 3 ], SList!int(2, 3)[]) == [ 2, 3 ]);
     assert(find([ 1, 2, 1, 2, 3, 3 ], SList!int(2, 3)[]) == [ 2, 3, 3 ]);
 }
@@ -4026,6 +4078,8 @@ unittest
 
 unittest
 {
+    import std.string : toUpper;
+
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 3 ];
@@ -4740,6 +4794,9 @@ ptrdiff_t countUntil(alias pred, R)(R haystack)
 //Verify Examples.
 unittest
 {
+    import std.ascii : isDigit;
+    import std.uni : isWhite;
+
     assert(countUntil!(std.uni.isWhite)("hello world") == 5);
     assert(countUntil!(std.ascii.isDigit)("hello world") == -1);
     assert(countUntil!"a > 20"([0, 7, 12, 22, 9]) == 3);
@@ -5102,6 +5159,8 @@ if (isInputRange!R &&
 
 unittest
 {
+    import std.conv : to;
+
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
@@ -5401,6 +5460,8 @@ if (isBidirectionalRange!R &&
 
 unittest
 {
+    import std.conv : to;
+
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
@@ -5531,6 +5592,8 @@ auto commonPrefix(alias pred, R1, R2)(R1 r1, R2 r2)
 if (isNarrowString!R1 && isInputRange!R2 &&
     is(typeof(binaryFun!pred(r1.front, r2.front))))
 {
+    import std.utf : decode;
+
     auto result = r1.save;
     immutable len = r1.length;
     size_t i = 0;
@@ -5557,6 +5620,8 @@ if (isNarrowString!R1 && isNarrowString!R2)
 {
     static if (ElementEncodingType!R1.sizeof == ElementEncodingType!R2.sizeof)
     {
+        import std.utf : UTFException;
+
         immutable limit = min(r1.length, r2.length);
         for (size_t i = 0; i < limit;)
         {
@@ -5580,6 +5645,10 @@ if (isNarrowString!R1 && isNarrowString!R2)
 
 unittest
 {
+    import std.conv : to;
+    import std.exception : assertThrown;
+    import std.utf : UTFException;
+
     assert(commonPrefix([1, 2, 3], [1, 2, 3, 4, 5]) == [1, 2, 3]);
     assert(commonPrefix([1, 2, 3, 4, 5], [1, 2, 3]) == [1, 2, 3]);
     assert(commonPrefix([1, 2, 3, 4], [1, 2, 3, 4]) == [1, 2, 3, 4]);
@@ -5772,6 +5841,8 @@ size_t count(alias pred = "a == b", Range, E)(Range haystack, E needle)
 
 unittest
 {
+    import std.conv : text;
+
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 4, 3, 2, 5, 3, 2, 4 ];
@@ -5790,7 +5861,8 @@ unittest
 
 unittest
 {
-    debug(std_algorithm) printf("algorithm.count.unittest\n");
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     string s = "This is a fofofof list";
     string sub = "fof";
     assert(count(s, sub) == 2);
@@ -5802,6 +5874,8 @@ size_t count(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
         isForwardRange!R2 &&
         is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
 {
+    import std.exception : enforce;
+
     enforce(!needle.empty, "Cannot count occurrences of an empty range");
     static if (isInfinite!R2)
     {
@@ -5821,6 +5895,8 @@ size_t count(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 
 unittest
 {
+    import std.uni : toLower;
+
     assert(count("abcadfabf", "ab") == 2);
     assert(count("ababab", "abab") == 1);
     assert(count("ababab", "abx") == 0);
@@ -5979,6 +6055,8 @@ bool equal(alias pred, Range1, Range2)(Range1 r1, Range2 r2)
 
 unittest
 {
+    import std.math : approxEqual;
+
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 4, 3];
@@ -6375,6 +6453,8 @@ minCount(alias pred = "a < b", Range)(Range range)
     if (isInputRange!Range && !isInfinite!Range &&
         is(typeof(binaryFun!pred(range.front, range.front))))
 {
+    import std.exception : enforce;
+
     enforce(!range.empty, "Can't count elements from an empty range");
     size_t occurrences = 1;
     auto v = range.front;
@@ -6398,6 +6478,9 @@ minCount(alias pred = "a < b", Range)(Range range)
 
 unittest
 {
+    import std.conv : text;
+    import std.exception : assertThrown;
+
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 2, 3, 4, 1, 2, 4, 1, 1, 2 ];
@@ -6471,6 +6554,8 @@ unittest
 }
 unittest
 {
+    import std.container : Array;
+
     //Rvalue range
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -6723,6 +6808,8 @@ size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
 //Verify Examples.
 unittest
 {
+    import std.uni : toUpper;
+
     assert(levenshteinDistance("cat", "rat") == 1);
     assert(levenshteinDistance("parks", "spark") == 2);
     assert(levenshteinDistance("kitten", "sitting") == 3);
@@ -6815,7 +6902,6 @@ assert(b[0 .. $ - c.length] == [ 1, 5, 9, 1 ]);
 Range2 copy(Range1, Range2)(Range1 source, Range2 target)
 if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
 {
-
     static Range2 genericImpl(Range1 source, Range2 target)
     {
         // Specialize for 2 random access ranges.
@@ -6839,6 +6925,8 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
     static if (isArray!Range1 && isArray!Range2 &&
                is(Unqual!(typeof(source[0])) == Unqual!(typeof(target[0]))))
     {
+        import std.exception : enforce;
+
         immutable overlaps = source.ptr < target.ptr + target.length &&
                              target.ptr < source.ptr + source.length;
 
@@ -7014,6 +7102,9 @@ assert(arr == "\U00010143\u0100\U00010143olleh");
 void reverse(Char)(Char[] s)
 if (isNarrowString!(Char[]) && !is(Char == const) && !is(Char == immutable))
 {
+    import std.string : representation;
+    import std.utf : stride;
+
     auto r = representation(s);
     for (size_t i = 0; i < s.length; )
     {
@@ -7173,6 +7264,10 @@ size_t bringToFront(Range1, Range2)(Range1 front, Range2 back)
 
 unittest
 {
+    import std.container : SList;
+    import std.conv : text;
+    import std.random : Random, unpredictableSeed, uniform;
+
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     // doc example
@@ -7386,6 +7481,8 @@ if (s != SwapStrategy.stable
     && isBidirectionalRange!Range && hasLength!Range
     && Offset.length >= 1)
 {
+    import std.exception : enforce;
+
     Tuple!(size_t, "pos", size_t, "len")[offset.length] blackouts;
     foreach (i, v; offset)
     {
@@ -7452,6 +7549,8 @@ Range remove
 (Range range, Offset offset)
 if (s == SwapStrategy.stable && isForwardRange!Range && Offset.length >= 1)
 {
+    import std.exception : enforce;
+
     auto result = range;
     auto src = range, tgt = range;
     size_t pos;
@@ -7493,6 +7592,8 @@ if (s == SwapStrategy.stable && isForwardRange!Range && Offset.length >= 1)
 
 unittest
 {
+    import std.exception : assertThrown;
+
     // http://d.puremagic.com/issues/show_bug.cgi?id=10173
     int[] test = iota(0, 10).array();
     assertThrown(remove!(SwapStrategy.stable)(test, tuple(2, 4), tuple(1, 3)));
@@ -7820,6 +7921,8 @@ Range partition(alias predicate,
 
 unittest // partition
 {
+    import std.conv : text;
+
     auto Arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     auto arr = Arr.dup;
     static bool even(int a) { return (a & 1) == 0; }
@@ -7967,6 +8070,8 @@ if (ss == SwapStrategy.unstable && isRandomAccessRange!Range
 
 unittest
 {
+    import std.random : uniform;
+
     auto a = [ 8, 3, 4, 1, 4, 7, 4 ];
     auto pieces = partition3(a, 4);
     assert(a == [ 1, 3, 4, 4, 4, 8, 7 ]);
@@ -8037,6 +8142,8 @@ void topN(alias less = "a < b",
         Range)(Range r, size_t nth)
     if (isRandomAccessRange!(Range) && hasLength!Range)
 {
+    import std.random : uniform;
+
     static assert(ss == SwapStrategy.unstable,
             "Stable topN not yet implemented");
     while (r.length > nth)
@@ -8116,6 +8223,8 @@ unittest
 
 unittest
 {
+    import std.random : uniform;
+
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = new int[uniform(1, 10000)];
@@ -8143,6 +8252,8 @@ void topN(alias less = "a < b",
     if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
             isInputRange!Range2 && is(ElementType!Range1 == ElementType!Range2))
 {
+    import std.container : BinaryHeap;
+
     static assert(ss == SwapStrategy.unstable,
             "Stable topN not yet implemented");
     auto heap = BinaryHeap!Range1(r1);
@@ -8218,6 +8329,8 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
        Stable sorting uses TimSort, which needs to copy elements into a buffer,
        requiring assignable elements. +/
 {
+    import std.conv : text;
+
     alias binaryFun!(less) lessFun;
     alias typeof(lessFun(r.front, r.front)) LessRet;    // instantiate lessFun
     static if (is(LessRet == bool))
@@ -8242,6 +8355,9 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
 
 unittest
 {
+    import std.random : Random, unpredictableSeed, uniform;
+    import std.string : toUpper;
+
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     // sort using delegate
@@ -8468,6 +8584,8 @@ private void optimisticInsertionSort(alias less, Range)(Range r)
 
 unittest
 {
+    import std.random : Random, uniform;
+
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto rnd = Random(1);
@@ -8557,6 +8675,8 @@ private void quickSortImpl(alias less, Range)(Range r)
 // Tim Sort implementation
 private template TimSortImpl(alias pred, R)
 {
+    import core.bitop : bsr;
+
     static assert(isRandomAccessRange!R);
     static assert(hasLength!R);
     static assert(hasSlicing!R);
@@ -9058,7 +9178,7 @@ private template TimSortImpl(alias pred, R)
 
 unittest
 {
-    import std.random;
+    import std.random : Random, uniform, randomShuffle;
 
     // Element type with two fields
     static struct E
@@ -9193,7 +9313,10 @@ schwartzSort(alias transform, alias less = "a < b",
         SwapStrategy ss = SwapStrategy.unstable, R)(R r)
     if (isRandomAccessRange!R && hasLength!R)
 {
-    import core.stdc.stdlib;
+    import core.stdc.stdlib : malloc, free;
+    import std.conv : emplace;
+    import std.string : representation;
+
     alias T = typeof(unaryFun!transform(r.front));
     auto xform1 = (cast(T*) malloc(r.length * T.sizeof))[0 .. r.length];
     size_t length;
@@ -9239,6 +9362,8 @@ unittest
 
 unittest
 {
+    import std.math : log2;
+
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     static double entropy(double[] probs) {
@@ -9268,6 +9393,8 @@ unittest
 
 unittest
 {
+    import std.math : log2;
+
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     static double entropy(double[] probs) {
@@ -9366,7 +9493,7 @@ if (hasLength!(Range2) && hasSlicing!(Range2))
 unittest
 {
     debug(std_algorithm) scope(success)
-       writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 3 ];
     int[] b = [ 4, 0, 6, 5 ];
     // @@@BUG@@@ The call below should work
@@ -9395,6 +9522,8 @@ assert(isSorted!("a > b")(arr));
 */
 bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
 {
+    import std.conv : text;
+
     if (r.empty) return true;
 
     static if (isRandomAccessRange!Range && hasLength!Range)
@@ -9436,6 +9565,8 @@ bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
 
 unittest
 {
+    import std.conv : to;
+
     // Issue 9457
     auto x = "abcd";
     assert(isSorted(x));
@@ -9510,6 +9641,8 @@ makeIndex(
     if (isForwardRange!(Range) && isRandomAccessRange!(RangeIndex)
             && is(ElementType!(RangeIndex) : ElementType!(Range)*))
 {
+    import std.exception : enforce;
+
     // assume collection already ordered
     size_t i;
     for (; !r.empty; r.popFront(), ++i)
@@ -9531,6 +9664,9 @@ if (isRandomAccessRange!Range && !isInfinite!Range &&
     isRandomAccessRange!RangeIndex && !isInfinite!RangeIndex &&
     isIntegral!(ElementType!RangeIndex))
 {
+    import std.conv : to;
+    import std.exception : enforce;
+
     alias Unqual!(ElementType!RangeIndex) IndexType;
     enforce(r.length == index.length,
         "r and index must be same length for makeIndex.");
@@ -9599,6 +9735,9 @@ void topNIndex(
     Range, RangeIndex)(Range r, RangeIndex index, SortOutput sorted = SortOutput.no)
 if (isIntegral!(ElementType!(RangeIndex)))
 {
+    import std.exception : enforce;
+    import std.container : BinaryHeap;
+
     if (index.empty) return;
     enforce(ElementType!(RangeIndex).max >= index.length,
             "Index type too small");
@@ -9624,6 +9763,8 @@ void topNIndex(
             SortOutput sorted = SortOutput.no)
 if (is(ElementType!(RangeIndex) == ElementType!(Range)*))
 {
+    import std.container : BinaryHeap;
+
     if (index.empty) return;
     static bool indirectLess(const ElementType!(RangeIndex) a,
             const ElementType!(RangeIndex) b)
@@ -9643,6 +9784,8 @@ if (is(ElementType!(RangeIndex) == ElementType!(Range)*))
 
 unittest
 {
+    import std.conv : text;
+
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     {
@@ -9670,6 +9813,8 @@ unittest
     SwapStrategy ss,
     SRange, TRange)(SRange source, TRange target)
 {
+    import std.exception : enforce;
+
     alias binaryFun!(less) lessFun;
     static assert(ss == SwapStrategy.unstable,
             "Stable indexing not yet implemented");
@@ -9814,6 +9959,7 @@ unittest
 
 unittest
 {
+    import std.uni : toUpper;
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     static bool less(int a, int b) { return a < b; }
@@ -10054,6 +10200,8 @@ TRange topNCopy(alias less = "a < b", SRange, TRange)
     if (isInputRange!(SRange) && isRandomAccessRange!(TRange)
             && hasLength!(TRange) && hasSlicing!(TRange))
 {
+    import std.container : BinaryHeap;
+
     if (target.empty) return target;
     auto heap = BinaryHeap!(TRange, less)(target, 0);
     foreach (e; source) heap.conditionalInsert(e);
@@ -10077,6 +10225,8 @@ unittest
 
 unittest
 {
+    import std.random : Random, unpredictableSeed, uniform, randomShuffle;
+
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto r = Random(unpredictableSeed);
@@ -10572,6 +10722,8 @@ version(unittest)
 
     private string[] rndstuff(T : string)()
     {
+        import std.random : Random, unpredictableSeed, uniform;
+
         static Random rnd;
         static bool first = true;
         if (first)
@@ -10595,6 +10747,8 @@ version(unittest)
 
     private int[] rndstuff(T : int)()
     {
+        import std.random : Random, unpredictableSeed, uniform;
+
         static Random rnd;
         static bool first = true;
         if (first)
@@ -10697,6 +10851,8 @@ assert(equal(nWayUnion(a), witness[]));
  */
 struct NWayUnion(alias less, RangeOfRanges)
 {
+    private import std.container : BinaryHeap;
+
     private alias .ElementType!(.ElementType!RangeOfRanges) ElementType;
     private alias binaryFun!less comp;
     private RangeOfRanges _ror;
@@ -10873,6 +11029,8 @@ void largestPartialIntersectionWeighted
 
 unittest
 {
+    import std.conv : text;
+
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     double[][] a =
@@ -10893,6 +11051,8 @@ unittest
 
 unittest
 {
+    import std.conv : text;
+
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     string[][] a =
@@ -10932,6 +11092,8 @@ unittest
 
 unittest
 {
+    import std.container : Array;
+
     alias Tuple!(uint, uint) T;
     const Array!T arrayOne = Array!T( [ T(1,2), T(3,4) ] );
     const Array!T arrayTwo = Array!T([ T(1,2), T(3,4) ] );
@@ -11373,6 +11535,8 @@ unittest
 
 unittest
 {
+    import std.math : sqrt;
+
     // Verify correctness of ddoc example.
     enum real Phi = (1.0 + sqrt(5.0)) / 2.0;    // Golden ratio
     real[][] seeds = [
@@ -11673,6 +11837,8 @@ unittest
 /// ditto
 auto cartesianProduct(R1, R2, RR...)(R1 range1, R2 range2, RR otherRanges)
 {
+    import std.string : format;
+
     /* We implement the n-ary cartesian product by recursively invoking the
      * binary cartesian product. To make the resulting range nicer, we denest
      * one level of tuples so that a ternary cartesian product, for example,
