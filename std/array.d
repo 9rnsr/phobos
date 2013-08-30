@@ -42,7 +42,8 @@ if (isIterable!Range && !isNarrowString!Range)
     {
         if(r.length == 0) return null;
 
-        auto result = ()@trusted{ return uninitializedArray!(Unqual!E[])(r.length); }();
+        auto makeUninitializedArray()() @trusted { return uninitializedArray!(Unqual!E[])(r.length); }
+        auto result = makeUninitializedArray();
 
         size_t i = 0;
         foreach (e; r)
@@ -2190,9 +2191,13 @@ struct Appender(A : T[], T)
         // We want to use up as much of the block the array is in as possible.
         // if we consume all the block that we can, then array appending is
         // safe WRT built-in append, and we can use the entire block.
-        auto cap = ()@trusted{ return arr.capacity; }();
+        auto getArrayCapacity()() @trusted { return arr.capacity; }
+        auto cap = getArrayCapacity();
         if (cap > arr.length)
-            arr = ()@trusted{ return arr.ptr[0 .. cap]; }();
+        {
+            auto extendArraySlice()() @trusted { return arr.ptr[0 .. cap]; }
+            arr = extendArraySlice();
+        }
         // we assume no reallocation occurred
         assert(arr.ptr is _data.arr.ptr);
         _data.capacity = arr.length;
@@ -2249,7 +2254,7 @@ struct Appender(A : T[], T)
         immutable len = _data.arr.length;
         immutable reqlen = len + nelems;
 
-        if (()@trusted{ return _data.capacity; }() >= reqlen)
+        if (_data.capacity >= reqlen)
             return;
 
         // need to increase capacity
@@ -2262,7 +2267,8 @@ struct Appender(A : T[], T)
             else
             {
                 // avoid restriction of @disable this()
-                ()@trusted{ _data.arr = _data.arr[0 .. _data.capacity]; }();
+                auto extendArraySlice()() @trusted { _data.arr = _data.arr[0 .. _data.capacity]; }
+                extendArraySlice();
                 foreach (i; _data.capacity .. reqlen)
                     _data.arr ~= Unqual!T.init;
             }
@@ -2276,9 +2282,11 @@ struct Appender(A : T[], T)
             // have better access to the capacity field.
             auto newlen = newCapacity(reqlen);
             // first, try extending the current block
-            auto u = ()@trusted{ return
-                GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof);
-            }();
+            auto extendGC()() @trusted
+            {
+                return GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof);
+            }
+            auto u = extendGC();
             if (u)
             {
                 // extend worked, update the capacity
@@ -2287,13 +2295,19 @@ struct Appender(A : T[], T)
             else
             {
                 // didn't work, must reallocate
-                auto bi = ()@trusted{ return
-                    GC.qalloc(newlen * T.sizeof, (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
-                }();
+                auto qallocGC()() @trusted
+                {
+                    return GC.qalloc(newlen * T.sizeof, (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
+                }
+                auto bi = qallocGC();
                 _data.capacity = bi.size / T.sizeof;
                 if (len)
-                    ()@trusted{ memcpy(bi.base, _data.arr.ptr, len * T.sizeof); }();
-                _data.arr = ()@trusted{ return (cast(Unqual!T*)bi.base)[0 .. len]; }();
+                {
+                    auto copyMemory()() @trusted { memcpy(bi.base, _data.arr.ptr, len * T.sizeof); }
+                    copyMemory();
+                }
+                auto shrinkSlice()() @trusted { return (cast(Unqual!T*)bi.base)[0 .. len]; }
+                _data.arr = shrinkSlice();
                 // leave the old data, for safety reasons
             }
         }
@@ -2341,10 +2355,13 @@ struct Appender(A : T[], T)
             //_data.arr = _data.arr.ptr[0 .. len + 1];
 
             // Cannot return ref because it doesn't work in CTFE
-            ()@trusted{ return _data.arr.ptr[len .. len + 1]; }()[0]
+            auto getPayload()() @trusted { return _data.arr.ptr[len .. len + 1]; }
+            auto getItem()() @trusted { return cast(Unqual!T)item; }
+            getPayload()[0]
             =   // assign? emplace?
-            ()@trusted{ return cast(Unqual!T)item; } ();
-            ()@trusted{ _data.arr = _data.arr.ptr[0 .. len + 1]; }();
+            getItem();
+            auto extendSlice()() @trusted { _data.arr = _data.arr.ptr[0 .. len + 1]; }
+            extendSlice();
         }
     }
 
@@ -2382,10 +2399,12 @@ struct Appender(A : T[], T)
             ensureAddable(items.length);
             immutable len = _data.arr.length;
             immutable newlen = len + items.length;
-            _data.arr = ()@trusted{ return _data.arr.ptr[0 .. newlen]; }();
+            auto getSlice()() @trusted { return _data.arr.ptr[0 .. newlen]; }
+            _data.arr = getSlice();
             static if (is(typeof(_data.arr[] = items[])))
             {
-                ()@trusted{ return _data.arr.ptr[len .. newlen]; }()[] = items[];
+                auto getExtendedSlice()() @trusted { return _data.arr.ptr[len .. newlen]; }
+                getExtendedSlice()[] = items[];
             }
             else
             {
@@ -2394,9 +2413,11 @@ struct Appender(A : T[], T)
                     //_data.arr.ptr[i] = cast(Unqual!T)items.front;
 
                     // Cannot return ref because it doesn't work in CTFE
-                    ()@trusted{ return _data.arr.ptr[i .. i + 1]; }()[0]
+                    auto getPayload()() @trusted { return _data.arr.ptr[i .. i + 1]; }
+                    auto getItem()() @trusted { return cast(Unqual!T)items.front; }
+                    getPayload()[0]
                     =   // assign? emplace?
-                    ()@trusted{ return cast(Unqual!T)items.front; }();
+                    getItem();
                 }
             }
         }
@@ -2447,7 +2468,8 @@ struct Appender(A : T[], T)
         {
             if (_data)
             {
-                _data.arr = ()@trusted{ return _data.arr.ptr[0 .. 0]; }();
+                auto getEmptySlice()() @trusted { return _data.arr.ptr[0 .. 0]; }
+                _data.arr = getEmptySlice();
             }
         }
 
@@ -2461,7 +2483,8 @@ struct Appender(A : T[], T)
             if (_data)
             {
                 enforce(newlength <= _data.arr.length);
-                _data.arr = ()@trusted{ return _data.arr.ptr[0 .. newlength]; }();
+                auto getShrinkedSlice()() @trusted { return _data.arr.ptr[0 .. newlength]; }
+                _data.arr = getShrinkedSlice();
             }
             else
                 enforce(newlength == 0);
