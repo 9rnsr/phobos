@@ -1538,7 +1538,18 @@ void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
 if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     FormatSpec!Char fs = f; // fs is copy for change its values.
-    FloatingPointTypeOf!T val = obj;
+
+    version (Win64)
+    {
+        // Workaround for bug 10691.
+        // MSVC does not support 80bit floating point formatting, so instead
+        // print it as a double.
+        alias F = FloatingPointTypeOf!T;
+        alias FPType = Select!(is(Unqual!F == real), double, F);
+    }
+    else
+        alias FPType = FloatingPointTypeOf!T;
+    FPType val = obj;
 
     if (fs.spec == 'r')
     {
@@ -3172,6 +3183,11 @@ unittest
         assert(stream.data == "1.67 -0XA.3D70A3D70A3D8P-3 nan",
                 stream.data);
     }
+    else version (Win64)
+    {
+        assert(stream.data == "1.67 -0X1.47AE14P+0 nan",
+                stream.data);
+    }
     else
     {
         assert(stream.data == "1.67 -0X1.47AE147AE147BP+0 nan",
@@ -3197,7 +3213,10 @@ unittest
 
     formattedWrite(stream, "%a %A", 1.32, 6.78f);
     //formattedWrite(stream, "%x %X", 1.32);
-    assert(stream.data == "0x1.51eb851eb851fp+0 0X1.B1EB86P+2");
+    version (Win64)
+        assert(stream.data == "0x1.51eb85p+0 0X1.B1EB86P+2");
+    else
+        assert(stream.data == "0x1.51eb851eb851fp+0 0X1.B1EB86P+2");
     stream.clear();
 
     formattedWrite(stream, "%#06.*f",2,12.345);
@@ -5645,6 +5664,8 @@ unittest
     //else
     version (MinGW)
         assert(s == "1.67 -0XA.3D70A3D70A3D8P-3 nan", s);
+    else version (Win64)
+        assert(s == "1.67 -0X1.47AE14P+0 nan", s);
     else
         assert(s == "1.67 -0X1.47AE147AE147BP+0 nan", s);
 
