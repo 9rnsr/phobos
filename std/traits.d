@@ -4299,21 +4299,27 @@ unittest
 // SomethingTypeOf
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
+template AliasThisTypeOf(T) if (isAggregateType!T)
+{
+    static if (is(T AT == this))
+        alias AliasThisTypeOf = AT;
+    else
+        static assert(0, T.stringof~" does not have alias this type");
+}
+
 /*
  */
 template BooleanTypeOf(T)
 {
-           inout(bool) idx(        inout(bool) );
-    shared(inout bool) idx( shared(inout bool) );
+    static if (is(AliasThisTypeOf!T AT))
+        alias X = OriginalType!AT;
+    else
+        alias X = OriginalType!T;
 
-       immutable(bool) idy(    immutable(bool) );
-
-    static if (is(T == enum))
-        alias .BooleanTypeOf!(OriginalType!T) BooleanTypeOf;
-    else static if (is(typeof(idx(T.init)) X) && !is(IntegralTypeOf!T))
-        alias X BooleanTypeOf;
-    else static if (is(typeof(idy(T.init)) X) && is(Unqual!X == bool) && !is(IntegralTypeOf!T))
-        alias X BooleanTypeOf;
+    static if (is(Unqual!X == bool))
+    {
+        alias BooleanTypeOf = X;
+    }
     else
         static assert(0, T.stringof~" is not boolean type");
 }
@@ -4322,61 +4328,33 @@ unittest
 {
     // unexpected failure, maybe dmd type-merging bug
     foreach (T; TypeTuple!bool)
-        foreach (Q; TypeQualifierList)
-        {
-            static assert( is(Q!T == BooleanTypeOf!(            Q!T  )));
-            static assert( is(Q!T == BooleanTypeOf!( SubTypeOf!(Q!T) )));
-        }
+    foreach (Q; TypeQualifierList)
+    {
+        static assert( is(Q!T == BooleanTypeOf!(            Q!T  )));
+        static assert( is(Q!T == BooleanTypeOf!( SubTypeOf!(Q!T) )));
+    }
 
     foreach (T; TypeTuple!(void, NumericTypeList, ImaginaryTypeList, ComplexTypeList, CharTypeList))
-        foreach (Q; TypeQualifierList)
-        {
-            static assert(!is(BooleanTypeOf!(            Q!T  )), Q!T.stringof);
-            static assert(!is(BooleanTypeOf!( SubTypeOf!(Q!T) )));
-        }
+    foreach (Q; TypeQualifierList)
+    {
+        static assert(!is(BooleanTypeOf!(            Q!T  )), Q!T.stringof);
+        static assert(!is(BooleanTypeOf!( SubTypeOf!(Q!T) )));
+    }
 }
 
 /*
  */
 template IntegralTypeOf(T)
 {
-           inout(  byte) idx(        inout(  byte) );
-           inout( ubyte) idx(        inout( ubyte) );
-           inout( short) idx(        inout( short) );
-           inout(ushort) idx(        inout(ushort) );
-           inout(   int) idx(        inout(   int) );
-           inout(  uint) idx(        inout(  uint) );
-           inout(  long) idx(        inout(  long) );
-           inout( ulong) idx(        inout( ulong) );
-    shared(inout   byte) idx( shared(inout   byte) );
-    shared(inout  ubyte) idx( shared(inout  ubyte) );
-    shared(inout  short) idx( shared(inout  short) );
-    shared(inout ushort) idx( shared(inout ushort) );
-    shared(inout    int) idx( shared(inout    int) );
-    shared(inout   uint) idx( shared(inout   uint) );
-    shared(inout   long) idx( shared(inout   long) );
-    shared(inout  ulong) idx( shared(inout  ulong) );
+    static if (is(AliasThisTypeOf!T AT))
+        alias X = OriginalType!AT;
+    else
+        alias X = OriginalType!T;
 
-       immutable(  char) idy(    immutable(  char) );
-       immutable( wchar) idy(    immutable( wchar) );
-       immutable( dchar) idy(    immutable( dchar) );
-    // Integrals and characers are implicitly convertible with each other for value copy.
-    // Then adding exact overloads to detect it.
-       immutable(  byte) idy(    immutable(  byte) );
-       immutable( ubyte) idy(    immutable( ubyte) );
-       immutable( short) idy(    immutable( short) );
-       immutable(ushort) idy(    immutable(ushort) );
-       immutable(   int) idy(    immutable(   int) );
-       immutable(  uint) idy(    immutable(  uint) );
-       immutable(  long) idy(    immutable(  long) );
-       immutable( ulong) idy(    immutable( ulong) );
-
-    static if (is(T == enum))
-        alias .IntegralTypeOf!(OriginalType!T) IntegralTypeOf;
-    else static if (is(typeof(idx(T.init)) X))
-        alias X IntegralTypeOf;
-    else static if (is(typeof(idy(T.init)) X) && staticIndexOf!(Unqual!X, IntegralTypeList) >= 0)
-        alias X IntegralTypeOf;
+    static if (staticIndexOf!(Unqual!X, IntegralTypeList) >= 0)
+    {
+        alias IntegralTypeOf = X;
+    }
     else
         static assert(0, T.stringof~" is not an integral type");
 }
@@ -4384,41 +4362,33 @@ template IntegralTypeOf(T)
 unittest
 {
     foreach (T; IntegralTypeList)
-        foreach (Q; TypeQualifierList)
-        {
-            static assert( is(Q!T == IntegralTypeOf!(            Q!T  )));
-            static assert( is(Q!T == IntegralTypeOf!( SubTypeOf!(Q!T) )));
-        }
+    foreach (Q; TypeQualifierList)
+    {
+        static assert( is(Q!T == IntegralTypeOf!(            Q!T  )));
+        static assert( is(Q!T == IntegralTypeOf!( SubTypeOf!(Q!T) )));
+    }
 
     foreach (T; TypeTuple!(void, bool, FloatingPointTypeList, ImaginaryTypeList, ComplexTypeList, CharTypeList))
-        foreach (Q; TypeQualifierList)
-        {
-            static assert(!is(IntegralTypeOf!(            Q!T  )));
-            static assert(!is(IntegralTypeOf!( SubTypeOf!(Q!T) )));
-        }
+    foreach (Q; TypeQualifierList)
+    {
+        static assert(!is(IntegralTypeOf!(            Q!T  )));
+        static assert(!is(IntegralTypeOf!( SubTypeOf!(Q!T) )));
+    }
 }
 
 /*
  */
 template FloatingPointTypeOf(T)
 {
-           inout( float) idx(        inout( float) );
-           inout(double) idx(        inout(double) );
-           inout(  real) idx(        inout(  real) );
-    shared(inout  float) idx( shared(inout  float) );
-    shared(inout double) idx( shared(inout double) );
-    shared(inout   real) idx( shared(inout   real) );
+    static if (is(AliasThisTypeOf!T AT))
+        alias X = OriginalType!AT;
+    else
+        alias X = OriginalType!T;
 
-       immutable( float) idy(   immutable( float) );
-       immutable(double) idy(   immutable(double) );
-       immutable(  real) idy(   immutable(  real) );
-
-    static if (is(T == enum))
-        alias .FloatingPointTypeOf!(OriginalType!T) FloatingPointTypeOf;
-    else static if (is(typeof(idx(T.init)) X))
-        alias X FloatingPointTypeOf;
-    else static if (is(typeof(idy(T.init)) X))
-        alias X FloatingPointTypeOf;
+    static if (staticIndexOf!(Unqual!X, FloatingPointTypeList) >= 0)
+    {
+        alias FloatingPointTypeOf = X;
+    }
     else
         static assert(0, T.stringof~" is not a floating point type");
 }
@@ -4426,18 +4396,18 @@ template FloatingPointTypeOf(T)
 unittest
 {
     foreach (T; FloatingPointTypeList)
-        foreach (Q; TypeQualifierList)
-        {
-            static assert( is(Q!T == FloatingPointTypeOf!(            Q!T  )));
-            static assert( is(Q!T == FloatingPointTypeOf!( SubTypeOf!(Q!T) )));
-        }
+    foreach (Q; TypeQualifierList)
+    {
+        static assert( is(Q!T == FloatingPointTypeOf!(            Q!T  )));
+        static assert( is(Q!T == FloatingPointTypeOf!( SubTypeOf!(Q!T) )));
+    }
 
     foreach (T; TypeTuple!(void, bool, IntegralTypeList, ImaginaryTypeList, ComplexTypeList, CharTypeList))
-        foreach (Q; TypeQualifierList)
-        {
-            static assert(!is(FloatingPointTypeOf!(            Q!T  )));
-            static assert(!is(FloatingPointTypeOf!( SubTypeOf!(Q!T) )));
-        }
+    foreach (Q; TypeQualifierList)
+    {
+        static assert(!is(FloatingPointTypeOf!(            Q!T  )));
+        static assert(!is(FloatingPointTypeOf!( SubTypeOf!(Q!T) )));
+    }
 }
 
 /*
@@ -4445,9 +4415,9 @@ unittest
 template NumericTypeOf(T)
 {
     static if (is(IntegralTypeOf!T X))
-        alias X NumericTypeOf;
+        alias NumericTypeOf = X;
     else static if (is(FloatingPointTypeOf!T X))
-        alias X NumericTypeOf;
+        alias NumericTypeOf = X;
     else
         static assert(0, T.stringof~" is not a numeric type");
 }
@@ -4455,18 +4425,18 @@ template NumericTypeOf(T)
 unittest
 {
     foreach (T; NumericTypeList)
-        foreach (Q; TypeQualifierList)
-        {
-            static assert( is(Q!T == NumericTypeOf!(            Q!T  )));
-            static assert( is(Q!T == NumericTypeOf!( SubTypeOf!(Q!T) )));
-        }
+    foreach (Q; TypeQualifierList)
+    {
+        static assert( is(Q!T == NumericTypeOf!(            Q!T  )));
+        static assert( is(Q!T == NumericTypeOf!( SubTypeOf!(Q!T) )));
+    }
 
     foreach (T; TypeTuple!(void, bool, CharTypeList, ImaginaryTypeList, ComplexTypeList))
-        foreach (Q; TypeQualifierList)
-        {
-            static assert(!is(NumericTypeOf!(            Q!T  )));
-            static assert(!is(NumericTypeOf!( SubTypeOf!(Q!T) )));
-        }
+    foreach (Q; TypeQualifierList)
+    {
+        static assert(!is(NumericTypeOf!(            Q!T  )));
+        static assert(!is(NumericTypeOf!( SubTypeOf!(Q!T) )));
+    }
 }
 
 /*
@@ -4475,7 +4445,7 @@ template UnsignedTypeOf(T)
 {
     static if (is(IntegralTypeOf!T X) &&
                staticIndexOf!(Unqual!X, UnsignedIntTypeList) >= 0)
-        alias X UnsignedTypeOf;
+        alias UnsignedTypeOf = X;
     else
         static assert(0, T.stringof~" is not an unsigned type.");
 }
@@ -4486,9 +4456,9 @@ template SignedTypeOf(T)
 {
     static if (is(IntegralTypeOf!T X) &&
                staticIndexOf!(Unqual!X, SignedIntTypeList) >= 0)
-        alias X SignedTypeOf;
+        alias SignedTypeOf = X;
     else static if (is(FloatingPointTypeOf!T X))
-        alias X SignedTypeOf;
+        alias SignedTypeOf = X;
     else
         static assert(0, T.stringof~" is not an signed type.");
 }
@@ -4497,31 +4467,15 @@ template SignedTypeOf(T)
  */
 template CharTypeOf(T)
 {
-           inout( char) idx(        inout( char) );
-           inout(wchar) idx(        inout(wchar) );
-           inout(dchar) idx(        inout(dchar) );
-    shared(inout  char) idx( shared(inout  char) );
-    shared(inout wchar) idx( shared(inout wchar) );
-    shared(inout dchar) idx( shared(inout dchar) );
+    static if (is(AliasThisTypeOf!T AT))
+        alias X = OriginalType!AT;
+    else
+        alias X = OriginalType!T;
 
-      immutable(  char) idy(   immutable(  char) );
-      immutable( wchar) idy(   immutable( wchar) );
-      immutable( dchar) idy(   immutable( dchar) );
-    // Integrals and characers are implicitly convertible with each other for value copy.
-    // Then adding exact overloads to detect it.
-      immutable(  byte) idy(   immutable(  byte) );
-      immutable( ubyte) idy(   immutable( ubyte) );
-      immutable( short) idy(   immutable( short) );
-      immutable(ushort) idy(   immutable(ushort) );
-      immutable(   int) idy(   immutable(   int) );
-      immutable(  uint) idy(   immutable(  uint) );
-
-    static if (is(T == enum))
-        alias .CharTypeOf!(OriginalType!T) CharTypeOf;
-    else static if (is(typeof(idx(T.init)) X))
-        alias X CharTypeOf;
-    else static if (is(typeof(idy(T.init)) X) && staticIndexOf!(Unqual!X, CharTypeList) >= 0)
-        alias X CharTypeOf;
+    static if (staticIndexOf!(Unqual!X, CharTypeList) >= 0)
+    {
+        alias CharTypeOf = X;
+    }
     else
         static assert(0, T.stringof~" is not a character type");
 }
@@ -4529,37 +4483,38 @@ template CharTypeOf(T)
 unittest
 {
     foreach (T; CharTypeList)
-        foreach (Q; TypeQualifierList)
-        {
-            static assert( is(CharTypeOf!(            Q!T  )));
-            static assert( is(CharTypeOf!( SubTypeOf!(Q!T) )));
-        }
+    foreach (Q; TypeQualifierList)
+    {
+        static assert( is(CharTypeOf!(            Q!T  )));
+        static assert( is(CharTypeOf!( SubTypeOf!(Q!T) )));
+    }
 
     foreach (T; TypeTuple!(void, bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList))
-        foreach (Q; TypeQualifierList)
-        {
-            static assert(!is(CharTypeOf!(            Q!T  )));
-            static assert(!is(CharTypeOf!( SubTypeOf!(Q!T) )));
-        }
+    foreach (Q; TypeQualifierList)
+    {
+        static assert(!is(CharTypeOf!(            Q!T  )));
+        static assert(!is(CharTypeOf!( SubTypeOf!(Q!T) )));
+    }
 
     foreach (T; TypeTuple!(string, wstring, dstring, char[4]))
-        foreach (Q; TypeQualifierList)
-        {
-            static assert(!is(CharTypeOf!(            Q!T  )));
-            static assert(!is(CharTypeOf!( SubTypeOf!(Q!T) )));
-        }
+    foreach (Q; TypeQualifierList)
+    {
+        static assert(!is(CharTypeOf!(            Q!T  )));
+        static assert(!is(CharTypeOf!( SubTypeOf!(Q!T) )));
+    }
 }
 
 /*
  */
 template StaticArrayTypeOf(T)
 {
-    inout(U[n]) idx(U, size_t n)( inout(U[n]) );
+    static if (is(AliasThisTypeOf!T AT))
+        alias X = OriginalType!AT;
+    else
+        alias X = OriginalType!T;
 
-    static if (is(T == enum))
-        alias .StaticArrayTypeOf!(OriginalType!T) StaticArrayTypeOf;
-    else static if (is(typeof(idx(defaultInit!T)) X))
-        alias X StaticArrayTypeOf;
+    static if (is(X : E[n], E, size_t n))
+        alias StaticArrayTypeOf = X;
     else
         static assert(0, T.stringof~" is not a static array type");
 }
@@ -4567,45 +4522,35 @@ template StaticArrayTypeOf(T)
 unittest
 {
     foreach (T; TypeTuple!(bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList))
-        foreach (Q; TypeTuple!(TypeQualifierList, InoutOf, SharedInoutOf))
-        {
-            static assert(is( Q!(   T[1] ) == StaticArrayTypeOf!( Q!(              T[1]  ) ) ));
+    foreach (Q; TypeTuple!(TypeQualifierList, InoutOf, SharedInoutOf))
+    {
+        static assert(is( Q!(   T[1] ) == StaticArrayTypeOf!( Q!(              T[1]  ) ) ));
 
-            foreach (P; TypeQualifierList)
-            { // SubTypeOf cannot have inout type
-                static assert(is( Q!(P!(T[1])) == StaticArrayTypeOf!( Q!(SubTypeOf!(P!(T[1]))) ) ));
-            }
+        foreach (P; TypeQualifierList)
+        { // SubTypeOf cannot have inout type
+            static assert(is( Q!(P!(T[1])) == StaticArrayTypeOf!( Q!(SubTypeOf!(P!(T[1]))) ) ));
         }
+    }
 
     foreach (T; TypeTuple!void)
-        foreach (Q; TypeTuple!TypeQualifierList)
-        {
-            static assert(is( StaticArrayTypeOf!( Q!(void[1]) ) == Q!(void[1]) ));
-        }
+    foreach (Q; TypeTuple!TypeQualifierList)
+    {
+        static assert(is( StaticArrayTypeOf!( Q!(void[1]) ) == Q!(void[1]) ));
+    }
 }
 
 /*
  */
 template DynamicArrayTypeOf(T)
 {
-    inout(U[]) idx(U)( inout(U[]) );
+    static if (is(AliasThisTypeOf!T AT))
+        alias X = OriginalType!AT;
+    else
+        alias X = OriginalType!T;
 
-    static if (is(T == enum))
-        alias .DynamicArrayTypeOf!(OriginalType!T) DynamicArrayTypeOf;
-    else static if (!is(StaticArrayTypeOf!T) &&
-                     is(typeof(idx(defaultInit!T)) X))
+    static if (is(Unqual!X : E[], E) && !is(typeof({ enum n = X.length; })))
     {
-        alias typeof(defaultInit!T[0]) E;
-
-                     E[]  idy(              E[]  );
-               const(E[]) idy(        const(E[]) );
-               inout(E[]) idy(        inout(E[]) );
-        shared(      E[]) idy( shared(      E[]) );
-        shared(const E[]) idy( shared(const E[]) );
-        shared(inout E[]) idy( shared(inout E[]) );
-           immutable(E[]) idy(    immutable(E[]) );
-
-        alias typeof(idy(defaultInit!T)) DynamicArrayTypeOf;
+        alias DynamicArrayTypeOf = X;
     }
     else
         static assert(0, T.stringof~" is not a dynamic array");
@@ -4614,17 +4559,17 @@ template DynamicArrayTypeOf(T)
 unittest
 {
     foreach (T; TypeTuple!(/*void, */bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList))
-        foreach (Q; TypeTuple!(TypeQualifierList, InoutOf, SharedInoutOf))
-        {
-            static assert(is( Q!T[]  == DynamicArrayTypeOf!( Q!T[] ) ));
-            static assert(is( Q!(T[])  == DynamicArrayTypeOf!( Q!(T[]) ) ));
+    foreach (Q; TypeTuple!(TypeQualifierList, InoutOf, SharedInoutOf))
+    {
+        static assert(is( Q!T[]  == DynamicArrayTypeOf!( Q!T[] ) ));
+        static assert(is( Q!(T[])  == DynamicArrayTypeOf!( Q!(T[]) ) ));
 
-            foreach (P; TypeTuple!(MutableOf, ConstOf, ImmutableOf))
-            {
-                static assert(is( Q!(P!T[]) == DynamicArrayTypeOf!( Q!(SubTypeOf!(P!T[])) ) ));
-                static assert(is( Q!(P!(T[])) == DynamicArrayTypeOf!( Q!(SubTypeOf!(P!(T[]))) ) ));
-            }
+        foreach (P; TypeTuple!(MutableOf, ConstOf, ImmutableOf))
+        {
+            static assert(is( Q!(P!T[]) == DynamicArrayTypeOf!( Q!(SubTypeOf!(P!T[])) ) ));
+            static assert(is( Q!(P!(T[])) == DynamicArrayTypeOf!( Q!(SubTypeOf!(P!(T[]))) ) ));
         }
+    }
 
     static assert(!is(DynamicArrayTypeOf!(int[3])));
     static assert(!is(DynamicArrayTypeOf!(void[3])));
@@ -4636,9 +4581,13 @@ unittest
 template ArrayTypeOf(T)
 {
     static if (is(StaticArrayTypeOf!T X))
-        alias X ArrayTypeOf;
+    {
+        alias ArrayTypeOf = X;
+    }
     else static if (is(DynamicArrayTypeOf!T X))
-        alias X ArrayTypeOf;
+    {
+        alias ArrayTypeOf = X;
+    }
     else
         static assert(0, T.stringof~" is not an array type");
 }
@@ -4660,7 +4609,7 @@ template StringTypeOf(T)
     }
     else static if (is(T : const char[]) || is(T : const wchar[]) || is(T : const dchar[]))
     {
-        alias ArrayTypeOf!T StringTypeOf;
+        alias StringTypeOf = ArrayTypeOf!T;
     }
     else
         static assert(0, T.stringof~" is not a string type");
@@ -4669,64 +4618,40 @@ template StringTypeOf(T)
 unittest
 {
     foreach (T; CharTypeList)
-        foreach (Q; TypeTuple!(MutableOf, ConstOf, ImmutableOf, InoutOf))
+    foreach (Q; TypeTuple!(MutableOf, ConstOf, ImmutableOf, InoutOf))
+    {
+        static assert(is(Q!T[] == StringTypeOf!( Q!T[] )));
+
+        static if (!__traits(isSame, Q, InoutOf))
         {
-            static assert(is(Q!T[] == StringTypeOf!( Q!T[] )));
+            static assert(is(Q!T[] == StringTypeOf!( SubTypeOf!(Q!T[]) )));
 
-            static if (!__traits(isSame, Q, InoutOf))
-            {
-                static assert(is(Q!T[] == StringTypeOf!( SubTypeOf!(Q!T[]) )));
-
-                alias Q!T[] Str;
-                class  C(Str) { Str val;  alias val this; }
-                static assert(is(StringTypeOf!(C!Str) == Str));
-            }
+            alias Q!T[] Str;
+            class  C(Str) { Str val;  alias val this; }
+            static assert(is(StringTypeOf!(C!Str) == Str));
         }
+    }
 
     foreach (T; CharTypeList)
-        foreach (Q; TypeTuple!(SharedOf, SharedConstOf, SharedInoutOf))
-        {
-            static assert(!is(StringTypeOf!( Q!T[] )));
-        }
+    foreach (Q; TypeTuple!(SharedOf, SharedConstOf, SharedInoutOf))
+    {
+        static assert(!is(StringTypeOf!( Q!T[] )));
+    }
 }
 
 /*
  */
 template AssocArrayTypeOf(T)
 {
-       immutable(V [K]) idx(K, V)(    immutable(V [K]) );
+    static if (is(AliasThisTypeOf!T AT))
+        alias X = OriginalType!AT;
+    else
+        alias X = OriginalType!T;
 
-           inout(V)[K]  idy(K, V)(        inout(V)[K]  );
-    shared(      V [K]) idy(K, V)( shared(      V [K]) );
-
-           inout(V [K]) idz(K, V)(        inout(V [K]) );
-    shared(inout V [K]) idz(K, V)( shared(inout V [K]) );
-
-           inout(immutable(V)[K])  idw(K, V)(        inout(immutable(V)[K])  );
-    shared(inout(immutable(V)[K])) idw(K, V)( shared(inout(immutable(V)[K])) );
-
-    static if (is(typeof(idx(defaultInit!T)) X))
+    static if (is(Unqual!X : V[K], K, V))
     {
-        alias X AssocArrayTypeOf;
+        alias AssocArrayTypeOf = X;
     }
-    else static if (is(typeof(idy(defaultInit!T)) X))
-    {
-        alias X AssocArrayTypeOf;
-    }
-    else static if (is(typeof(idz(defaultInit!T)) X))
-    {
-               inout(             V  [K]) idzp(K, V)(        inout(             V  [K]) );
-               inout(       const(V) [K]) idzp(K, V)(        inout(       const(V) [K]) );
-               inout(shared(const V) [K]) idzp(K, V)(        inout(shared(const V) [K]) );
-               inout(   immutable(V) [K]) idzp(K, V)(        inout(   immutable(V) [K]) );
-        shared(inout              V  [K]) idzp(K, V)( shared(inout              V  [K]) );
-        shared(inout        const(V) [K]) idzp(K, V)( shared(inout        const(V) [K]) );
-        shared(inout    immutable(V) [K]) idzp(K, V)( shared(inout    immutable(V) [K]) );
-
-        alias typeof(idzp(defaultInit!T)) AssocArrayTypeOf;
-    }
-    else static if (is(typeof(idw(defaultInit!T)) X))
-        alias X AssocArrayTypeOf;
     else
         static assert(0, T.stringof~" is not an associative array type");
 }
@@ -4734,21 +4659,21 @@ template AssocArrayTypeOf(T)
 unittest
 {
     foreach (T; TypeTuple!(int/*bool, CharTypeList, NumericTypeList, ImaginaryTypeList, ComplexTypeList*/))
-        foreach (P; TypeTuple!(TypeQualifierList, InoutOf, SharedInoutOf))
-            foreach (Q; TypeTuple!(TypeQualifierList, InoutOf, SharedInoutOf))
-                foreach (R; TypeTuple!(TypeQualifierList, InoutOf, SharedInoutOf))
-                {
-                    static assert(is( P!(Q!T[R!T]) == AssocArrayTypeOf!(            P!(Q!T[R!T])  ) ));
-                }
+    foreach (P; TypeTuple!(TypeQualifierList, InoutOf, SharedInoutOf))
+    foreach (Q; TypeTuple!(TypeQualifierList, InoutOf, SharedInoutOf))
+    foreach (R; TypeTuple!(TypeQualifierList, InoutOf, SharedInoutOf))
+    {
+        static assert(is( P!(Q!T[R!T]) == AssocArrayTypeOf!(            P!(Q!T[R!T])  ) ));
+    }
 
     foreach (T; TypeTuple!(int/*bool, CharTypeList, NumericTypeList, ImaginaryTypeList, ComplexTypeList*/))
-        foreach (O; TypeTuple!(TypeQualifierList, InoutOf, SharedInoutOf))
-            foreach (P; TypeTuple!TypeQualifierList)
-                foreach (Q; TypeTuple!TypeQualifierList)
-                    foreach (R; TypeTuple!TypeQualifierList)
-                    {
-                        static assert(is( O!(P!(Q!T[R!T])) == AssocArrayTypeOf!( O!(SubTypeOf!(P!(Q!T[R!T]))) ) ));
-                    }
+    foreach (O; TypeTuple!(TypeQualifierList, InoutOf, SharedInoutOf))
+    foreach (P; TypeTuple!TypeQualifierList)
+    foreach (Q; TypeTuple!TypeQualifierList)
+    foreach (R; TypeTuple!TypeQualifierList)
+    {
+        static assert(is( O!(P!(Q!T[R!T])) == AssocArrayTypeOf!( O!(SubTypeOf!(P!(Q!T[R!T]))) ) ));
+    }
 }
 
 /*
