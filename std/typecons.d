@@ -899,11 +899,11 @@ unittest
 
 
 /**
-$(D Rebindable!(T)) is a simple, efficient wrapper that behaves just
+$(D Rebindable!T) is a simple, efficient wrapper that behaves just
 like an object of type $(D T), except that you can reassign it to
-refer to another object. For completeness, $(D Rebindable!(T)) aliases
+refer to another object. For completeness, $(D Rebindable!T) aliases
 itself away to $(D T) if $(D T) is a non-const object type. However,
-$(D Rebindable!(T)) does not compile if $(D T) is a non-class type.
+$(D Rebindable!T) does not compile if $(D T) is a non-class type.
 
 Regular $(D const) object references cannot be reassigned:
 
@@ -915,7 +915,7 @@ a.x = 5;        // error! can't modify const a
 a = new Widget; // error! can't modify const a
 ----
 
-However, $(D Rebindable!(Widget)) does allow reassignment, while
+However, $(D Rebindable!(const Widget)) does allow reassignment, while
 otherwise behaving exactly like a $(D const Widget):
 
 ----
@@ -944,6 +944,7 @@ template Rebindable(T) if (is(T == class) || is(T == interface) || isArray!T)
     }
     else
     {
+        pure nothrow
         struct Rebindable
         {
             private union
@@ -951,33 +952,53 @@ template Rebindable(T) if (is(T == class) || is(T == interface) || isArray!T)
                 T original;
                 U stripped;
             }
-            void opAssign(T another) pure nothrow
+
+            this(inout T initializer) inout
             {
-                stripped = cast(U) another;
+                original = initializer;
             }
-            void opAssign(Rebindable another) pure nothrow
+            void opAssign(T another) @trusted
+            {
+                stripped = *cast(U*) &another;
+            }
+            void opAssign(Rebindable another) @trusted
             {
                 stripped = another.stripped;
             }
+
+            // safely construction/assignment
+            // from Rebindable!(immutable U) to Rebindable!(const U)
             static if (is(T == const U))
             {
-                // safely assign immutable to const
-                void opAssign(Rebindable!(immutable U) another) pure nothrow
+                this(Rebindable!(immutable U) another) inout
                 {
+                    original = another.original;
+                }
+                void opAssign(Rebindable!(immutable U) another)
+                {
+                    // safely assign immutable to const
                     stripped = another.stripped;
                 }
             }
 
-            this(T initializer) pure nothrow
+            // safely construction/assignment
+            // from immutable Rebindable!(const U) to Rebindable!(immutable U)
+            static if (is(T == immutable U))
             {
-                opAssign(initializer);
+                this(immutable Rebindable!(const U) another) inout
+                {
+                    original = another.original;
+                }
+                void opAssign(immutable Rebindable!(const U) another) @trusted
+                {
+                    stripped = cast(U)another.stripped;
+                }
             }
 
-            @property ref inout(T) get() inout pure nothrow
+            @property ref inout(T) get() inout
             {
                 return original;
             }
-
             alias get this;
         }
     }
