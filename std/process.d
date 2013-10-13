@@ -2672,7 +2672,7 @@ static:
     $(OBJECTREF Exception) if the environment variable could not be added
         (e.g. if the name is invalid).
     */
-    inout(char)[] opIndexAssign(inout char[] value, in char[] name) @trusted
+    inout(char)[] opIndexAssign(inout(char)[] value, in char[] name) @trusted
     {
         version (Posix)
         {
