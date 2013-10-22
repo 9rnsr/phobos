@@ -107,6 +107,12 @@ private:
     {
         opAssign(x);
     }
+
+    this(this) inout pure
+    {
+        data = data.dup;
+    }
+
 public:
     // Length in uints
     size_t uintLength() pure const
