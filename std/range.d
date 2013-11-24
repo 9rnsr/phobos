@@ -4178,36 +4178,41 @@ struct Repeat(T)
 {
     private T _value;
     /// Range primitive implementations.
-    @property T front() { return _value; }
-    /// Ditto
     enum bool empty = false;
     /// Ditto
+    @property T front() { return _value; }
+    /// Ditto
     void popFront() {}
+
     /// Ditto
     @property Repeat!T save() { return this; }
+
     /// Ditto
     T opIndex(size_t) { return _value; }
     /// Ditto
     auto opSlice(size_t i, size_t j)
     {
         version (assert)
-            if (i > j) throw new RangeError();
+        {
+            if (i > j)
+                throw new RangeError();
+        }
         return this.takeExactly(j - i);
     }
     /// Ditto
     version (StdDdoc)
-        auto opDollar(){return DollarToken();} //Opaque signature for Ddoc
+        auto opDollar() { return DollarToken(); } //Opaque signature for Ddoc
     else
         enum opDollar = DollarToken(); //Implementation defined signature
 
-    private static struct DollarToken{}
-    auto opSlice(size_t, DollarToken){return this;}
+    private static struct DollarToken {}
+    auto opSlice(size_t, DollarToken) { return this; }
 }
 
 /// Ditto
 Repeat!(T) repeat(T)(T value) { return Repeat!(T)(value); }
 
-unittest
+@safe pure unittest
 {
     auto  r = repeat(5);
     alias R = typeof(r);
@@ -4231,12 +4236,13 @@ Take!(Repeat!T) repeat(T)(T value, size_t n)
 }
 
 // Explicitly undocumented. It will be removed in November 2013.
-deprecated("Please use std.range.repeat instead.") Take!(Repeat!T) replicate(T)(T value, size_t n)
+deprecated("Please use std.range.repeat instead.")
+Take!(Repeat!T) replicate(T)(T value, size_t n)
 {
     return repeat(value, n);
 }
 
-unittest
+@safe pure unittest
 {
     enforce(equal(repeat(5, 4), [ 5, 5, 5, 5 ][]));
 }
