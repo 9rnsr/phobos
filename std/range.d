@@ -3366,14 +3366,15 @@ if (isInputRange!R)
                 return _input.front;
             }
             void popFront() { _input.popFront(); --_n; }
-            @property size_t length() const { return _n; }
-            alias length opDollar;
 
             static if (isForwardRange!R)
                 @property auto save()
                 {
                     return Result(_input.save, _n);
                 }
+
+            @property size_t length() const { return _n; }
+            alias opDollar = length;
 
             static if (hasMobileElements!R)
             {
@@ -3402,7 +3403,7 @@ if (isInputRange!R)
     }
 }
 
-unittest
+@safe pure unittest
 {
     auto a = [ 1, 2, 3, 4, 5 ];
 
@@ -3428,11 +3429,19 @@ unittest
     //but aren't sliceable.
     struct L
     {
-        @property auto front() { return _arr[0]; }
-        @property bool empty() { return _arr.empty; }
-        void popFront() { _arr.popFront(); }
-        @property size_t length() { return _arr.length; }
         int[] _arr;
+
+        @safe pure  // workaround
+        @property bool empty() { return _arr.empty; }
+
+        @safe pure  // workaround
+        @property auto front() { return _arr[0]; }
+
+        @safe pure  // workaround
+        void popFront() { _arr.popFront(); }
+
+        @safe pure  // workaround
+        @property size_t length() { return _arr.length; }
     }
     static assert(is(typeof(take(L(a), 3)) == typeof(takeExactly(L(a), 3))));
     assert(take(L(a), 3) == takeExactly(L(a), 3));
@@ -3450,7 +3459,7 @@ unittest
     //define length.
     static assert(!is(typeof(take(filter!"true"(a), 3)) == typeof(takeExactly(filter!"true"(a), 3))));
 
-    foreach(DummyType; AllDummyRanges)
+    foreach (DummyType; AllDummyRanges)
     {
         {
             DummyType dummy;
@@ -3460,7 +3469,7 @@ unittest
             assert(takeExactly(t, 4) == takeExactly(dummy, 4));
         }
 
-        static if(hasMobileElements!DummyType)
+        static if (hasMobileElements!DummyType)
         {
             {
                 auto t = takeExactly(DummyType.init, 4);
@@ -3469,7 +3478,7 @@ unittest
             }
         }
 
-        static if(hasAssignableElements!DummyType)
+        static if (hasAssignableElements!DummyType)
         {
             {
                 auto t = takeExactly(DummyType.init, 4);
