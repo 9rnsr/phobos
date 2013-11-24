@@ -525,12 +525,14 @@ template map(fun...) if (fun.length >= 1)
     }
 }
 
-unittest
+/*pure @safe */unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+
     alias map!(to!string) stringize;
     assert(equal(stringize([ 1, 2, 3, 4 ]), [ "1", "2", "3", "4" ]));
+
     uint counter;
     alias map!((a) { return counter++; }) count;
     assert(equal(count([ 10, 2, 30, 4 ]), [ 0, 1, 2, 3 ]));
@@ -540,10 +542,11 @@ unittest
     //assert(equal(countAndSquare([ 10, 2 ]), [ tuple(0u, 100), tuple(1u, 4) ]));
 }
 
-unittest
+/*@safe pure */unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+
     int[] arr1 = [ 1, 2, 3, 4 ];
     const int[] arr1Const = arr1;
     int[] arr2 = [ 5, 6 ];
@@ -628,14 +631,15 @@ unittest
     assert(equal(ms2[0..2], "日本"w));
     assert(equal(ms3[0..2], "HE"));
 }
-unittest
+
+@safe pure unittest
 {
     auto LL = iota(1L, 4L);
     auto m = map!"a*a"(LL);
     assert(equal(m, [1L, 4L, 9L]));
 }
 
-unittest
+@safe pure unittest
 {
     // Issue #10130 - map of iota with const step.
     const step = 2;
@@ -648,7 +652,8 @@ unittest
     const floatStep = 0.02;
     static assert(__traits(compiles, map!(i => i)(iota(floatBegin, floatEnd, floatStep))));
 }
-unittest
+
+@safe pure unittest
 {
     //slicing infinites
     auto rr = iota(0, 5).cycle().map!"a * a"();
