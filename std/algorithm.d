@@ -404,125 +404,124 @@ template map(fun...) if (fun.length >= 1)
     {
         static if (fun.length > 1)
         {
-            alias adjoin!(staticMap!(unaryFun, fun)) _fun;
+            alias _fun = adjoin!(staticMap!(unaryFun, fun));
         }
         else
         {
-            alias unaryFun!fun _fun;
+            alias _fun = unaryFun!fun;
         }
 
-        return MapResult!(_fun, Range)(r);
-    }
-}
-
-private struct MapResult(alias fun, Range)
-{
-    alias Unqual!Range R;
-    //alias typeof(fun(.ElementType!R.init)) ElementType;
-    R _input;
-
-    static if (isBidirectionalRange!R)
-    {
-        @property auto ref back()
+        struct Result
         {
-            return fun(_input.back);
-        }
+            alias Unqual!Range R;
+            R _input;
 
-        void popBack()
-        {
-            _input.popBack();
-        }
-    }
-
-    this(R input)
-    {
-        _input = input;
-    }
-
-    static if (isInfinite!R)
-    {
-        // Propagate infinite-ness.
-        enum bool empty = false;
-    }
-    else
-    {
-        @property bool empty()
-        {
-            return _input.empty;
-        }
-    }
-
-    void popFront()
-    {
-        _input.popFront();
-    }
-
-    @property auto ref front()
-    {
-        return fun(_input.front);
-    }
-
-    static if (isRandomAccessRange!R)
-    {
-        static if (is(typeof(_input[ulong.max])))
-            private alias ulong opIndex_t;
-        else
-            private alias uint opIndex_t;
-
-        auto ref opIndex(opIndex_t index)
-        {
-            return fun(_input[index]);
-        }
-    }
-
-    static if (hasLength!R)
-    {
-        @property auto length()
-        {
-            return _input.length;
-        }
-
-        alias length opDollar;
-    }
-
-    static if (hasSlicing!R)
-    {
-        static if (is(typeof(_input[ulong.max .. ulong.max])))
-            private alias opSlice_t = ulong;
-        else
-            private alias opSlice_t = uint;
-
-        static if (hasLength!R)
-        {
-            auto opSlice(opSlice_t low, opSlice_t high)
+            this(R input)
             {
-                return typeof(this)(_input[low .. high]);
-            }
-        }
-        else static if (is(typeof(_input[opSlice_t.max .. $])))
-        {
-            struct DollarToken{}
-            enum opDollar = DollarToken.init;
-            auto opSlice(opSlice_t low, DollarToken)
-            {
-                return typeof(this)(_input[low .. $]);
+                _input = input;
             }
 
-            auto opSlice(opSlice_t low, opSlice_t high)
+            static if (isInfinite!R)
             {
-                return this[low .. $].take(high - low);
+                // Propagate infinite-ness.
+                enum bool empty = false;
+            }
+            else
+            {
+                @property bool empty()
+                {
+                    return _input.empty;
+                }
+            }
+
+            @property auto ref front()
+            {
+                return _fun(_input.front);
+            }
+
+            void popFront()
+            {
+                _input.popFront();
+            }
+
+            static if (isForwardRange!R)
+            {
+                @property auto save()
+                {
+                    auto result = this;
+                    result._input = result._input.save;
+                    return result;
+                }
+            }
+
+            static if (isBidirectionalRange!R)
+            {
+                @property auto ref back()
+                {
+                    return _fun(_input.back);
+                }
+
+                void popBack()
+                {
+                    _input.popBack();
+                }
+            }
+
+            static if (isRandomAccessRange!R)
+            {
+                static if (is(typeof(_input[ulong.max])))
+                    private alias ulong opIndex_t;
+                else
+                    private alias uint opIndex_t;
+
+                auto ref opIndex(opIndex_t index)
+                {
+                    return _fun(_input[index]);
+                }
+            }
+
+            static if (hasLength!R)
+            {
+                @property auto length()
+                {
+                    return _input.length;
+                }
+
+                alias length opDollar;
+            }
+
+            static if (hasSlicing!R)
+            {
+                static if (is(typeof(_input[ulong.max .. ulong.max])))
+                    private alias opSlice_t = ulong;
+                else
+                    private alias opSlice_t = uint;
+
+                static if (hasLength!R)
+                {
+                    auto opSlice(opSlice_t low, opSlice_t high)
+                    {
+                        return typeof(this)(_input[low .. high]);
+                    }
+                }
+                else static if (is(typeof(_input[opSlice_t.max .. $])))
+                {
+                    struct DollarToken{}
+                    enum opDollar = DollarToken.init;
+                    auto opSlice(opSlice_t low, DollarToken)
+                    {
+                        return typeof(this)(_input[low .. $]);
+                    }
+
+                    auto opSlice(opSlice_t low, opSlice_t high)
+                    {
+                        return this[low .. $].take(high - low);
+                    }
+                }
             }
         }
-    }
 
-    static if (isForwardRange!R)
-    {
-        @property auto save()
-        {
-            auto result = this;
-            result._input = result._input.save;
-            return result;
-        }
+        return Result(r);
     }
 }
 
