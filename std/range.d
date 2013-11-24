@@ -4562,8 +4562,6 @@ if (isStaticArray!R)
     assert (c == i);
 }
 
-private template lengthType(R) { alias typeof((inout int = 0){ R r = void; return r.length; }()) lengthType; }
-
 /**
    Iterate several ranges in lockstep. The element type is a proxy tuple
    that allows accessing the current element in the $(D n)th range by
@@ -4596,17 +4594,18 @@ private template lengthType(R) { alias typeof((inout int = 0){ R r = void; retur
    ----
 */
 struct Zip(Ranges...)
-    if (Ranges.length && allSatisfy!(isInputRange, Ranges))
+if (Ranges.length && allSatisfy!(isInputRange, Ranges))
 {
     alias R = Ranges;
     R ranges;
-    alias Tuple!(staticMap!(.ElementType, R)) ElementType;
+
+    alias ElementType = Tuple!(staticMap!(.ElementType, R));
     StoppingPolicy stoppingPolicy = StoppingPolicy.shortest;
 
-/**
-   Builds an object. Usually this is invoked indirectly by using the
-   $(LREF zip) function.
- */
+    /**
+       Builds an object. Usually this is invoked indirectly by using the
+       $(LREF zip) function.
+     */
     this(R rs, StoppingPolicy s = StoppingPolicy.shortest)
     {
         stoppingPolicy = s;
@@ -4616,10 +4615,10 @@ struct Zip(Ranges...)
         }
     }
 
-/**
-   Returns $(D true) if the range is at end. The test depends on the
-   stopping policy.
-*/
+    /**
+       Returns $(D true) if the range is at end. The test depends on the
+       stopping policy.
+     */
     static if (allSatisfy!(isInfinite, R))
     {
         // BUG:  Doesn't propagate infiniteness if only some ranges are infinite
@@ -4636,13 +4635,15 @@ struct Zip(Ranges...)
             case StoppingPolicy.shortest:
                 foreach (i, Unused; R)
                 {
-                    if (ranges[i].empty) return true;
+                    if (ranges[i].empty)
+                        return true;
                 }
                 return false;
             case StoppingPolicy.longest:
                 foreach (i, Unused; R)
                 {
-                    if (!ranges[i].empty) return false;
+                    if (!ranges[i].empty)
+                        return false;
                 }
                 return true;
             case StoppingPolicy.requireSameLength:
@@ -4658,28 +4659,9 @@ struct Zip(Ranges...)
         }
     }
 
-    static if (allSatisfy!(isForwardRange, R))
-        @property Zip save()
-        {
-            Zip result = this;
-            foreach (i, Unused; R)
-            {
-                result.ranges[i] = result.ranges[i].save;
-            }
-            return result;
-        }
-
-    private void emplaceIfCan(T)(T* addr)
-    {
-        static if(__traits(compiles, emplace(addr)))
-            emplace(addr);
-        else
-            throw new Exception("Range with non-default constructable elements exhausted.");
-    }
-
-/**
-   Returns the current iterated element.
-*/
+    /**
+       Returns the current iterated element.
+     */
     @property ElementType front()
     {
         ElementType result = void;
@@ -4700,9 +4682,9 @@ struct Zip(Ranges...)
 
     static if (allSatisfy!(hasAssignableElements, R))
     {
-/**
-   Sets the front of all iterated ranges.
-*/
+        /**
+           Sets the front of all iterated ranges.
+         */
         @property void front(ElementType v)
         {
             foreach (i, Unused; R)
@@ -4715,9 +4697,9 @@ struct Zip(Ranges...)
         }
     }
 
-/**
-   Moves out the front.
-*/
+    /**
+       Moves out the front.
+     */
     static if (allSatisfy!(hasMobileElements, R))
     {
         ElementType moveFront()
@@ -4739,74 +4721,9 @@ struct Zip(Ranges...)
         }
     }
 
-/**
-   Returns the rightmost element.
-*/
-    static if (allSatisfy!(isBidirectionalRange, R))
-    {
-        @property ElementType back()
-        {
-            ElementType result = void;
-            foreach (i, Unused; R)
-            {
-                auto addr = cast(Unqual!(typeof(result[i]))*) &result[i];
-                if (!ranges[i].empty)
-                {
-                    emplace(addr, ranges[i].back);
-                }
-                else
-                {
-                    emplaceIfCan(addr);
-                }
-            }
-            return result;
-        }
-
-/**
-   Moves out the back.
-*/
-        static if (allSatisfy!(hasMobileElements, R))
-        {
-            ElementType moveBack()
-            {
-                ElementType result = void;
-                foreach (i, Unused; R)
-                {
-                    auto addr = cast(Unqual!(typeof(result[i]))*) &result[i];
-                    if (!ranges[i].empty)
-                    {
-                        emplace(addr, .moveBack(ranges[i]));
-                    }
-                    else
-                    {
-                        emplaceIfCan(addr);
-                    }
-                }
-                return result;
-            }
-        }
-
-/**
-   Returns the current iterated element.
-*/
-        static if (allSatisfy!(hasAssignableElements, R))
-        {
-            @property void back(ElementType v)
-            {
-                foreach (i, Unused; R)
-                {
-                    if (!ranges[i].empty)
-                    {
-                        ranges[i].back = v[i];
-                    }
-                }
-            }
-        }
-    }
-
-/**
-   Advances to the next element in all controlled ranges.
-*/
+    /**
+       Advances to the next element in all controlled ranges.
+     */
     void popFront()
     {
         final switch (stoppingPolicy)
@@ -4834,10 +4751,94 @@ struct Zip(Ranges...)
         }
     }
 
+    static if (allSatisfy!(isForwardRange, R))
+        @property Zip save()
+        {
+            Zip result = this;
+            foreach (i, Unused; R)
+            {
+                result.ranges[i] = result.ranges[i].save;
+            }
+            return result;
+        }
+
+    private void emplaceIfCan(T)(T* addr)
+    {
+        static if(__traits(compiles, emplace(addr)))
+            emplace(addr);
+        else
+            throw new Exception("Range with non-default constructable elements exhausted.");
+    }
+
     static if (allSatisfy!(isBidirectionalRange, R))
-/**
-   Calls $(D popBack) for all controlled ranges.
-*/
+    {
+        /**
+           Returns the current iterated element.
+         */
+        static if (allSatisfy!(hasAssignableElements, R))
+        {
+            @property void back(ElementType v)
+            {
+                foreach (i, Unused; R)
+                {
+                    if (!ranges[i].empty)
+                    {
+                        ranges[i].back = v[i];
+                    }
+                }
+            }
+        }
+
+        /**
+           Returns the rightmost element.
+         */
+        @property ElementType back()
+        {
+            ElementType result = void;
+            foreach (i, Unused; R)
+            {
+                auto addr = cast(Unqual!(typeof(result[i]))*) &result[i];
+                if (!ranges[i].empty)
+                {
+                    emplace(addr, ranges[i].back);
+                }
+                else
+                {
+                    emplaceIfCan(addr);
+                }
+            }
+            return result;
+        }
+
+        static if (allSatisfy!(hasMobileElements, R))
+        {
+            /**
+               Moves out the back.
+             */
+            ElementType moveBack()
+            {
+                ElementType result = void;
+                foreach (i, Unused; R)
+                {
+                    auto addr = cast(Unqual!(typeof(result[i]))*) &result[i];
+                    if (!ranges[i].empty)
+                    {
+                        emplace(addr, .moveBack(ranges[i]));
+                    }
+                    else
+                    {
+                        emplaceIfCan(addr);
+                    }
+                }
+                return result;
+            }
+        }
+    }
+
+    static if (allSatisfy!(isBidirectionalRange, R))
+        /**
+           Calls $(D popBack) for all controlled ranges.
+         */
         void popBack()
         {
             final switch (stoppingPolicy)
@@ -4865,14 +4866,16 @@ struct Zip(Ranges...)
             }
         }
 
-/**
-   Returns the length of this range. Defined only if all ranges define
-   $(D length).
-*/
     static if (allSatisfy!(hasLength, R))
     {
+        /**
+           Returns the length of this range. Defined only if all ranges define
+           $(D length).
+         */
         @property auto length()
         {
+            alias lengthType(R) = typeof(R.init.length);
+
             CommonType!(staticMap!(lengthType, R)) result = ranges[0].length;
             if (stoppingPolicy == StoppingPolicy.requireSameLength)
                 return result;
@@ -4891,14 +4894,14 @@ struct Zip(Ranges...)
             return result;
         }
 
-        alias length opDollar;
+        alias opDollar = length;
     }
 
-/**
-   Returns a slice of the range. Defined only if all range define
-   slicing.
-*/
     static if (allSatisfy!(hasSlicing, R))
+        /**
+           Returns a slice of the range. Defined only if all range define
+           slicing.
+         */
         auto opSlice(size_t from, size_t to)
         {
             //Slicing an infinite range yields the type Take!R
@@ -4914,10 +4917,10 @@ struct Zip(Ranges...)
 
     static if (allSatisfy!(isRandomAccessRange, R))
     {
-/**
-   Returns the $(D n)th element in the composite range. Defined if all
-   ranges offer random access.
-*/
+        /**
+           Returns the $(D n)th element in the composite range. Defined if all
+           ranges offer random access.
+         */
         ElementType opIndex(size_t n)
         {
             ElementType result = void;
@@ -4931,10 +4934,10 @@ struct Zip(Ranges...)
 
         static if (allSatisfy!(hasAssignableElements, R))
         {
-/**
-   Assigns to the $(D n)th element in the composite range. Defined if
-   all ranges offer random access.
-*/
+            /**
+               Assigns to the $(D n)th element in the composite range. Defined if
+               all ranges offer random access.
+             */
             void opIndexAssign(ElementType v, size_t n)
             {
                 foreach (i, Range; R)
@@ -4943,13 +4946,13 @@ struct Zip(Ranges...)
                 }
             }
         }
-
-/**
-   Destructively reads the $(D n)th element in the composite
-   range. Defined if all ranges offer random access.
-*/
         static if (allSatisfy!(hasMobileElements, R))
         {
+
+            /**
+               Destructively reads the $(D n)th element in the composite
+               range. Defined if all ranges offer random access.
+             */
             ElementType moveAt(size_t n)
             {
                 ElementType result = void;
@@ -4966,14 +4969,14 @@ struct Zip(Ranges...)
 
 /// Ditto
 auto zip(Ranges...)(Ranges ranges)
-    if (Ranges.length && allSatisfy!(isInputRange, Ranges))
+if (Ranges.length && allSatisfy!(isInputRange, Ranges))
 {
     return Zip!Ranges(ranges);
 }
 
 /// Ditto
 auto zip(Ranges...)(StoppingPolicy sp, Ranges ranges)
-    if (Ranges.length && allSatisfy!(isInputRange, Ranges))
+if (Ranges.length && allSatisfy!(isInputRange, Ranges))
 {
     return Zip!Ranges(ranges, sp);
 }
@@ -4992,7 +4995,7 @@ enum StoppingPolicy
     requireSameLength,
 }
 
-unittest
+/*@safe pure */unittest
 {
     int[] a = [ 1, 2, 3 ];
     float[] b = [ 1.0, 2.0, 3.0 ];
@@ -5100,7 +5103,7 @@ unittest
     +/
 }
 
-unittest
+/*@safe pure */unittest
 {
     auto a = [5,4,3,2,1];
     auto b = [3,1,2,5,6];
@@ -5111,7 +5114,8 @@ unittest
     assert(a == [1, 2, 3, 4, 5]);
     assert(b == [6, 5, 2, 1, 3]);
 }
-unittest
+
+@safe pure unittest
 {
     auto LL = iota(1L, 1000L);
     auto z = zip(LL, [4]);
@@ -5124,7 +5128,7 @@ unittest
 }
 
 // Text for Issue 11196
-unittest
+@safe pure unittest
 {
     static struct S { @disable this(); }
     static assert(__traits(compiles, zip((S[5]).init[])));
