@@ -2759,7 +2759,7 @@ if (Ranges.length > 0 &&
     }
 }
 
-unittest
+@safe pure unittest
 {
     {
         int[] arr1 = [ 1, 2, 3, 4 ];
@@ -2813,29 +2813,30 @@ unittest
     // Check that chain at least instantiates and compiles with every possible
     // pair of DummyRange types, in either order.
 
-    foreach(DummyType1; AllDummyRanges) {
+    foreach (DummyType1; AllDummyRanges)
+    {
         DummyType1 dummy1;
-        foreach(DummyType2; AllDummyRanges) {
+        foreach (DummyType2; AllDummyRanges)
+        {
             DummyType2 dummy2;
             auto myChain = chain(dummy1, dummy2);
 
-            static assert(
-                propagatesRangeType!(typeof(myChain), DummyType1, DummyType2)
-            );
+            static assert(propagatesRangeType!(typeof(myChain), DummyType1, DummyType2));
 
             assert(myChain.front == 1);
-            foreach(i; 0..dummyLength) {
+            foreach (i; 0..dummyLength)
+            {
                 myChain.popFront();
             }
             assert(myChain.front == 1);
 
-            static if (isBidirectionalRange!DummyType1 &&
-                      isBidirectionalRange!DummyType2) {
+            static if (isBidirectionalRange!DummyType1 && isBidirectionalRange!DummyType2)
+            {
                 assert(myChain.back == 10);
             }
 
-            static if (isRandomAccessRange!DummyType1 &&
-                      isRandomAccessRange!DummyType2) {
+            static if (isRandomAccessRange!DummyType1 && isRandomAccessRange!DummyType2)
+            {
                 assert(myChain[0] == 1);
             }
 
