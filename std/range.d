@@ -3811,47 +3811,51 @@ assert(a[].equal(iota(0, 7)));
 --------------------
   +/
 R drop(R)(R range, size_t n)
-    if(isInputRange!R)
+if (isInputRange!R)
 {
     range.popFrontN(n);
     return range;
 }
 /// ditto
 R dropBack(R)(R range, size_t n)
-    if(isBidirectionalRange!R)
+if (isBidirectionalRange!R)
 {
     range.popBackN(n);
     return range;
 }
 
 //Verify Examples
-unittest
+@safe pure unittest
 {
     assert([0, 2, 1, 5, 0, 3].drop(3) == [5, 0, 3]);
     assert("hello world".drop(6) == "world");
     assert("hello world".drop(50).empty);
     assert("hello world".take(6).drop(3).equal("lo "));
 }
-unittest
+
+@safe pure unittest
 {
     //Remove all but the first two elements
     auto a = DList!int(0, 1, 9, 9, 9, 9);
     a.remove(a[].drop(2));
     assert(a[].equal(a[].take(2)));
 }
-unittest
+
+@safe pure unittest
 {
     assert(drop("", 5).empty);
     assert(equal(drop(filter!"true"([0, 2, 1, 5, 0, 3]), 3), [5, 0, 3]));
 }
-unittest
+
+@safe pure unittest
 {
     assert([0, 2, 1, 5, 0, 3].dropBack(3) == [0, 2, 1]);
     assert("hello world".dropBack(6) == "hello");
     assert("hello world".dropBack(50).empty);
     assert("hello world".drop(4).dropBack(4).equal("o w"));
 }
-unittest
+
+@safe pure unittest
 {
     //insert before the last two elements
     auto a = DList!int(0, 1, 2, 5, 6);
@@ -3873,20 +3877,20 @@ unittest
     $(D n) elements.
 +/
 R dropExactly(R)(R range, size_t n)
-    if(isInputRange!R)
+if (isInputRange!R)
 {
     popFrontExactly(range, n);
     return range;
 }
 /// ditto
 R dropBackExactly(R)(R range, size_t n)
-    if(isBidirectionalRange!R)
+if (isBidirectionalRange!R)
 {
     popBackExactly(range, n);
     return range;
 }
 
-unittest
+@safe pure unittest
 {
     //RA+slicing
     auto a = [1, 2, 3];
@@ -3921,25 +3925,25 @@ assert(dl[].dropOne().dropBackOne().equal([1, 2, 3]));
 ----
 +/
 R dropOne(R)(R range)
-    if (isInputRange!R)
+if (isInputRange!R)
 {
     range.popFront();
     return range;
 }
 /// ditto
 R dropBackOne(R)(R range)
-    if (isBidirectionalRange!R)
+if (isBidirectionalRange!R)
 {
     range.popBack();
     return range;
 }
 
-unittest
+@safe pure unittest
 {
     auto dl = DList!int(9, 1, 2, 3, 9);
     assert(dl[].dropOne().dropBackOne().equal([1, 2, 3]));
 }
-unittest
+@safe pure unittest
 {
     //RA+slicing
     auto a = [1, 2, 3];
