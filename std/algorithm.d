@@ -880,10 +880,11 @@ template reduce(fun...) if (fun.length >= 1)
     }
 }
 
-unittest
+/*@safe pure */unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+
     double[] a = [ 3, 4 ];
     auto r = reduce!("a + b")(0.0, a);
     assert(r == 7);
@@ -945,10 +946,11 @@ unittest
     } catch(Exception) {}
 }
 
-unittest
+@safe pure unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+
     const float a = 0.0;
     const float[] b = [ 1.2, 3, 3.3 ];
     float[] c = [ 1.2, 3, 3.3 ];
@@ -956,7 +958,7 @@ unittest
     r = reduce!"a + b"(a, c);
 }
 
-unittest
+@safe pure unittest
 {
     // Issue #10408 - Two-function reduce of a const array.
     const numbers = [10, 30, 20];
