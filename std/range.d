@@ -2986,7 +2986,8 @@ assert(equal(radial(a), [ 2, 3, 1, 4 ]));
 auto radial(Range, I)(Range r, I startingIndex)
 if (isRandomAccessRange!(Unqual!Range) && hasLength!(Unqual!Range) && isIntegral!I)
 {
-    if (!r.empty) ++startingIndex;
+    if (!r.empty)
+        ++startingIndex;
     return roundRobin(retro(r[0 .. startingIndex]), r[startingIndex .. r.length]);
 }
 
@@ -2997,7 +2998,7 @@ if (isRandomAccessRange!(Unqual!R) && hasLength!(Unqual!R))
     return .radial(r, (r.length - !r.empty) / 2);
 }
 
-unittest
+@safe pure unittest
 {
     void test(int[] input, int[] witness)
     {
@@ -3017,7 +3018,7 @@ unittest
     static assert(isForwardRange!(typeof(radial(a, 1))));
 
     auto r = radial([1,2,3,4,5]);
-    for(auto rr = r.save; !rr.empty; rr.popFront())
+    for (auto rr = r.save; !rr.empty; rr.popFront())
     {
         assert(rr.front == moveFront(rr));
     }
@@ -3031,7 +3032,8 @@ unittest
     // immutable int[] immi = [ 1, 2 ];
     // static assert(is(typeof(radial(immi))));
 }
-unittest
+
+@safe pure unittest
 {
     auto LL = iota(1L, 6L);
     auto r = radial(LL);
