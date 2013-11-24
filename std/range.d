@@ -4264,9 +4264,9 @@ assert(equal(take(cycle([1, 2][]), 5), [ 1, 2, 1, 2, 1 ][]));
 Tip: This is a great way to implement simple circular buffers.
 */
 struct Cycle(Range)
-    if (isForwardRange!(Unqual!Range) && !isInfinite!(Unqual!Range))
+if (isForwardRange!(Unqual!Range) && !isInfinite!(Unqual!Range))
 {
-    alias Unqual!Range R;
+    alias R = Unqual!Range;
 
     static if (isRandomAccessRange!R && hasLength!R)
     {
@@ -4274,6 +4274,8 @@ struct Cycle(Range)
         size_t _index;
 
         this(R input, size_t index = 0) { _original = input; _index = index; }
+
+        enum bool empty = false;
 
         @property auto ref front()
         {
@@ -4297,9 +4299,12 @@ struct Cycle(Range)
             }
         }
 
-        enum bool empty = false;
-
         void popFront() { ++_index; }
+
+        @property Cycle save()
+        {
+            return Cycle(this._original.save, this._index);
+        }
 
         auto ref opIndex(size_t n)
         {
@@ -4321,11 +4326,6 @@ struct Cycle(Range)
             {
                 _original[(n + _index) % _original.length] = val;
             }
-        }
-
-        @property Cycle save()
-        {
-            return Cycle(this._original.save, this._index);
         }
 
         private static struct DollarToken {}
@@ -4353,6 +4353,8 @@ struct Cycle(Range)
 
         this(R input) { _original = input; _current = input.save; }
 
+        enum bool empty = false;
+
         @property auto ref front() { return _current.front; }
 
         static if (is(typeof((cast(const R)_current).front)))
@@ -4368,8 +4370,6 @@ struct Cycle(Range)
                 return _current.front = val;
             }
         }
-
-        enum bool empty = false;
 
         void popFront()
         {
@@ -4388,15 +4388,15 @@ struct Cycle(Range)
 }
 
 template Cycle(R)
-    if (isInfinite!R)
+if (isInfinite!R)
 {
-    alias R Cycle;
+    alias Cycle = R;
 }
 
 struct Cycle(R)
-    if (isStaticArray!R)
+if (isStaticArray!R)
 {
-    private alias typeof(R.init[0]) ElementType;
+    private alias ElementType = typeof(R.init[0]);
     private ElementType* _ptr;
     private size_t _index;
 
@@ -4406,30 +4406,23 @@ struct Cycle(R)
         _index = index;
     }
 
+    enum bool empty = false;
+
     @property auto ref inout(ElementType) front() inout
     {
         return _ptr[_index % R.length];
     }
 
-    enum bool empty = false;
-
     void popFront() { ++_index; }
-
-    ref inout(ElementType) opIndex(size_t n) inout
-    {
-        return _ptr[(n + _index) % R.length];
-    }
 
     @property Cycle save()
     {
         return this;
     }
 
-    private static struct DollarToken {}
-
-    DollarToken opDollar()
+    ref inout(ElementType) opIndex(size_t n) inout
     {
-        return DollarToken.init;
+        return _ptr[(n + _index) % R.length];
     }
 
     auto opSlice(size_t i, size_t j)
@@ -4446,41 +4439,49 @@ struct Cycle(R)
         retval._index += i;
         return retval;
     }
+
+    private static struct DollarToken {}
+
+    DollarToken opDollar()
+    {
+        return DollarToken.init;
+    }
 }
 
 /// Ditto
 Cycle!R cycle(R)(R input)
-    if (isForwardRange!(Unqual!R) && !isInfinite!(Unqual!R))
+if (isForwardRange!(Unqual!R) && !isInfinite!(Unqual!R))
 {
     return Cycle!R(input);
 }
 
 /// Ditto
 Cycle!R cycle(R)(R input, size_t index = 0)
-    if (isRandomAccessRange!(Unqual!R) && !isInfinite!(Unqual!R))
+if (isRandomAccessRange!(Unqual!R) && !isInfinite!(Unqual!R))
 {
     return Cycle!R(input, index);
 }
 
 Cycle!R cycle(R)(R input)
-    if (isInfinite!R)
+if (isInfinite!R)
 {
     return input;
 }
 
 Cycle!R cycle(R)(ref R input, size_t index = 0)
-    if (isStaticArray!R)
+if (isStaticArray!R)
 {
     return Cycle!R(input, index);
 }
 
-unittest
+/*@safe pure */unittest
 {
     assert(equal(take(cycle([1, 2][]), 5), [ 1, 2, 1, 2, 1 ][]));
     static assert(isForwardRange!(Cycle!(uint[])));
 
     int[3] a = [ 1, 2, 3 ];
     static assert(isStaticArray!(typeof(a)));
+
     auto c = cycle(a);
     assert(a.ptr == c._ptr);
     assert(equal(take(cycle(a), 5), [ 1, 2, 3, 1, 2 ][]));
@@ -4493,8 +4494,11 @@ unittest
     assert(nums[0] == 2);
 
     static assert(is(Cycle!(immutable int[])));
+}
 
-    foreach(DummyType; AllDummyRanges)
+/*@safe pure */unittest
+{
+    foreach (DummyType; AllDummyRanges)
     {
         static if (isForwardRange!DummyType)
         {
@@ -4529,7 +4533,7 @@ unittest
                 }
             }
 
-            static if(hasSlicing!DummyType)
+            static if (hasSlicing!DummyType)
             {
                 auto slice = cy[5 .. 15];
                 assert(equal(slice, [6, 7, 8, 9, 10, 1, 2, 3, 4, 5]));
@@ -4543,13 +4547,14 @@ unittest
     }
 }
 
-unittest // For infinite ranges
+@safe pure unittest // For infinite ranges
 {
     struct InfRange
     {
-        void popFront() { }
-        @property int front() { return 0; }
+      @safe pure:   // workaround
         enum empty = false;
+        @property int front() { return 0; }
+        void popFront() { }
     }
 
     InfRange i;
