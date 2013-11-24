@@ -2879,14 +2879,15 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
         {
             foreach (i, Unused; Rs)
             {
-                if (!source[i].empty) return false;
+                if (!source[i].empty)
+                    return false;
             }
             return true;
         }
 
         @property auto ref front()
         {
-            static string makeSwitch()
+            mixin(
             {
                 string result = "switch (_current) {\n";
                 foreach (i, R; Rs)
@@ -2896,14 +2897,12 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
                         "assert(!source["~si~"].empty); return source["~si~"].front;\n";
                 }
                 return result ~ "default: assert(0); }";
-            }
-
-            mixin(makeSwitch());
+            }());
         }
 
         void popFront()
         {
-            static string makeSwitchPopFront()
+            mixin(
             {
                 string result = "switch (_current) {\n";
                 foreach (i, R; Rs)
@@ -2912,9 +2911,9 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
                     result ~= "case "~si~": source["~si~"].popFront(); break;\n";
                 }
                 return result ~ "default: assert(0); }";
-            }
+            }());
 
-            static string makeSwitchIncrementCounter()
+            mixin(
             {
                 string result =
                     "auto next = _current == Rs.length - 1 ? 0 : _current + 1;\n"
@@ -2929,10 +2928,7 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
                         "goto case "~to!string((i + 1) % Rs.length)~";\n";
                 }
                 return result ~ "default: assert(0); }";
-            }
-
-            mixin(makeSwitchPopFront());
-            mixin(makeSwitchIncrementCounter());
+            }());
         }
 
         static if (allSatisfy!(isForwardRange, staticMap!(Unqual, Rs)))
@@ -2958,14 +2954,14 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
                 return result;
             }
 
-            alias length opDollar;
+            alias opDollar = length;
         }
     }
 
     return Result(rs, 0);
 }
 
-unittest
+@safe pure unittest
 {
     int[] a = [ 1, 2, 3 ];
     int[] b = [ 10, 20, 30, 40 ];
