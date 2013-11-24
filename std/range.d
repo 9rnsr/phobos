@@ -3993,7 +3993,7 @@ assert(a == [ ]);
 ----
 */
 size_t popFrontN(Range)(ref Range r, size_t n)
-    if (isInputRange!Range)
+if (isInputRange!Range)
 {
     static if (hasLength!Range)
         n = min(n, r.length);
@@ -4017,7 +4017,8 @@ size_t popFrontN(Range)(ref Range r, size_t n)
         {
             foreach (i; 0 .. n)
             {
-                if (r.empty) return i;
+                if (r.empty)
+                    return i;
                 r.popFront();
             }
         }
@@ -4026,7 +4027,7 @@ size_t popFrontN(Range)(ref Range r, size_t n)
 }
 /// ditto
 size_t popBackN(Range)(ref Range r, size_t n)
-    if (isBidirectionalRange!Range)
+if (isBidirectionalRange!Range)
 {
     static if (hasLength!Range)
         n = min(n, r.length);
@@ -4050,7 +4051,8 @@ size_t popBackN(Range)(ref Range r, size_t n)
         {
             foreach (i; 0 .. n)
             {
-                if (r.empty) return i;
+                if (r.empty)
+                    return i;
                 r.popBack();
             }
         }
@@ -4058,7 +4060,7 @@ size_t popBackN(Range)(ref Range r, size_t n)
     return n;
 }
 
-unittest
+@safe pure unittest
 {
     int[] a = [ 1, 2, 3, 4, 5 ];
     a.popFrontN(2);
@@ -4066,14 +4068,16 @@ unittest
     a.popFrontN(7);
     assert(a == [ ]);
 }
-unittest
+
+@safe pure unittest
 {
     auto LL = iota(1L, 7L);
     auto r = popFrontN(LL, 2);
     assert(equal(LL, [3L, 4L, 5L, 6L]));
     assert(r == 2);
 }
-unittest
+
+@safe pure unittest
 {
     int[] a = [ 1, 2, 3, 4, 5 ];
     a.popBackN(2);
@@ -4081,7 +4085,8 @@ unittest
     a.popBackN(7);
     assert(a == [ ]);
 }
-unittest
+
+@safe pure unittest
 {
     auto LL = iota(1L, 7L);
     auto r = popBackN(LL, 2);
@@ -4108,7 +4113,7 @@ unittest
     the back of the (bidirectional) range instead of the front.
 */
 void popFrontExactly(Range)(ref Range r, size_t n)
-    if (isInputRange!Range)
+if (isInputRange!Range)
 {
     static if (hasLength!Range)
         assert(n <= r.length, "range is smaller than amount of items to pop");
@@ -4123,7 +4128,7 @@ void popFrontExactly(Range)(ref Range r, size_t n)
 }
 /// ditto
 void popBackExactly(Range)(ref Range r, size_t n)
-    if (isBidirectionalRange!Range)
+if (isBidirectionalRange!Range)
 {
     static if (hasLength!Range)
         assert(n <= r.length, "range is smaller than amount of items to pop");
@@ -4137,7 +4142,7 @@ void popBackExactly(Range)(ref Range r, size_t n)
             r.popBack();
 }
 
-unittest
+@safe pure unittest
 {
     //RA+slicing
     auto a = [1, 2, 3];
