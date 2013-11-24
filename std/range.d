@@ -3060,14 +3060,14 @@ if (isInputRange!(Unqual!Range) &&
     //take for slicing infinite ranges.
     !((!isInfinite!(Unqual!Range) && hasSlicing!(Unqual!Range)) || is(Range T == Take!T)))
 {
-    private alias Unqual!Range R;
+    private alias R = Unqual!Range;
 
     // User accessible in read and write
     public R source;
 
     private size_t _maxAvailable;
 
-    alias R Source;
+    alias Source = R;
 
     @property bool empty()
     {
@@ -3134,25 +3134,25 @@ if (isInputRange!(Unqual!Range) &&
             return min(_maxAvailable, source.length);
         }
 
-        alias length opDollar;
+        alias opDollar = length;
     }
 
     static if (isRandomAccessRange!R)
     {
-        void popBack()
-        {
-            assert(!empty,
-                "Attempting to popBack() past the beginning of a "
-                ~ Take.stringof);
-            --_maxAvailable;
-        }
-
         @property auto ref back()
         {
             assert(!empty,
                 "Attempting to fetch the back of an empty "
                 ~ Take.stringof);
             return source[this.length - 1];
+        }
+
+        void popBack()
+        {
+            assert(!empty,
+                "Attempting to popBack() past the beginning of a "
+                ~ Take.stringof);
+            --_maxAvailable;
         }
 
         auto ref opIndex(size_t index)
@@ -3216,7 +3216,7 @@ template Take(R)
 if (isInputRange!(Unqual!R) &&
     ((!isInfinite!(Unqual!R) && hasSlicing!(Unqual!R)) || is(R T == Take!T)))
 {
-    alias R Take;
+    alias Take = R;
 }
 
 // take for finite ranges with slicing
@@ -3237,13 +3237,13 @@ if (is(R T == Take!T))
 }
 
 // Regular take for input ranges
-Take!(R) take(R)(R input, size_t n)
+Take!R take(R)(R input, size_t n)
 if (isInputRange!(Unqual!R) && (isInfinite!(Unqual!R) || !hasSlicing!(Unqual!R) && !is(R T == Take!T)))
 {
     return Take!R(input, n);
 }
 
-unittest
+@safe pure unittest
 {
     int[] arr1 = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
     auto s = take(arr1, 5);
@@ -3268,22 +3268,26 @@ unittest
     takeMyStrAgain = take(takeMyStr, 10);
     assert(equal(takeMyStrAgain, "This is"));
 
-    foreach(DummyType; AllDummyRanges) {
+    foreach (DummyType; AllDummyRanges)
+    {
         DummyType dummy;
         auto t = take(dummy, 5);
-        alias typeof(t) T;
+        alias T = typeof(t);
 
-        static if (isRandomAccessRange!DummyType) {
+        static if (isRandomAccessRange!DummyType)
+        {
             static assert(isRandomAccessRange!T);
             assert(t[4] == 5);
 
             assert(moveAt(t, 1) == t[1]);
             assert(t.back == moveBack(t));
-        } else static if (isForwardRange!DummyType) {
+        }
+        else static if (isForwardRange!DummyType)
+        {
             static assert(isForwardRange!T);
         }
 
-        for(auto tt = t; !tt.empty; tt.popFront())
+        for (auto tt = t; !tt.empty; tt.popFront())
         {
             assert(tt.front == moveFront(tt));
         }
@@ -3301,7 +3305,7 @@ unittest
     static assert(is(Take!(typeof(myRepeat))));
 }
 
-unittest
+@safe pure unittest
 {
     // Check that one can declare variables of all Take types,
     // and that they match the return type of the corresponding
