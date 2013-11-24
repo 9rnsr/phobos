@@ -3529,20 +3529,25 @@ auto takeOne(R)(R source) if (isInputRange!R)
         {
             private R _source;
             private bool _empty = true;
+
             @property bool empty() const { return _empty; }
             @property auto ref front() { assert(!empty); return _source.front; }
             void popFront() { assert(!empty); _empty = true; }
-            void popBack() { assert(!empty); _empty = true; }
+
             @property auto save() { return Result(_source.save, empty); }
+
             @property auto ref back() { assert(!empty); return _source.front; }
+            void popBack() { assert(!empty); _empty = true; }
+
             @property size_t length() const { return !empty; }
-            alias length opDollar;
+            alias opDollar = length;
             auto ref opIndex(size_t n) { assert(n < length); return _source.front; }
             auto opSlice(size_t m, size_t n)
             {
                 assert(m <= n && n < length);
                 return n > m ? this : Result(_source, false);
             }
+
             // Non-standard property
             @property R source() { return _source; }
         }
@@ -3551,17 +3556,19 @@ auto takeOne(R)(R source) if (isInputRange!R)
     }
 }
 
-unittest
+@safe pure unittest
 {
     auto s = takeOne([42, 43, 44]);
     static assert(isRandomAccessRange!(typeof(s)));
     assert(s.length == 1);
     assert(!s.empty);
     assert(s.front == 42);
+
     s.front = 43;
     assert(s.front == 43);
     assert(s.back == 43);
     assert(s[0] == 43);
+
     s.popFront();
     assert(s.length == 0);
     assert(s.empty);
@@ -3580,12 +3587,12 @@ assert(range.empty);
 --------------------
   +/
 auto takeNone(R)()
-    if(isInputRange!R)
+if (isInputRange!R)
 {
     return typeof(takeOne(R.init)).init;
 }
 
-unittest
+@safe pure unittest
 {
     auto range = takeNone!(int[])();
     assert(range.length == 0);
@@ -3601,48 +3608,46 @@ unittest
     Creates an empty range from the given range in $(BIGOH 1). If it can, it
     will return the same range type. If not, it will return
     $(D takeExactly(range, 0)).
-
-    Examples:
---------------------
-assert(takeNone([42, 27, 19]).empty);
-assert(takeNone("dlang.org").empty);
-assert(takeNone(filter!"true"([42, 27, 19])).empty);
---------------------
   +/
 auto takeNone(R)(R range)
-    if(isInputRange!R)
+if (isInputRange!R)
 {
     //Makes it so that calls to takeNone which don't use UFCS still work with a
     //member version if it's defined.
-    static if(is(typeof(R.takeNone)))
+    static if (is(typeof(R.takeNone)))
+    {
         auto retval = range.takeNone();
-    //@@@BUG@@@ 8339
-    else static if(isDynamicArray!R)/+ ||
-                   (is(R == struct) && __traits(compiles, {auto r = R.init;}) && R.init.empty))+/
+    }
+    //@@@BUG@@@ 8339 -> fixed?
+    else static if (isDynamicArray!R)/+ ||
+                    (is(R == struct) && __traits(compiles, {auto r = R.init;}) && R.init.empty))+/
     {
         auto retval = R.init;
     }
     //An infinite range sliced at [0 .. 0] would likely still not be empty...
-    else static if(hasSlicing!R && !isInfinite!R)
+    else static if (hasSlicing!R && !isInfinite!R)
+    {
         auto retval = range[0 .. 0];
+    }
     else
         auto retval = takeExactly(range, 0);
 
-    //@@@BUG@@@ 7892 prevents this from being done in an out block.
+    //@@@BUG@@@ 7892 prevents this from being done in an out block. -> fixed?
     assert(retval.empty);
     return retval;
 }
 
-//Verify Examples.
-unittest
+///
+@safe pure unittest
 {
     assert(takeNone([42, 27, 19]).empty);
     assert(takeNone("dlang.org").empty);
     assert(takeNone(filter!"true"([42, 27, 19])).empty);
 }
 
-unittest
+@safe pure unittest
 {
+    @safe pure  // workaround
     string genInput()
     {
         return "@property bool empty() { return _arr.empty; }" ~
@@ -3653,6 +3658,7 @@ unittest
 
     static struct NormalStruct
     {
+      @safe pure:  // workaround
         //Disabled to make sure that the takeExactly version is used.
         @disable this();
         this(int[] arr) { _arr = arr; }
@@ -3662,6 +3668,7 @@ unittest
 
     static struct SliceStruct
     {
+      @safe pure:  // workaround
         @disable this();
         this(int[] arr) { _arr = arr; }
         mixin(genInput());
@@ -3673,12 +3680,14 @@ unittest
 
     static struct InitStruct
     {
+      @safe pure:  // workaround
         mixin(genInput());
         int[] _arr;
     }
 
     static struct TakeNoneStruct
     {
+      @safe pure:  // workaround
         this(int[] arr) { _arr = arr; }
         @disable this();
         mixin(genInput());
@@ -3688,6 +3697,7 @@ unittest
 
     static class NormalClass
     {
+      @safe pure:  // workaround
         this(int[] arr) {_arr = arr;}
         mixin(genInput());
         int[] _arr;
@@ -3695,6 +3705,7 @@ unittest
 
     static class SliceClass
     {
+      @safe pure:  // workaround
         this(int[] arr) { _arr = arr; }
         mixin(genInput());
         @property auto save() { return new typeof(this)(_arr); }
@@ -3705,20 +3716,21 @@ unittest
 
     static class TakeNoneClass
     {
+      @safe pure:  // workaround
         this(int[] arr) { _arr = arr; }
         mixin(genInput());
         auto takeNone() { return new typeof(this)(null); }
         int[] _arr;
     }
 
-    foreach(range; TypeTuple!(`[1, 2, 3, 4, 5]`,
-                              `"hello world"`,
-                              `"hello world"w`,
-                              `"hello world"d`,
-                              `SliceStruct([1, 2, 3])`,
-                              //@@@BUG@@@ 8339 forces this to be takeExactly
-                              //`InitStruct([1, 2, 3])`,
-                              `TakeNoneStruct([1, 2, 3])`))
+    foreach (range; TypeTuple!(`[1, 2, 3, 4, 5]`,
+                               `"hello world"`,
+                               `"hello world"w`,
+                               `"hello world"d`,
+                               `SliceStruct([1, 2, 3])`,
+                               //@@@BUG@@@ 8339 forces this to be takeExactly
+                               //`InitStruct([1, 2, 3])`,
+                               `TakeNoneStruct([1, 2, 3])`))
     {
         mixin(format("enum a = takeNone(%s).empty;", range));
         assert(a, typeof(range).stringof);
@@ -3727,8 +3739,8 @@ unittest
                      range, range, range));
     }
 
-    foreach(range; TypeTuple!(`NormalStruct([1, 2, 3])`,
-                              `InitStruct([1, 2, 3])`))
+    foreach (range; TypeTuple!(`NormalStruct([1, 2, 3])`,
+                               `InitStruct([1, 2, 3])`))
     {
         mixin(format("enum a = takeNone(%s).empty;", range));
         assert(a, typeof(range).stringof);
