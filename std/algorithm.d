@@ -1933,7 +1933,7 @@ Preconditions:
 $(D !pointsTo(lhs, lhs) && !pointsTo(lhs, rhs) && !pointsTo(rhs, lhs)
 && !pointsTo(rhs, rhs))
 
-See_Also: 
+See_Also:
     $(XREF exception, pointsTo)
  */
 void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow
@@ -6161,7 +6161,7 @@ unittest
 Advances $(D seq) by calling $(D seq.popFront) until either $(D
 find!(pred)(choices, seq.front)) is $(D true), or $(D seq) becomes
 empty. Performs $(BIGOH seq.length * choices.length) evaluations of
-$(D pred). 
+$(D pred).
 
 Example:
 ----
@@ -6374,7 +6374,7 @@ Returns $(D true) if and only if the two ranges compare equal element
 for element, according to binary predicate $(D pred). The ranges may
 have different element types, as long as $(D pred(a, b)) evaluates to
 $(D bool) for $(D a) in $(D r1) and $(D b) in $(D r2). Performs
-$(BIGOH min(r1.length, r2.length)) evaluations of $(D pred). 
+$(BIGOH min(r1.length, r2.length)) evaluations of $(D pred).
 
 Example:
 ----
@@ -6429,7 +6429,7 @@ bool equal(alias pred, Range1, Range2)(Range1 r1, Range2 r2)
         //Good news is we can sqeeze out a bit of performance by not checking if r2 is empty
         for (; !r1.empty; r1.popFront(), r2.popFront())
         {
-            if (!binaryFun!(pred)(r1.front, r2.front)) return false;
+            if (!binaryFun!pred(r1.front, r2.front)) return false;
         }
         return true;
     }
@@ -6445,42 +6445,43 @@ bool equal(alias pred, Range1, Range2)(Range1 r1, Range2 r2)
     }
 }
 
-unittest
+@safe pure unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+
     int[] a = [ 1, 2, 4, 3];
     assert(!equal(a, a[1..$]));
-    assert(equal(a, a));
+    assert( equal(a, a));
     // test with different types
     double[] b = [ 1.0, 2, 4, 3];
     assert(!equal(a, b[1..$]));
-    assert(equal(a, b));
+    assert( equal(a, b));
 
     // predicated
     double[] c = [ 1.005, 2, 4, 3];
     assert(equal!(approxEqual)(b, c));
 
     // various strings
-    assert(equal("æøå", "æøå")); //UTF8 vs UTF8
-    assert(!equal("???", "æøå")); //UTF8 vs UTF8
-    assert(equal("æøå"w, "æøå"d)); //UTF16 vs UTF32
-    assert(!equal("???"w, "æøå"d));//UTF16 vs UTF32
-    assert(equal("æøå"d, "æøå"d)); //UTF32 vs UTF32
-    assert(!equal("???"d, "æøå"d));//UTF32 vs UTF32
+    assert( equal("æøå", "æøå"));   //UTF8 vs UTF8
+    assert(!equal("???", "æøå"));   //UTF8 vs UTF8
+    assert( equal("æøå"w, "æøå"d)); //UTF16 vs UTF32
+    assert(!equal("???"w, "æøå"d)); //UTF16 vs UTF32
+    assert( equal("æøå"d, "æøå"d)); //UTF32 vs UTF32
+    assert(!equal("???"d, "æøå"d)); //UTF32 vs UTF32
     assert(!equal("hello", "world"));
 
     // same strings, but "explicit non default" comparison (to test the non optimized array comparison)
-    assert( equal!("a==b")("æøå", "æøå")); //UTF8 vs UTF8
-    assert(!equal!("a==b")("???", "æøå")); //UTF8 vs UTF8
-    assert( equal!("a==b")("æøå"w, "æøå"d)); //UTF16 vs UTF32
-    assert(!equal!("a==b")("???"w, "æøå"d));//UTF16 vs UTF32
-    assert( equal!("a==b")("æøå"d, "æøå"d)); //UTF32 vs UTF32
-    assert(!equal!("a==b")("???"d, "æøå"d));//UTF32 vs UTF32
+    assert( equal!("a==b")("æøå", "æøå"));      //UTF8 vs UTF8
+    assert(!equal!("a==b")("???", "æøå"));      //UTF8 vs UTF8
+    assert( equal!("a==b")("æøå"w, "æøå"d));    //UTF16 vs UTF32
+    assert(!equal!("a==b")("???"w, "æøå"d));    //UTF16 vs UTF32
+    assert( equal!("a==b")("æøå"d, "æøå"d));    //UTF32 vs UTF32
+    assert(!equal!("a==b")("???"d, "æøå"d));    //UTF32 vs UTF32
     assert(!equal!("a==b")("hello", "world"));
 
     //Array of string
-    assert(equal(["hello", "world"], ["hello", "world"]));
+    assert( equal(["hello", "world"], ["hello", "world"]));
     assert(!equal(["hello", "world"], ["hello"]));
     assert(!equal(["hello", "world"], ["hello", "Bob!"]));
 
@@ -6490,15 +6491,15 @@ unittest
     equal!equal(["hello", "world"], ["hello"d, "world"d]);
 
     //Tests, with more fancy map ranges
-    assert(equal([2, 4, 8, 6], map!"a*2"(a)));
-    assert(equal!approxEqual(map!"a*2"(b), map!"a*2"(c)));
+    assert( equal([2, 4, 8, 6], map!"a*2"(a)));
+    assert( equal!approxEqual(map!"a*2"(b), map!"a*2"(c)));
     assert(!equal([2, 4, 1, 3], map!"a*2"(a)));
     assert(!equal([2, 4, 1], map!"a*2"(a)));
     assert(!equal!approxEqual(map!"a*3"(b), map!"a*2"(c)));
 
     //Tests with some fancy reference ranges.
-    ReferenceInputRange!int cir = new ReferenceInputRange!int([1, 2, 4, 3]);
-    ReferenceForwardRange!int cfr = new ReferenceForwardRange!int([1, 2, 4, 3]);
+    auto cir = new ReferenceInputRange!int([1, 2, 4, 3]);
+    auto cfr = new ReferenceForwardRange!int([1, 2, 4, 3]);
     assert(equal(cir, a));
     cir = new ReferenceInputRange!int([1, 2, 4, 3]);
     assert(equal(cir, cfr.save));
@@ -7075,7 +7076,7 @@ Sequentially compares elements in $(D r1) and $(D r2) in lockstep, and
 stops at the first mismatch (according to $(D pred), by default
 equality). Returns a tuple with the reduced ranges that start with the
 two mismatched values. Performs $(BIGOH min(r1.length, r2.length))
-evaluations of $(D pred). 
+evaluations of $(D pred).
 
 Example:
 ----
@@ -7387,7 +7388,7 @@ assert(b[0 .. $ - c.length] == [ 1, 5, 9, 1 ]);
 $(XREF range, retro) can be used to achieve behavior similar to
 $(WEB sgi.com/tech/stl/copy_backward.html, STL's copy_backward').
 
-Example: 
+Example:
 ----
 import std.algorithm, std.range;
 int[] src = [1, 2, 4];
@@ -8751,7 +8752,7 @@ and all elements $(D e2) from $(D r[nth]) to $(D r[r.length]) satisfy
 $(D !less(e2, r[nth])). Effectively, it finds the nth smallest
 (according to $(D less)) elements in $(D r). Performs an expected
 $(BIGOH r.length) (if unstable) or $(BIGOH r.length * log(r.length))
-(if stable) evaluations of $(D less) and $(D swap). 
+(if stable) evaluations of $(D less) and $(D swap).
 
 If $(D n >= r.length), the algorithm has no effect.
 
