@@ -1000,10 +1000,11 @@ void fill(Range, Value)(Range range, Value filler)
     }
 }
 
-unittest
+@safe pure unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+
     int[] a = [ 1, 2, 3 ];
     fill(a, 6);
     assert(a == [ 6, 6, 6 ], text(a));
@@ -1025,18 +1026,22 @@ unittest
     foreach (value; range.arr)
         assert(value == filler);
 }
-unittest
+
+@safe pure unittest
 {
     //ER8638_1 IS_NOT self assignable
     static struct ER8638_1
     {
+        @safe pure  // workaround
         void opAssign(int){}
     }
 
     //ER8638_1 IS self assignable
     static struct ER8638_2
     {
+        @safe pure  // workaround
         void opAssign(ER8638_2){}
+        @safe pure  // workaround
         void opAssign(int){}
     }
 
@@ -1045,7 +1050,8 @@ unittest
     er8638_1.fill(5); //generic case
     er8638_2.fill(5); //opSlice(T.init) case
 }
-unittest
+
+@safe pure unittest
 {
     {
         int[] a = [1, 2, 3];
@@ -1139,10 +1145,11 @@ void fill(Range1, Range2)(Range1 range, Range2 filler)
     }
 }
 
-unittest
+/*@safe pure */unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+
     int[] a = [ 1, 2, 3, 4, 5 ];
     int[] b = [1, 2];
     fill(a, b);
@@ -1164,7 +1171,6 @@ unittest
 
     //empty filler test
     assertThrown(fill(a, a[$..$]));
-
 }
 
 /**
