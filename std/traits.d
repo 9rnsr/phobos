@@ -269,10 +269,10 @@ package
     // Get qualifier template from the given type T
     template QualifierOf(T)
     {
-             static if (is(T == shared(const U), U)) alias QualifierOf = SharedConstOf;
-        else static if (is(T ==        const U , U)) alias QualifierOf = ConstOf;
-        else static if (is(T == shared(inout U), U)) alias QualifierOf = SharedInoutOf;
+             static if (is(T == shared(inout U), U)) alias QualifierOf = SharedInoutOf;
         else static if (is(T ==        inout U , U)) alias QualifierOf = InoutOf;
+        else static if (is(T == shared(const U), U)) alias QualifierOf = SharedConstOf;
+        else static if (is(T ==        const U , U)) alias QualifierOf = ConstOf;
         else static if (is(T ==    immutable U , U)) alias QualifierOf = ImmutableOf;
         else static if (is(T ==       shared U , U)) alias QualifierOf = SharedOf;
         else                                         alias QualifierOf = MutableOf;
@@ -4525,7 +4525,7 @@ template StaticArrayTypeOf(T)
 unittest
 {
     foreach (T; TypeTuple!(bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList))
-        foreach (Q; TypeTuple!(TypeQualifierList, InoutOf, SharedInoutOf))
+        foreach (Q; TypeTuple!(TypeQualifierList/*, InoutOf, SharedInoutOf*/))
         {
             static assert(is( Q!(   T[1] ) == StaticArrayTypeOf!( Q!(              T[1]  ) ) ));
 
@@ -4562,7 +4562,7 @@ template DynamicArrayTypeOf(T)
 unittest
 {
     foreach (T; TypeTuple!(/*void, */bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList))
-        foreach (Q; TypeTuple!(TypeQualifierList, InoutOf, SharedInoutOf))
+        foreach (Q; TypeTuple!(TypeQualifierList/*, InoutOf, SharedInoutOf*/))
         {
             static assert(is( Q!T[]  == DynamicArrayTypeOf!( Q!T[] ) ));
             static assert(is( Q!(T[])  == DynamicArrayTypeOf!( Q!(T[]) ) ));
@@ -4670,7 +4670,7 @@ unittest
                 }
 
     foreach (T; TypeTuple!(int/*bool, CharTypeList, NumericTypeList, ImaginaryTypeList, ComplexTypeList*/))
-        foreach (O; TypeTuple!(TypeQualifierList, InoutOf, SharedInoutOf))
+        foreach (O; TypeTuple!(TypeQualifierList/*, InoutOf, SharedInoutOf*/))
             foreach (P; TypeTuple!TypeQualifierList)
                 foreach (Q; TypeTuple!TypeQualifierList)
                     foreach (R; TypeTuple!TypeQualifierList)
