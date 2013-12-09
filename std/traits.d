@@ -4347,7 +4347,7 @@ unittest
             static assert(!isBoolean!( Sub!(Q!T) ));
         }
 
-        foreach (T; TypeTuple!(void, NumericTypeList, ImaginaryTypeList, ComplexTypeList, CharTypeList))
+        foreach (T; TypeTuple!(NumericTypeList, ImaginaryTypeList, ComplexTypeList, CharTypeList))
         {
             static assert(!is(BooleanTypeOf!(      Q!T  )));
             static assert(!is(BooleanTypeOf!( Sub!(Q!T) )));
@@ -4393,7 +4393,7 @@ unittest
             static assert(!isIntegral!( Sub!(Q!T) ));
         }
 
-        foreach (T; TypeTuple!(void, bool, FloatingPointTypeList, ImaginaryTypeList, ComplexTypeList, CharTypeList))
+        foreach (T; TypeTuple!(bool, FloatingPointTypeList, ImaginaryTypeList, ComplexTypeList, CharTypeList))
         {
             static assert(!is(IntegralTypeOf!(      Q!T  )));
             static assert(!is(IntegralTypeOf!( Sub!(Q!T) )));
@@ -4438,7 +4438,7 @@ unittest
             static assert(!isFloatingPoint!( Sub!(Q!T) ));
         }
 
-        foreach (T; TypeTuple!(void, bool, IntegralTypeList, ImaginaryTypeList, ComplexTypeList, CharTypeList))
+        foreach (T; TypeTuple!(bool, IntegralTypeList, ImaginaryTypeList, ComplexTypeList, CharTypeList))
         {
             static assert(!is(FloatingPointTypeOf!(      Q!T  )));
             static assert(!is(FloatingPointTypeOf!( Sub!(Q!T) )));
@@ -4476,7 +4476,7 @@ unittest
             static assert(!isNumeric!( Sub!(Q!T) ));
         }
 
-        foreach (T; TypeTuple!(void, bool, CharTypeList, ImaginaryTypeList, ComplexTypeList))
+        foreach (T; TypeTuple!(bool, CharTypeList, ImaginaryTypeList, ComplexTypeList))
         {
             static assert(!is(NumericTypeOf!(      Q!T  )));
             static assert(!is(NumericTypeOf!( Sub!(Q!T) )));
@@ -4586,7 +4586,7 @@ unittest
             static assert(!isSomeChar!( Sub!(Q!T) ));
         }
 
-        foreach (T; TypeTuple!(void, bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList,
+        foreach (T; TypeTuple!(bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList,
                 string, wstring, dstring, char[4]))
         {
             static assert(!is(CharTypeOf!(      Q!T  )));
@@ -4635,8 +4635,8 @@ unittest
 
         foreach (T; TypeTuple!(const(int)[], immutable(int)[], const(int)[4][], int[], int[1][], int[int], int))
         {
-            static assert(!is(StaticArrayTypeOf!(      Q!T[1]  )));
-            static assert(!is(StaticArrayTypeOf!( Sub!(Q!T[1]) )));
+            static assert(!is(StaticArrayTypeOf!(      Q!T  )));
+            static assert(!is(StaticArrayTypeOf!( Sub!(Q!T) )));
 
             static assert(!isStaticArray!(      Q!T  ));
             static assert(!isStaticArray!( Sub!(Q!T) ));
