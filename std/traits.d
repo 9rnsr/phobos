@@ -4299,9 +4299,12 @@ unittest
 // SomethingTypeOf
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
+/*
+ */
 template AliasThisTypeOf(T) if (isAggregateType!T)
 {
     alias members = TypeTuple!(__traits(getAliasThis, T));
+
     static if (members.length == 1)
     {
         alias AliasThisTypeOf = typeof(__traits(getMember, T.init, members[0]));
@@ -4331,18 +4334,26 @@ unittest
 {
     alias Sub = SubTypeOf;
 
-    foreach (Q; TypeQualifierList)
+    enum EB : bool { a = true }
+
+    foreach (Q; TypeTuple!(TypeQualifierList))
     {
-        foreach (T; TypeTuple!bool)
+        foreach (T; TypeTuple!(bool, EB))
         {
-            static assert( is(BooleanTypeOf!(      Q!T  ) == Q!T));
-            static assert( is(BooleanTypeOf!( Sub!(Q!T) ) == Q!T));
+            static assert( is(BooleanTypeOf!(      Q!T  ) == Q!(OriginalType!T)));
+            static assert( is(BooleanTypeOf!( Sub!(Q!T) ) == Q!(OriginalType!T)));
+
+            static assert( isBoolean!(      Q!T  ));
+            static assert(!isBoolean!( Sub!(Q!T) ));
         }
 
         foreach (T; TypeTuple!(void, NumericTypeList, ImaginaryTypeList, ComplexTypeList, CharTypeList))
         {
             static assert(!is(BooleanTypeOf!(      Q!T  )));
             static assert(!is(BooleanTypeOf!( Sub!(Q!T) )));
+
+            static assert(!isBoolean!(      Q!T  ));
+            static assert(!isBoolean!( Sub!(Q!T) ));
         }
     }
 }
@@ -4368,18 +4379,27 @@ unittest
 {
     alias Sub = SubTypeOf;
 
-    foreach (Q; TypeQualifierList)
+    enum EU : uint { a = 0, b = 1, c = 2 }  // base type is unsigned
+    enum EI : int { a = -1, b = 0, c = 1 }  // base type is signed (bug 7909)
+
+    foreach (Q; TypeTuple!(TypeQualifierList))
     {
-        foreach (T; IntegralTypeList)
+        foreach (T; TypeTuple!(IntegralTypeList, EU, EI))
         {
-            static assert( is(IntegralTypeOf!(      Q!T  ) == Q!T));
-            static assert( is(IntegralTypeOf!( Sub!(Q!T) ) == Q!T));
+            static assert( is(IntegralTypeOf!(      Q!T  ) == Q!(OriginalType!T)));
+            static assert( is(IntegralTypeOf!( Sub!(Q!T) ) == Q!(OriginalType!T)));
+
+            static assert( isIntegral!(      Q!T  ));
+            static assert(!isIntegral!( Sub!(Q!T) ));
         }
 
         foreach (T; TypeTuple!(void, bool, FloatingPointTypeList, ImaginaryTypeList, ComplexTypeList, CharTypeList))
         {
             static assert(!is(IntegralTypeOf!(      Q!T  )));
             static assert(!is(IntegralTypeOf!( Sub!(Q!T) )));
+
+            static assert(!isIntegral!(      Q!T  ));
+            static assert(!isIntegral!( Sub!(Q!T) ));
         }
     }
 }
@@ -4405,18 +4425,26 @@ unittest
 {
     alias Sub = SubTypeOf;
 
-    foreach (Q; TypeQualifierList)
+    enum EF : real { a = 1.414, b = 1.732, c = 2.236 }
+
+    foreach (Q; TypeTuple!(TypeQualifierList))
     {
-        foreach (T; FloatingPointTypeList)
+        foreach (T; TypeTuple!(FloatingPointTypeList, EF))
         {
-            static assert( is(FloatingPointTypeOf!(      Q!T  ) == Q!T));
-            static assert( is(FloatingPointTypeOf!( Sub!(Q!T) ) == Q!T));
+            static assert( is(FloatingPointTypeOf!(      Q!T  ) == Q!(OriginalType!T)));
+            static assert( is(FloatingPointTypeOf!( Sub!(Q!T) ) == Q!(OriginalType!T)));
+
+            static assert( isFloatingPoint!(      Q!T  ));
+            static assert(!isFloatingPoint!( Sub!(Q!T) ));
         }
 
         foreach (T; TypeTuple!(void, bool, IntegralTypeList, ImaginaryTypeList, ComplexTypeList, CharTypeList))
         {
             static assert(!is(FloatingPointTypeOf!(      Q!T  )));
             static assert(!is(FloatingPointTypeOf!( Sub!(Q!T) )));
+
+            static assert(!isFloatingPoint!(      Q!T  ));
+            static assert(!isFloatingPoint!( Sub!(Q!T) ));
         }
     }
 }
@@ -4425,10 +4453,10 @@ unittest
  */
 template NumericTypeOf(T)
 {
-    static if (is(IntegralTypeOf!T X))
+    static if (is(IntegralTypeOf!T X) || is(FloatingPointTypeOf!T X))
+    {
         alias NumericTypeOf = X;
-    else static if (is(FloatingPointTypeOf!T X))
-        alias NumericTypeOf = X;
+    }
     else
         static assert(0, T.stringof~" is not a numeric type");
 }
@@ -4441,14 +4469,20 @@ unittest
     {
         foreach (T; NumericTypeList)
         {
-            static assert( is(NumericTypeOf!(      Q!T  ) == Q!T));
-            static assert( is(NumericTypeOf!( Sub!(Q!T) ) == Q!T));
+            static assert( is(NumericTypeOf!(      Q!T  ) == Q!(OriginalType!T)));
+            static assert( is(NumericTypeOf!( Sub!(Q!T) ) == Q!(OriginalType!T)));
+
+            static assert( isNumeric!(      Q!T  ));
+            static assert(!isNumeric!( Sub!(Q!T) ));
         }
 
         foreach (T; TypeTuple!(void, bool, CharTypeList, ImaginaryTypeList, ComplexTypeList))
         {
             static assert(!is(NumericTypeOf!(      Q!T  )));
             static assert(!is(NumericTypeOf!( Sub!(Q!T) )));
+
+            static assert(!isNumeric!(      Q!T  ));
+            static assert(!isNumeric!( Sub!(Q!T) ));
         }
     }
 }
@@ -4477,6 +4511,47 @@ template SignedTypeOf(T)
         static assert(0, T.stringof~" is not an signed type.");
 }
 
+unittest
+{
+    alias Sub = SubTypeOf;
+
+    enum EU : uint { a = 0, b = 1, c = 2 }  // base type is unsigned
+    enum EI : int { a = -1, b = 0, c = 1 }  // base type is signed (bug 7909)
+
+    foreach (Q; TypeTuple!(TypeQualifierList))
+    {
+        foreach (T; TypeTuple!(UnsignedIntTypeList, EU))
+        {
+            static assert( is(UnsignedTypeOf!(      Q!T  ) == Q!(OriginalType!T)));
+            static assert( is(UnsignedTypeOf!( Sub!(Q!T) ) == Q!(OriginalType!T)));
+
+            static assert(!is(SignedTypeOf!(      Q!T  )));
+            static assert(!is(SignedTypeOf!( Sub!(Q!T) )));
+
+            static assert( isUnsigned!(      Q!T  ));
+            static assert(!isUnsigned!( Sub!(Q!T) ));
+
+            static assert(!isSigned!(      Q!T  ));
+            static assert(!isSigned!( Sub!(Q!T) ));
+        }
+
+        foreach (T; TypeTuple!(SignedIntTypeList, EI))
+        {
+            static assert(!is(UnsignedTypeOf!(      Q!T  )));
+            static assert(!is(UnsignedTypeOf!( Sub!(Q!T) )));
+
+            static assert( is(SignedTypeOf!(      Q!T  ) == Q!(OriginalType!T)));
+            static assert( is(SignedTypeOf!( Sub!(Q!T) ) == Q!(OriginalType!T)));
+
+            static assert(!isUnsigned!(      Q!T  ));
+            static assert(!isUnsigned!( Sub!(Q!T) ));
+
+            static assert( isSigned!(      Q!T  ));
+            static assert(!isSigned!( Sub!(Q!T) ));
+        }
+    }
+}
+
 /*
  */
 template CharTypeOf(T)
@@ -4498,12 +4573,17 @@ unittest
 {
     alias Sub = SubTypeOf;
 
-    foreach (Q; TypeQualifierList)
+    enum EC : char { a = 'x', b = 'y' }
+
+    foreach (Q; TypeTuple!(TypeQualifierList))
     {
-        foreach (T; CharTypeList)
+        foreach (T; TypeTuple!(CharTypeList, EC))
         {
-            static assert( is(CharTypeOf!(      Q!T  )));
-            static assert( is(CharTypeOf!( Sub!(Q!T) )));
+            static assert( is(CharTypeOf!(      Q!T  ) == Q!(OriginalType!T)));
+            static assert( is(CharTypeOf!( Sub!(Q!T) ) == Q!(OriginalType!T)));
+
+            static assert( isSomeChar!(      Q!T  ));
+            static assert(!isSomeChar!( Sub!(Q!T) ));
         }
 
         foreach (T; TypeTuple!(void, bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList,
@@ -4511,6 +4591,9 @@ unittest
         {
             static assert(!is(CharTypeOf!(      Q!T  )));
             static assert(!is(CharTypeOf!( Sub!(Q!T) )));
+
+            static assert(!isSomeChar!(      Q!T  ));
+            static assert(!isSomeChar!( Sub!(Q!T) ));
         }
     }
 }
@@ -4534,19 +4617,34 @@ unittest
 {
     alias Sub = SubTypeOf;
 
-    foreach (Q; TypeQualifierList)
+    foreach (Q; TypeTuple!(TypeQualifierList))
     {
-        foreach (T; TypeTuple!(void, bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList))
+        foreach (E; TypeTuple!(void, int, int[], char[][int], char, real, real[1]))
         {
-            static assert( is(StaticArrayTypeOf!(      Q!T[1]  ) == Q!T[1]));
-            static assert( is(StaticArrayTypeOf!( Sub!(Q!T[1]) ) == Q!T[1]));
+            static assert( is(StaticArrayTypeOf!(      Q!E[1]  ) == Q!E[1]));
+            static assert( is(StaticArrayTypeOf!( Sub!(Q!E[1]) ) == Q!E[1]));
 
-            foreach (P; TypeQualifierList)
+            foreach (P; TypeTuple!(TypeQualifierList))
             {
-                static assert( is(StaticArrayTypeOf!( P!(Sub!(Q!T[1])) ) == P!(Q!T[1])));
+                static assert( is(StaticArrayTypeOf!( P!(Sub!(Q!E[1])) ) == P!(Q!E[1])));
             }
+
+            static assert( isStaticArray!(      Q!E[1]  ));
+            static assert(!isStaticArray!( Sub!(Q!E[1]) ));
+        }
+
+        foreach (T; TypeTuple!(const(int)[], immutable(int)[], const(int)[4][], int[], int[1][], int[int], int))
+        {
+            static assert(!is(StaticArrayTypeOf!(      Q!T[1]  )));
+            static assert(!is(StaticArrayTypeOf!( Sub!(Q!T[1]) )));
+
+            static assert(!isStaticArray!(      Q!T  ));
+            static assert(!isStaticArray!( Sub!(Q!T) ));
         }
     }
+
+    //enum ESA : int[1] { a = [1], b = [2] }
+    //static assert( isStaticArray!ESA);
 }
 
 /*
@@ -4570,44 +4668,39 @@ unittest
 {
     alias Sub = SubTypeOf;
 
-    foreach (Q; TypeQualifierList)
+    foreach (Q; TypeTuple!(TypeQualifierList))
     {
-        foreach (T; TypeTuple!(void, bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList))
+        foreach (P; TypeTuple!(MutableOf, ConstOf, ImmutableOf))
         {
-            static assert(is( DynamicArrayTypeOf!( Q!(T)[] ) == Q!(T)[]));
-            static assert(is( DynamicArrayTypeOf!( Q!(T[]) ) == Q!(T[])));
-
-            foreach (P; TypeTuple!(MutableOf, ConstOf, ImmutableOf))
+            foreach (E; TypeTuple!(void, bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList))
             {
-                static assert(is(DynamicArrayTypeOf!( Q!(Sub!(P!(T)[])) ) == Q!(P!(T)[])));
-                static assert(is(DynamicArrayTypeOf!( Q!(Sub!(P!(T[]))) ) == Q!(P!(T[]))));
+                static assert( is(DynamicArrayTypeOf!( Q!(     P!(E)[] ) ) == Q!(P!(E)[])));
+                static assert( is(DynamicArrayTypeOf!( Q!(     P!(E[]) ) ) == Q!(P!(E[]))));
+
+                static assert( is(DynamicArrayTypeOf!( Q!(Sub!(P!(E)[])) ) == Q!(P!(E)[])));
+                static assert( is(DynamicArrayTypeOf!( Q!(Sub!(P!(E[]))) ) == Q!(P!(E[]))));
+            }
+
+            foreach (T; TypeTuple!(int, double, char, P!(int)[2], P!(int)[][3], P!(int)[int]))
+            {
+                static assert(!is(DynamicArrayTypeOf!( Q!T )));
+
+                static assert(!isDynamicArray!( Q!T ));
             }
         }
     }
-
-    static assert(!is(DynamicArrayTypeOf!(int[3])));
-    static assert(!is(DynamicArrayTypeOf!(void[3])));
-    static assert(!is(DynamicArrayTypeOf!(typeof(null))));
 }
 
 /*
  */
 template ArrayTypeOf(T)
 {
-    static if (is(StaticArrayTypeOf!T X))
-    {
-        alias ArrayTypeOf = X;
-    }
-    else static if (is(DynamicArrayTypeOf!T X))
+    static if (is(StaticArrayTypeOf!T X) || is(DynamicArrayTypeOf!T X))
     {
         alias ArrayTypeOf = X;
     }
     else
         static assert(0, T.stringof~" is not an array type");
-}
-
-unittest
-{
 }
 
 /*
@@ -4716,14 +4809,6 @@ template isBoolean(T)
     enum bool isBoolean = is(BooleanTypeOf!T) && !isAggregateType!T;
 }
 
-unittest
-{
-    static assert( isBoolean!bool);
-    enum EB : bool { a = true }
-    static assert( isBoolean!EB);
-    static assert(!isBoolean!(SubTypeOf!bool));
-}
-
 /**
  * Detect whether $(D T) is a built-in integral type. Types $(D bool),
  * $(D char), $(D wchar), and $(D dchar) are not considered integral.
@@ -4731,25 +4816,6 @@ unittest
 template isIntegral(T)
 {
     enum bool isIntegral = is(IntegralTypeOf!T) && !isAggregateType!T;
-}
-
-unittest
-{
-    foreach (T; IntegralTypeList)
-    {
-        foreach (Q; TypeQualifierList)
-        {
-            static assert( isIntegral!(Q!T));
-            static assert(!isIntegral!(SubTypeOf!(Q!T)));
-        }
-    }
-
-    static assert(!isIntegral!float);
-
-    enum EU : uint { a = 0, b = 1, c = 2 }  // base type is unsigned
-    enum EI : int { a = -1, b = 0, c = 1 }  // base type is signed (bug 7909)
-    static assert(isIntegral!EU &&  isUnsigned!EU && !isSigned!EU);
-    static assert(isIntegral!EI && !isUnsigned!EI &&  isSigned!EI);
 }
 
 /**
@@ -4760,27 +4826,6 @@ template isFloatingPoint(T)
     enum bool isFloatingPoint = is(FloatingPointTypeOf!T) && !isAggregateType!T;
 }
 
-unittest
-{
-    enum EF : real { a = 1.414, b = 1.732, c = 2.236 }
-
-    foreach (T; TypeTuple!(FloatingPointTypeList, EF))
-    {
-        foreach (Q; TypeQualifierList)
-        {
-            static assert( isFloatingPoint!(Q!T));
-            static assert(!isFloatingPoint!(SubTypeOf!(Q!T)));
-        }
-    }
-    foreach (T; IntegralTypeList)
-    {
-        foreach (Q; TypeQualifierList)
-        {
-            static assert(!isFloatingPoint!(Q!T));
-        }
-    }
-}
-
 /**
 Detect whether $(D T) is a built-in numeric type (integral or floating
 point).
@@ -4788,18 +4833,6 @@ point).
 template isNumeric(T)
 {
     enum bool isNumeric = is(NumericTypeOf!T) && !isAggregateType!T;
-}
-
-unittest
-{
-    foreach (T; TypeTuple!(NumericTypeList))
-    {
-        foreach (Q; TypeQualifierList)
-        {
-            static assert( isNumeric!(Q!T));
-            static assert(!isNumeric!(SubTypeOf!(Q!T)));
-        }
-    }
 }
 
 /**
@@ -4844,18 +4877,6 @@ template isUnsigned(T)
     enum bool isUnsigned = is(UnsignedTypeOf!T) && !isAggregateType!T;
 }
 
-unittest
-{
-    foreach (T; TypeTuple!(UnsignedIntTypeList))
-    {
-        foreach (Q; TypeQualifierList)
-        {
-            static assert( isUnsigned!(Q!T));
-            static assert(!isUnsigned!(SubTypeOf!(Q!T)));
-        }
-    }
-}
-
 /**
 Detect whether $(D T) is a built-in signed numeric type.
  */
@@ -4882,27 +4903,6 @@ Detect whether $(D T) is one of the built-in character types.
 template isSomeChar(T)
 {
     enum isSomeChar = is(CharTypeOf!T) && !isAggregateType!T;
-}
-
-unittest
-{
-    enum EC : char { a = 'x', b = 'y' }
-
-    foreach (T; TypeTuple!(CharTypeList, EC))
-    {
-        foreach (Q; TypeQualifierList)
-        {
-            static assert( isSomeChar!(            Q!T  ));
-            static assert(!isSomeChar!( SubTypeOf!(Q!T) ));
-        }
-    }
-
-    static assert(!isSomeChar!int);
-    static assert(!isSomeChar!byte);
-    static assert(!isSomeChar!string);
-    static assert(!isSomeChar!wstring);
-    static assert(!isSomeChar!dstring);
-    static assert(!isSomeChar!(char[4]));
 }
 
 /**
