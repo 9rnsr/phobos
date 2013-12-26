@@ -80,12 +80,7 @@
  */
 module std.csv;
 
-import std.algorithm;
-import std.array;
-import std.conv;
-import std.exception;
 import std.range;
-import std.string;
 import std.traits;
 
 /**
@@ -124,7 +119,10 @@ class CSVException : Exception
         this.col = col;
     }
 
-    override string toString() {
+    override string toString()
+    {
+        import std.conv : to;
+
         return "(Row: " ~ to!string(row) ~
               ", Col: " ~ to!string(col) ~ ") " ~ msg;
     }
@@ -452,6 +450,8 @@ unittest
 // Test shorter row length exception
 unittest
 {
+    import std.exception : assertThrown;
+
     struct A
     {
         string a,b,c;
@@ -505,6 +505,8 @@ unittest
 // Test input conversion interface
 unittest
 {
+    import std.algorithm : equal;
+
     string str = `76,26,22`;
     int[] ans = [76,26,22];
     auto records = csvReader!int(str);
@@ -551,6 +553,8 @@ unittest
 // Test header interface
 unittest
 {
+    import std.algorithm : equal;
+
     string str = "a,b,c\nHello,65,63.63\nWorld,123,3673.562";
     auto records = csvReader!int(str, ["b"]);
 
@@ -859,9 +863,13 @@ public:
         {
             immutable index = colToIndex[h];
             static if(ErrorLevel != Malformed.ignore)
+            {
+                import std.conv : to;
+
                 if(index == size_t.max)
                     throw new HeaderMismatchException
                         ("Header not found: " ~ to!string(h));
+            }
             indices[i++] = index;
         }
 
@@ -869,14 +877,20 @@ public:
         {
             static if(is(Contents T : T[U], U : string))
             {
+                import std.algorithm : sort;
+
                 sort(indices);
             }
             else static if(ErrorLevel == Malformed.ignore)
             {
+                import std.algorithm : sort;
+
                 sort(indices);
             }
             else
             {
+                import std.algorithm : isSorted, findAdjacent;
+
                 if(!isSorted(indices))
                 {
                     auto ex = new HeaderMismatchException
@@ -977,6 +991,8 @@ public:
 
     private void prime()
     {
+        import std.conv : to, ConvException, skipWS;
+
         if(_empty)
             return;
         _input.row++;
@@ -1056,6 +1072,8 @@ public:
 
 unittest
 {
+    import std.algorithm : equal;
+
     string str = `76;^26^;22`;
     int[] ans = [76,26,22];
     auto records = CsvReader!(int,Malformed.ignore,string,char,string[])
@@ -1175,21 +1193,29 @@ public:
         {
             _empty = true;
             static if(ErrorLevel == Malformed.throwException)
+            {
+                import std.string : format;
+
                 if(_input.rowLength != 0)
                     if(_input.col != _input.rowLength)
                         throw new CSVException(
                            format("Row %s's length %s does not match "
                                   "previous length of %s.", _input.row,
                                   _input.col, _input.rowLength));
+            }
             return;
         } else {
             static if(ErrorLevel == Malformed.throwException)
+            {
+                import std.string : format;
+
                 if(_input.rowLength != 0)
                     if(_input.col > _input.rowLength)
                         throw new CSVException(
                            format("Row %s's length %s does not match "
                                   "previous length of %s.", _input.row,
                                   _input.col, _input.rowLength));
+            }
         }
 
         // Separator is left on the end of input from the last call.
@@ -1208,6 +1234,8 @@ public:
      */
     private void prime(size_t skipNum)
     {
+        import std.conv : ConvException;
+
         foreach(i; 0..skipNum)
         {
             _input.col++;
@@ -1234,6 +1262,8 @@ public:
 
     private void prime()
     {
+        import std.conv : to, ConvException, skipWS;
+
         try
         {
             _input.col++;
