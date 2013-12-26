@@ -14,8 +14,8 @@
 */
 module std.complex;
 
-
-import std.format, std.math, std.numeric, std.traits;
+import std.math;
+import std.traits;
 
 
 /** Helper function that returns a _complex number with the specified
@@ -104,6 +104,9 @@ unittest
 */
 struct Complex(T)  if (isFloatingPoint!T)
 {
+    import std.format : FormatSpec, formatValue, formattedWrite;
+    import std.numeric : FPTemporary;
+
     /** The real part of the number. */
     T re;
 
@@ -122,6 +125,7 @@ struct Complex(T)  if (isFloatingPoint!T)
     string toString() const /* TODO: pure @safe nothrow */
     {
         import std.exception : assumeUnique;
+
         char[] buf;
         buf.reserve(100);
         auto fmt = FormatSpec!char("%s");
@@ -133,6 +137,8 @@ struct Complex(T)  if (isFloatingPoint!T)
     ///
     unittest
     {
+        import std.string : format;
+
         auto c = complex(1.2, 3.4);
 
         // Vanilla toString formatting:
@@ -141,7 +147,6 @@ struct Complex(T)  if (isFloatingPoint!T)
         // Formatting with std.string.format specs: the precision and width
         // specifiers apply to both the real and imaginary parts of the
         // complex number.
-        import std.string : format;
         assert(format("%.2f", c)  == "1.20+3.40i");
         assert(format("%4.1f", c) == " 1.2+ 3.4i");
     }
@@ -184,6 +189,7 @@ struct Complex(T)  if (isFloatingPoint!T)
         if (sink == null)
         {
             import std.exception : assumeUnique;
+
             char[] buf;
             buf.reserve(100);
             formattedWrite((const(char)[] s) { buf ~= s; }, formatSpec, this);
@@ -649,7 +655,7 @@ unittest
     assert (z.re == 2.0  &&  z.im == 2.0);
 }
 
-unittest
+deprecated unittest
 {
     // Convert to string.
 
@@ -884,6 +890,8 @@ unittest
     wstring wformat(T)(string format, Complex!T c)
     {
         import std.array : appender;
+        import std.format : formattedWrite;
+
         auto w = appender!wstring();
         auto n = formattedWrite(w, format, c);
         return w.data;
