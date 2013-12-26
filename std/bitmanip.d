@@ -26,18 +26,11 @@ module std.bitmanip;
 
 //debug = bitarray;                // uncomment to turn on debugging printf's
 
-import core.bitop;
-import std.format;
 import std.range;
-import std.string;
-import std.system;
+import std.system : Endian;
 import std.traits;
 
-version(unittest)
-{
-    import std.stdio;
-    import std.typetuple;
-}
+version(unittest) import std.stdio : writefln;
 
 
 private string myToStringx(ulong n)
@@ -516,6 +509,10 @@ unittest
 
 struct BitArray
 {
+    private import core.bitop : bt, bts, btr;
+    private import std.format : FormatSpec;
+    private import std.string : format;
+
     size_t len;
     size_t* ptr;
     enum bitsPerSizeT = size_t.sizeof * 8;
@@ -1609,6 +1606,8 @@ struct BitArray
 
 unittest
 {
+    import std.string : format;
+
     BitArray b;
 
     b.init([]);
@@ -1665,17 +1664,23 @@ private ushort swapEndianImpl(ushort val) @safe pure nothrow
 
 private uint swapEndianImpl(uint val) @trusted pure nothrow
 {
+    import core.bitop : bswap;
+
     return bswap(val);
 }
 
 private ulong swapEndianImpl(ulong val) @trusted pure nothrow
 {
+    import core.bitop : bswap;
+
     immutable ulong res = bswap(cast(uint)val);
     return res << 32 | bswap(cast(uint)(val >> 32));
 }
 
 unittest
 {
+    import std.typetuple : TypeTuple;
+
     foreach(T; TypeTuple!(bool, byte, ubyte, short, ushort, int, uint, long, ulong, char, wchar, dchar))
     {
         scope(failure) writefln("Failed type: %s", T.stringof);
@@ -1802,6 +1807,8 @@ private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow
 
 unittest
 {
+    import std.typetuple : TypeTuple;
+
     foreach(T; TypeTuple!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
                           char, wchar, dchar
         /* The trouble here is with floats and doubles being compared against nan
@@ -1997,6 +2004,8 @@ private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow
 
 unittest
 {
+    import std.typetuple : TypeTuple;
+
     foreach(T; TypeTuple!(bool, byte, ubyte, short, ushort, int, uint, long, ulong,
                           char, wchar, dchar/*,
                           float, double*/))
@@ -2137,6 +2146,8 @@ private template isFloatOrDouble(T)
 
 unittest
 {
+    import std.typetuple : TypeTuple;
+
     foreach(T; TypeTuple!(float, double))
     {
         static assert(isFloatOrDouble!(T));
@@ -2165,6 +2176,8 @@ private template canSwapEndianness(T)
 
 unittest
 {
+    import std.typetuple : TypeTuple;
+
     foreach(T; TypeTuple!(bool, ubyte, byte, ushort, short, uint, int, ulong,
                           long, char, wchar, dchar, float, double))
     {
@@ -3342,7 +3355,8 @@ unittest
 
 unittest
 {
-    import std.string;
+    import std.string : format;
+    import std.typetuple : TypeTuple;
 
     foreach(endianness; TypeTuple!(Endian.bigEndian, Endian.littleEndian))
     {
