@@ -12,12 +12,14 @@ Source: $(PHOBOSSRC std/_array.d)
 */
 module std.array;
 
-import core.memory, core.bitop;
-import std.algorithm, std.ascii, std.conv, std.exception, std.functional,
-       std.range, std.string, std.traits, std.typecons, std.typetuple,
-       std.uni, std.utf;
-import std.c.string : memcpy;
-version(unittest) import core.exception, std.stdio;
+import std.algorithm;
+import std.functional : unaryFun;
+import std.range;
+import std.traits;
+import std.utf;
+import std.typecons : isTuple, tuple;
+import std.typetuple : allSatisfy;
+version(unittest) import std.stdio;
 
 /**
 Returns a newly-allocated dynamic array consisting of a copy of the
@@ -31,7 +33,9 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
     alias ForeachType!Range E;
     static if (hasLength!Range)
     {
-        if(r.length == 0) return null;
+        import std.conv : emplace;
+
+        if (r.length == 0) return null;
 
         static auto trustedAllocateArray(size_t n) @trusted nothrow
         {
@@ -105,12 +109,16 @@ the input.
 */
 ElementType!String[] array(String)(String str) if (isNarrowString!String)
 {
+    import std.conv : to;
+
     return to!(typeof(return))(str);
 }
 
 unittest
 {
-    static struct TestArray { int x; string toString() { return .to!string(x); } }
+    import std.conv : to;
+
+    static struct TestArray { int x; string toString() { return x.to!string(); } }
 
     static struct OpAssign
     {
@@ -148,7 +156,7 @@ unittest
     {
         int x;
         this(int y) { x = y; }
-        override string toString() const { return .to!string(x); }
+        override string toString() const { return x.to!string(); }
     }
     auto c = array([new C(1), new C(2)][]);
     //writeln(c);
@@ -169,6 +177,8 @@ unittest
 //Bug# 8233
 unittest
 {
+    import std.typetuple : TypeTuple;
+
     assert(array("hello world"d) == "hello world"d);
     immutable a = [1, 2, 3, 4, 5];
     assert(array(a) == a);
@@ -211,6 +221,7 @@ unittest
 {
     import std.algorithm : equal;
     import std.range : repeat;
+    import std.exception : assertCTFEable;
 
     static struct S
     {
@@ -273,6 +284,8 @@ unittest
 
 private template blockAttribute(T)
 {
+    import core.memory : GC;
+
     static if (hasIndirections!(T) || is(T == void))
     {
         enum blockAttribute = 0;
@@ -282,8 +295,9 @@ private template blockAttribute(T)
         enum blockAttribute = GC.BlkAttr.NO_SCAN;
     }
 }
-version(unittest)
+unittest
 {
+    import core.memory : GC;
     static assert(!(blockAttribute!void & GC.BlkAttr.NO_SCAN));
 }
 
@@ -300,7 +314,7 @@ private template nDimensions(T)
     }
 }
 
-version(unittest)
+unittest
 {
     static assert(nDimensions!(uint[]) == 1);
     static assert(nDimensions!(float[][]) == 2);
@@ -357,6 +371,8 @@ if(allSatisfy!(isIntegral, I))
 private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes)
 if(allSatisfy!(isIntegral, I))
 {
+    import core.memory : GC;
+
     static assert(sizes.length >= 1,
         "Cannot allocate an array without the size of at least the first " ~
         " dimension.");
@@ -462,7 +478,7 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
     assert(a == [ 2, 3 ]);
 }
 
-version(unittest)
+unittest
 {
     static assert(!is(typeof({          int[4] a; popFront(a); })));
     static assert(!is(typeof({ immutable int[] a; popFront(a); })));
@@ -485,14 +501,15 @@ if (isNarrowString!(C[]))
         }
         else
         {
-             import core.bitop;
-             auto msbs = 7 - bsr(~c);
-             if((msbs < 2) | (msbs > 6))
-             {
-                 //Invalid UTF-8
-                 msbs = 1;
-             }
-             str = str[msbs .. $];
+            import core.bitop : bsr;
+
+            auto msbs = 7 - bsr(~c);
+            if((msbs < 2) | (msbs > 6))
+            {
+                //Invalid UTF-8
+                msbs = 1;
+            }
+            str = str[msbs .. $];
         }
     }
     else static if(is(Unqual!C == wchar))
@@ -505,6 +522,8 @@ if (isNarrowString!(C[]))
 
 @safe pure unittest
 {
+    import std.typetuple : TypeTuple;
+
     foreach(S; TypeTuple!(string, wstring, dstring))
     {
         S s = "\xC2\xA9hello";
@@ -559,7 +578,7 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
     assert(a == [ 1, 2 ]);
 }
 
-version(unittest)
+unittest
 {
     static assert(!is(typeof({ immutable int[] a; popBack(a); })));
     static assert(!is(typeof({          int[4] a; popBack(a); })));
@@ -576,6 +595,8 @@ if (isNarrowString!(T[]))
 
 @safe pure unittest
 {
+    import std.typetuple : TypeTuple;
+
     foreach(S; TypeTuple!(string, wstring, dstring))
     {
         S s = "hello\xE2\x89\xA0";
@@ -838,6 +859,7 @@ unittest
 
     auto testStr(T, U)(string file = __FILE__, size_t line = __LINE__)
     {
+        import core.exception : AssertError;
 
         auto l = to!T("hello");
         auto r = to!U(" world");
@@ -909,12 +931,15 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
 {
     static if(allSatisfy!(isInputRangeWithLengthOrConvertible!T, U))
     {
-        import core.stdc.string;
+        import core.stdc.string : memcpy;
+
         void assign(E)(ref T dest, ref E src)
         {
             static if (is(typeof(dest.opAssign(src))) ||
                        !is(typeof(dest = src)))
             {
+                import std.conv : emplace;
+
                 // this should be in-place construction
                 emplace(&dest, src);
             }
@@ -988,6 +1013,8 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
     static if(is(Unqual!T == T)
         && allSatisfy!(isInputRangeWithLengthOrConvertible!dchar, U))
     {
+        import std.conv : text;
+
         // mutable, can do in place
         //helper function: re-encode dchar to Ts and store at *ptr
         static T* putDChar(T* ptr, dchar ch)
@@ -1098,6 +1125,8 @@ private template isInputRangeOrConvertible(E)
 
 unittest
 {
+    import std.typetuple : TypeTuple;
+
     bool test(T, U, V)(T orig, size_t pos, U toInsert, V result,
                string file = __FILE__, size_t line = __LINE__)
     {
@@ -1132,6 +1161,9 @@ unittest
 
     auto testStr(T, U)(string file = __FILE__, size_t line = __LINE__)
     {
+        import core.exception : AssertError;
+        import std.exception : enforce;
+        import std.conv : to;
 
         auto l = to!T("hello");
         auto r = to!U(" વિશ્વ");
@@ -1218,6 +1250,8 @@ unittest
 
 @safe unittest
 {
+    import std.exception : assertCTFEable;
+
     assertCTFEable!(
     {
         int[] a = [1, 2];
@@ -1229,6 +1263,8 @@ unittest
 
 unittest // bugzilla 6874
 {
+    import core.memory : GC;
+
     // allocate some space
     byte[] a;
     a.length = 1;
@@ -1270,6 +1306,8 @@ pure nothrow bool sameTail(T)(in T[] lhs, in T[] rhs)
 
 @safe pure nothrow unittest
 {
+    import std.typetuple : TypeTuple;
+
     foreach(T; TypeTuple!(int[], const(int)[], immutable(int)[], const int[], immutable int[]))
     {
         T a = [1, 2, 3, 4, 5];
@@ -1332,6 +1370,9 @@ if (isInputRange!S && !isDynamicArray!S)
 
 unittest
 {
+    import std.conv : to;
+    import std.typetuple : TypeTuple;
+
     debug(std_array) printf("array.replicate.unittest\n");
 
     foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
@@ -1358,6 +1399,8 @@ $(D @safe), $(D pure) and $(D CTFE)-able.
 S[] split(S)(S s) @safe pure
 if (isSomeString!S)
 {
+    import std.uni : isWhite;
+
     size_t istart;
     bool inword = false;
     S[] result;
@@ -1388,8 +1431,14 @@ if (isSomeString!S)
 
 unittest
 {
+    import std.conv : to;
+    import std.string : format;
+    import std.typetuple : TypeTuple;
+
     static auto makeEntry(S)(string l, string[] r)
-    {return tuple(l.to!S(), r.to!(S[])());}
+    {
+        return tuple(l.to!S(), r.to!(S[])());
+    }
 
     foreach (S; TypeTuple!(string, wstring, dstring,))
     {
@@ -1416,6 +1465,8 @@ unittest
 
 unittest //safety, purity, ctfe ...
 {
+    import std.exception : assertCTFEable;
+
     void dg() @safe pure {
         assert(split("hello world"c) == ["hello"c, "world"c]);
         assert(split("hello world"w) == ["hello"w, "world"w]);
@@ -1469,7 +1520,11 @@ if (isForwardRange!R && is(typeof(unaryFun!isTerminator(r.front))))
 
 unittest
 {
+    import std.conv : to, text;
+    import std.typetuple : TypeTuple;
+
     debug(std_array) printf("array.split\n");
+
     foreach (S; TypeTuple!(string, wstring, dstring,
                     immutable(string), immutable(wstring), immutable(dstring),
                     char[], wchar[], dchar[],
@@ -1529,6 +1584,8 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
        isInputRange!R &&
        is(Unqual!(ElementType!(ElementType!RoR)) == Unqual!(ElementType!R)))
 {
+    import std.conv : to;
+
     alias ElementType!RoR RoRElem;
     alias typeof(return) RetType;
 
@@ -1605,6 +1662,9 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
 
 unittest
 {
+    import std.conv : to;
+    import std.typetuple : TypeTuple;
+
     debug(std_array) printf("array.join.unittest\n");
 
     foreach(R; TypeTuple!(string, wstring, dstring))
@@ -1757,6 +1817,9 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
 
 unittest
 {
+    import std.conv : to;
+    import std.typetuple : TypeTuple;
+
     debug(std_array) printf("array.replace.unittest\n");
 
     foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
@@ -1784,6 +1847,9 @@ unittest
 
 unittest
 {
+    import std.conv : to;
+    import std.typetuple : TypeTuple;
+
     struct CheckOutput(C)
     {
         C[] desired;
@@ -1876,6 +1942,8 @@ unittest
 
     auto testStr(T, U)(string file = __FILE__, size_t line = __LINE__)
     {
+        import core.exception : AssertError;
+        import std.exception : enforce;
 
         auto l = to!T("hello");
         auto r = to!U(" world");
@@ -2013,6 +2081,9 @@ unittest
 
     auto testStr(T, U)(string file = __FILE__, size_t line = __LINE__)
     {
+        import core.exception : AssertError;
+        import std.exception : enforce;
+        import std.conv : to;
 
         auto l = to!T("hello");
         auto r = to!U(" world");
@@ -2063,6 +2134,9 @@ if (isDynamicArray!(E[]) &&
 
 unittest
 {
+    import std.conv : to;
+    import std.typetuple : TypeTuple;
+
     debug(std_array) printf("array.replaceFirst.unittest\n");
 
     foreach(S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[],
@@ -2227,6 +2301,9 @@ struct Appender(A : T[], T)
     // ensure we can add nelems elements, resizing as necessary
     private void ensureAddable(size_t nelems) @safe pure nothrow
     {
+        import core.memory : GC;
+        import core.stdc.string : memcpy;
+
         if (!_data)
             _data = new Data;
         immutable len = _data.arr.length;
@@ -2333,6 +2410,8 @@ struct Appender(A : T[], T)
             static if ( is(typeof(bigData[0].opAssign(uitem))) ||
                        !is(typeof(bigData[0] = uitem)))
             {
+                import std.conv : emplace;
+
                 //pragma(msg, T.stringof); pragma(msg, U.stringof);
                 emplace(&bigData[len], uitem);
             }
@@ -2387,6 +2466,8 @@ struct Appender(A : T[], T)
 
             enum mustEmplace =  is(typeof(bigData[0].opAssign(cast(Unqual!T)items.front))) ||
                                !is(typeof(bigData[0] = cast(Unqual!T)items.front));
+            static if (mustEmplace)
+                import std.conv : emplace;
 
             static if (is(typeof(_data.arr[] = items[])) && !mustEmplace)
             {
@@ -2478,6 +2559,8 @@ struct Appender(A : T[], T)
          */
         void shrinkTo(size_t newlength) @safe pure
         {
+            import std.exception : enforce;
+
             if (_data)
             {
                 enforce(newlength <= _data.arr.length);
@@ -2496,6 +2579,8 @@ struct Appender(A : T[], T)
 //ret sugLen: A suggested growth.
 private size_t appenderNewCapacity(size_t TSizeOf)(size_t curLen, size_t reqLen) @safe pure nothrow
 {
+    import core.bitop : bsr;
+
     if(curLen == 0)
         return max(reqLen,8);
     ulong mult = 100 + (1000UL) / (bsr(curLen * TSizeOf) + 1);
@@ -2614,6 +2699,9 @@ Appender!(E[]) appender(A : E[], E)(A array)
 
 @safe pure nothrow unittest
 {
+    import std.exception : assertCTFEable, assertThrown, assertNotThrown;
+    import std.typetuple : TypeTuple;
+
     {
         auto app = appender!(char[])();
         string b = "abcdefg";
@@ -2866,6 +2954,8 @@ RefAppender!(E[]) appender(A : E[]*, E)(A array)
 
 unittest
 {
+    import std.exception : assertThrown;
+
     {
         auto arr = new char[0];
         auto app = appender(&arr);
@@ -2933,6 +3023,8 @@ use yet.
  */
 struct SimpleSlice(T)
 {
+    import core.memory : GC;
+
     private T * _b, _e;
 
     this(U...)(U values)
@@ -2954,6 +3046,8 @@ struct SimpleSlice(T)
         }
         else
         {
+            import std.exception : enforce;
+
             // assign another slice to this
             enforce(anotherSlice.length == length);
             auto p = _b;
@@ -3035,6 +3129,8 @@ struct SimpleSlice(T)
 /// Ditto
     SimpleSliceLvalue!T opSlice(size_t x, size_t y)
     {
+        import std.exception : enforce;
+
         enforce(x <= y && y <= length);
         typeof(return) result = { _b + x, _b + y };
         return result;
@@ -3100,6 +3196,8 @@ struct SimpleSliceLvalue(T)
         }
         else
         {
+            import std.exception : enforce;
+
             // assign another slice to this
             enforce(anotherSlice.length == length);
             auto p = _b;
