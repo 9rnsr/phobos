@@ -43,12 +43,6 @@
  */
 module std.base64;
 
-import std.exception;  // enforce
-import std.range;      // isInputRange, isOutputRange, isForwardRange, ElementType, hasLength
-import std.traits;     // isArray
-
-version(unittest) import std.algorithm, std.conv, std.file, std.stdio;
-
 
 /**
  * The Base64
@@ -76,6 +70,9 @@ alias Base64Impl!('-', '_') Base64URL;
  */
 template Base64Impl(char Map62th, char Map63th, char Padding = '=')
 {
+    import std.range;      // isInputRange, isOutputRange, isForwardRange, ElementType, hasLength
+    import std.traits : isArray;
+
     enum NoPadding = '\0';  /// represents no-padding encoding
 
 
@@ -481,6 +478,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
          */
         void popFront()
         {
+            import std.exception : enforce;
+
             enforce(!empty, new Base64Exception("Cannot call popFront on Encoder with no data remaining"));
 
             range_.popFront();
@@ -592,6 +591,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
          */
         void popFront()
         {
+            import std.exception : enforce;
+
             enforce(!empty, new Base64Exception("Cannot call popFront on Encoder with no data remaining"));
 
             static if (Padding != NoPadding)
@@ -792,6 +793,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
     body
     {
+        import std.exception : enforce;
+
         immutable srcLen = source.length;
         if (srcLen == 0)
             return [];
@@ -860,6 +863,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
     body
     {
+        import std.exception : enforce;
+
         immutable srcLen = source.length;
         if (srcLen == 0)
             return [];
@@ -938,6 +943,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
     body
     {
+        import std.exception : enforce;
+
         immutable srcLen = source.length;
         if (srcLen == 0)
             return 0;
@@ -1008,6 +1015,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
     body
     {
+        import std.exception : enforce;
+
         immutable srcLen = source.length;
         if (srcLen == 0)
             return 0;
@@ -1141,6 +1150,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
          */
         void popFront()
         {
+            import std.exception : enforce;
+
             enforce(!empty, new Base64Exception("Cannot call popFront on Decoder with no data remaining."));
 
             range_.popFront();
@@ -1214,6 +1225,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
       public:
         this(Range range)
         {
+            import std.exception : enforce;
+
             range_ = range;
             static if (isForwardRange!Range)
                 range_ = range_.save;
@@ -1262,6 +1275,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
          */
         void popFront()
         {
+            import std.exception : enforce;
+
             enforce(!empty, new Base64Exception("Cannot call popFront on Decoder with no data remaining"));
 
             static if (Padding == NoPadding) {
@@ -1422,6 +1437,12 @@ class Base64Exception : Exception
 
 unittest
 {
+    static import std.file;
+    import std.array : Appender;
+    import std.exception : assertThrown;
+    import std.algorithm : equal;
+    import std.stdio : File;
+
     alias Base64Impl!('!', '=', Base64.NoPadding) Base64Re;
 
     // Test vectors from RFC 4648
