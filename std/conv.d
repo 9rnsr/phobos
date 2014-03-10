@@ -82,22 +82,6 @@ private void parseCheck(alias source)(dchar c, string fn = __FILE__, size_t ln =
 
 private
 {
-    template isImaginary(T)
-    {
-        enum bool isImaginary = staticIndexOf!(Unqual!T,
-                ifloat, idouble, ireal) >= 0;
-    }
-    template isComplex(T)
-    {
-        enum bool isComplex = staticIndexOf!(Unqual!T,
-                cfloat, cdouble, creal) >= 0;
-    }
-    template isNarrowInteger(T)
-    {
-        enum bool isNarrowInteger = staticIndexOf!(Unqual!T,
-                byte, ubyte, short, ushort) >= 0;
-    }
-
     T toStr(T, S)(S src)
         if (isSomeString!T)
     {
@@ -109,32 +93,13 @@ private
         return w.data;
     }
 
-    template isExactSomeString(T)
-    {
-        enum isExactSomeString = isSomeString!T && !is(T == enum);
-    }
+    enum isExactSomeString(T) = isSomeString!T && !is(T == enum);
 
-    template isEnumStrToStr(S, T)
-    {
-        enum isEnumStrToStr = isImplicitlyConvertible!(S, T) &&
-                              is(S == enum) && isExactSomeString!T;
-    }
-    template isNullToStr(S, T)
-    {
-        enum isNullToStr = isImplicitlyConvertible!(S, T) &&
-                           (is(Unqual!S == typeof(null))) && isExactSomeString!T;
-    }
+    enum isEnumStrToStr(S, T) = isImplicitlyConvertible!(S, T) &&
+                                is(S == enum) && isExactSomeString!T;
 
-    template isRawStaticArray(T, A...)
-    {
-        enum isRawStaticArray =
-            A.length == 0 &&
-            isStaticArray!T &&
-            !is(T == class) &&
-            !is(T == interface) &&
-            !is(T == struct) &&
-            !is(T == union);
-    }
+    enum isNullToStr(S, T) = isImplicitlyConvertible!(S, T) &&
+                             (is(Unqual!S == typeof(null))) && isExactSomeString!T;
 }
 
 /**
@@ -277,14 +242,14 @@ might fail the range check.
 template to(T)
 {
     T to(A...)(A args)
-        if (!isRawStaticArray!A)
+        if (A.length != 1 || !isStaticArray!A)
     {
         return toImpl!T(args);
     }
 
     // Fix issue 6175
     T to(S)(ref S arg)
-        if (isRawStaticArray!S)
+        if (isStaticArray!S)
     {
         return toImpl!T(arg);
     }
@@ -457,7 +422,7 @@ T toImpl(T, S)(S value)
   Converting static arrays forwards to their dynamic counterparts.
  */
 T toImpl(T, S)(ref S s)
-    if (isRawStaticArray!S)
+    if (isStaticArray!S)
 {
     return toImpl!(T, typeof(s[0])[])(s);
 }
