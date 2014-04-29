@@ -29158,7 +29158,7 @@ public:
             return transition.ttInfo.isDST;
         }
         catch(Exception e)
-            assert(0, format("Unexpected Exception: %s", e));
+            assert(0, "Unexpected Exception: " ~ typeid(e).name);
     }
 
 
@@ -29188,7 +29188,7 @@ public:
             return stdTime + convert!("seconds", "hnsecs")(transition.ttInfo.utcOffset + leapSecs);
         }
         catch(Exception e)
-            assert(0, format("Unexpected Exception: %s", e));
+            assert(0, "Unexpected Exception: " ~ typeid(e).name);
     }
 
 
@@ -29240,7 +29240,7 @@ public:
             return adjTime - convert!("seconds", "hnsecs")(transition.ttInfo.utcOffset + leapSecs);
         }
         catch(Exception e)
-            assert(0, format("Unexpected Exception: %s", e));
+            assert(0, "Unexpected Exception: " ~ typeid(e).name);
     }
 
 
@@ -29878,7 +29878,7 @@ private:
             return leapSecond.total;
         }
         catch(Exception e)
-            assert(0, format("Nothing in calculateLeapSeconds() should be throwing. Caught Exception: %s", e));
+            assert(0, "Nothing in calculateLeapSeconds() should be throwing. Caught Exception: " ~ typeid(e).name);
     }
 
 
