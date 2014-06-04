@@ -3965,8 +3965,9 @@ unittest
     t3.spinForce++;
     assert(t3.args[0] == 1);
 
-    static void testSafe() @safe {
-        static int bump(int num)
+    static void testSafe() @safe
+    {
+        static int bump(int num) @safe
         {
             return num + 1;
         }

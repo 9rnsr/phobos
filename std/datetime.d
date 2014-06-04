@@ -29096,7 +29096,7 @@ public:
     @safe unittest
     {
         void writeln(S...)(S args){}
-        static void bar() {}
+        static void bar() @safe {}
 
         StopWatch sw;
         enum n = 100;
