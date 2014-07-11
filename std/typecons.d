@@ -1455,7 +1455,7 @@ unittest
     static struct S
     {
         int x;
-        this(this) @system {}
+        this(this) inout @system {}
     }
 
     Nullable!S s;

@@ -1375,7 +1375,7 @@ unittest
 {
     static struct HasPostblit
     {
-        this(this) {}
+        this(this) inout {}
     }
 
     auto nonMobile = map!"a"(repeat(HasPostblit.init));
