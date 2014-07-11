@@ -519,7 +519,6 @@ calling $(D r.empty) has, or would have, returned $(D false).))
 template isInputRange(R)
 {
     enum bool isInputRange = is(typeof(
-    (inout int = 0)
     {
         R r = R.init;     // can define a range object
         if (r.empty) {}   // can test for empty
@@ -1030,7 +1029,6 @@ guaranteed to not overflow the range.
 package template isNativeOutputRange(R, E)
 {
     enum bool isNativeOutputRange = is(typeof(
-    (inout int = 0)
     {
         R r = void;
         E e;
@@ -1059,7 +1057,6 @@ supports the operation $(D put(r, e)) as defined above.
 template isOutputRange(R, E)
 {
     enum bool isOutputRange = is(typeof(
-    (inout int = 0)
     {
         R r = R.init;
         E e = E.init;
@@ -1133,7 +1130,6 @@ object with $(D save) and using it later.
 template isForwardRange(R)
 {
     enum bool isForwardRange = isInputRange!R && is(typeof(
-    (inout int = 0)
     {
         R r1 = R.init;
         static assert (is(typeof(r1.save) == R));
@@ -1173,7 +1169,6 @@ $(D r.empty) has, or would have, returned $(D false).))
 template isBidirectionalRange(R)
 {
     enum bool isBidirectionalRange = isForwardRange!R && is(typeof(
-    (inout int = 0)
     {
         R r = R.init;
         r.popBack();
@@ -1254,7 +1249,6 @@ are bidirectional ranges only.
 template isRandomAccessRange(R)
 {
     enum bool isRandomAccessRange = is(typeof(
-    (inout int = 0)
     {
         static assert(isBidirectionalRange!R ||
                       isForwardRange!R && isInfinite!R);
@@ -1351,19 +1345,16 @@ and friends.
 template hasMobileElements(R)
 {
     enum bool hasMobileElements = is(typeof(
-    (inout int = 0)
     {
         R r = R.init;
         return moveFront(r);
     }))
     && (!isBidirectionalRange!R || is(typeof(
-    (inout int = 0)
     {
         R r = R.init;
         return moveBack(r);
     })))
     && (!isRandomAccessRange!R || is(typeof(
-    (inout int = 0)
     {
         R r = R.init;
         return moveAt(r, 0);
@@ -1548,7 +1539,6 @@ swap(r.front, r.front);              // can swap elements of the range
 template hasSwappableElements(R)
 {
     enum bool hasSwappableElements = isForwardRange!R && is(typeof(
-    (inout int = 0)
     {
         R r = R.init;
         swap(r.front, r.front);             // can swap elements of the range
@@ -1579,7 +1569,6 @@ r.front = e;                      // can assign elements of the range
 template hasAssignableElements(R)
 {
     enum bool hasAssignableElements = isForwardRange!R && is(typeof(
-    (inout int = 0)
     {
         R r = R.init;
         static assert(isForwardRange!(R)); // range is forward
@@ -1604,7 +1593,6 @@ can be passed by reference and have their address taken.
 template hasLvalueElements(R)
 {
     enum bool hasLvalueElements = is(typeof(
-    (inout int = 0)
     {
         void checkRef(ref ElementType!R stuff) {}
         R r = R.init;
@@ -1651,7 +1639,6 @@ range-oriented algorithms.
 template hasLength(R)
 {
     enum bool hasLength = !isNarrowString!R && is(typeof(
-    (inout int = 0)
     {
         R r = R.init;
         static assert(is(typeof(r.length) : ulong));
@@ -1753,7 +1740,6 @@ static assert(hasLength!(typeof(r[1 .. 2])));
 template hasSlicing(R)
 {
     enum bool hasSlicing = isForwardRange!R && !isNarrowString!R && is(typeof(
-    (inout int = 0)
     {
         R r = R.init;
 

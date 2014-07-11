@@ -4526,10 +4526,6 @@ unittest
 }
 
 
-// Needed for rvalueOf/lvalueOf because "inout on return means
-// inout must be on a parameter as well"
-private struct __InoutWorkaroundStruct{}
-
 /**
 Creates an lvalue or rvalue of type $(D T) for $(D typeof(...)) and
 $(D __traits(compiles, ...)) purposes. No actual value is returned.
@@ -4549,10 +4545,10 @@ static assert(is(typeof(f(lvalueOf!int)) == bool));
 int i = rvalueOf!int; // error, no actual value is returned
 ---
 */
-@property T rvalueOf(T)(inout __InoutWorkaroundStruct = __InoutWorkaroundStruct.init);
+@property T rvalueOf(T)();
 
 /// ditto
-@property ref T lvalueOf(T)(inout __InoutWorkaroundStruct = __InoutWorkaroundStruct.init);
+@property ref T lvalueOf(T)();
 
 // Note: unittest can't be used as an example here as function overloads
 // aren't allowed inside functions.
@@ -5910,7 +5906,6 @@ has both opApply and a range interface.
 template ForeachType(T)
 {
     alias ForeachType = ReturnType!(typeof(
-    (inout int x = 0)
     {
         foreach(elem; T.init)
         {
