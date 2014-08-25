@@ -5,25 +5,30 @@ This module is intended to provide fast, safe and garbage free
 way to work with $(I C strings).
 
 Examples:
----
-version(Posix):
+    ---
+    version(Posix):
 
-import core.stdc.stdlib: free;
-import core.sys.posix.stdlib: setenv;
-import std.exception: enforce;
+    import core.stdc.stdlib: free;
+    import core.sys.posix.stdlib: setenv;
+    import std.exception: enforce;
 
-void setEnvironment(in char[] name, in char[] value)
-{ enforce(setenv(name.tempCString(), value.tempCString(), 1) != -1); }
----
----
-version(Windows):
+    void setEnvironment(in char[] name, in char[] value)
+    {
+        enforce(setenv(name.tempCString(), value.tempCString(), 1) != -1);
+    }
+    ---
 
-import core.sys.windows.windows: SetEnvironmentVariableW;
-import std.exception: enforce;
+    ---
+    version(Windows):
 
-void setEnvironment(in char[] name, in char[] value)
-{ enforce(SetEnvironmentVariableW(name.tempCStringW(), value.tempCStringW())); }
----
+    import core.sys.windows.windows: SetEnvironmentVariableW;
+    import std.exception: enforce;
+
+    void setEnvironment(in char[] name, in char[] value)
+    {
+        enforce(SetEnvironmentVariableW(name.tempCStringW(), value.tempCStringW()));
+    }
+    ---
 
 Copyright: Denis Shelomovskij 2013-2014
 
@@ -47,12 +52,15 @@ import std.utf;
 
 version(unittest)
 @property inout(C)[] asArray(C)(inout C* cstr) pure nothrow @nogc
-if(isSomeChar!C)
-in { assert(cstr); }
+if (isSomeChar!C)
+in
+{
+    assert(cstr);
+}
 body
 {
     size_t length = 0;
-    while(cstr[length])
+    while (cstr[length])
         ++length;
     return cstr[0 .. length];
 }
@@ -82,7 +90,7 @@ lead to memory corruption.
 See $(RED WARNING) in $(B Examples) section.
 */
 auto tempCString(To = char, From)(in From[] str) nothrow @nogc
-if(isSomeChar!To && isSomeChar!From)
+if (isSomeChar!To && isSomeChar!From)
 {
     enum useStack = cast(To*) -1;
 
@@ -95,13 +103,20 @@ if(isSomeChar!To && isSomeChar!From)
         alias ptr this;
 
         @property inout(To)* buffPtr() inout @safe pure
-        { return _ptr == useStack ? _buff.ptr : _ptr; }
+        {
+            return _ptr == useStack ? _buff.ptr : _ptr;
+        }
 
         @property const(To)* ptr() const @safe pure
-        { return buffPtr; }
+        {
+            return buffPtr;
+        }
 
         ~this()
-        { if(_ptr != useStack) rawFree(_ptr); }
+        {
+            if (_ptr != useStack)
+                rawFree(_ptr);
+        }
 
     private:
         To* _ptr;
@@ -112,7 +127,7 @@ if(isSomeChar!To && isSomeChar!From)
     // not confuse unprecise GC.
 
     Res res = void;
-    if(!str.ptr)
+    if (!str.ptr)
     {
         res._ptr = null;
         return res;
@@ -122,7 +137,7 @@ if(isSomeChar!To && isSomeChar!From)
 
     bool overflow = false;
     const totalCount = core.checkedint.addu(maxLength!To(str), 1, overflow);
-    if(overflow)
+    if (overflow)
         onOutOfMemoryError();
     const needAllocate = totalCount > res._buff.length;
     To[] arr = copyEncoded(str, needAllocate ?
@@ -184,7 +199,7 @@ Returns maximum possible length of string conversion
 to another Unicode Transformation Format result.
 */
 size_t maxLength(To, From)(in size_t length) pure nothrow @nogc
-if(isSomeChar!To && isSomeChar!From)
+if (isSomeChar!To && isSomeChar!From)
 {
     static if (To.sizeof >= From.sizeof)
         enum k = 1; // worst case: every code unit represents a character
@@ -201,7 +216,9 @@ if(isSomeChar!To && isSomeChar!From)
 
 /// ditto
 size_t maxLength(To, From)(in From[] str) pure nothrow @nogc
-{ return maxLength!(To, From)(str.length); }
+{
+    return maxLength!(To, From)(str.length);
+}
 
 pure nothrow @nogc unittest
 {
@@ -223,9 +240,9 @@ Returns:
 Slice of the provided buffer $(D buff) with the copy of $(D source).
 */
 To[] copyEncoded(To, From)(in From[] source, To[] buff) @trusted nothrow @nogc
-if(isSomeChar!To && isSomeChar!From)
+if (isSomeChar!To && isSomeChar!From)
 {
-    static if(is(Unqual!To == Unqual!From))
+    static if (is(Unqual!To == Unqual!From))
     {
         return buff[0 .. source.length] = source[];
     }
@@ -236,7 +253,7 @@ if(isSomeChar!To && isSomeChar!From)
 
         To* ptr = buff.ptr;
         const To* last = ptr + buff.length;
-        foreach(const c; byFunc(source))
+        foreach (const c; byFunc(source))
         {
             assert(ptr != last);
             *ptr++ = c;
@@ -293,29 +310,38 @@ enum mallocAlignment = 4;
 // but it may be changed in future so one shouldn't rely on that.
 
 T[] allocate(T)(in size_t count) nothrow @nogc
-if(T.alignof <= mallocAlignment)
-in { assert(count); }
+if (T.alignof <= mallocAlignment)
+in
+{
+    assert(count);
+}
 body
 {
     bool overflow = false;
     const buffBytes = core.checkedint.mulu(T.sizeof, count, overflow);
-    if(overflow)
+    if (overflow)
         onOutOfMemoryError();
 
     auto ptr = cast(T*) tryRawAllocate(buffBytes);
-    if(!ptr)
+    if (!ptr)
         onOutOfMemoryError();
 
     return ptr[0 .. count];
 }
 
 void* tryRawAllocate(in size_t count) nothrow @nogc
-in { assert(count); }
+in
+{
+    assert(count);
+}
 body
 {
     // Workaround snn @@@BUG11646@@@
     version(DigitalMars) version(Win32)
-        if(count > 0xD5550000) return null;
+    {
+        if (count > 0xD5550000)
+            return null;
+    }
 
     // FIXME: `malloc` must be checked on every C runtime for
     // possible bugs and workarounded if necessary.
