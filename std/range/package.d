@@ -210,20 +210,39 @@ if (isBidirectionalRange!(Unqual!Range))
             alias Source = R;
 
             @property bool empty() { return source.empty; }
-            @property auto save()
-            {
-                return Result(source.save);
-            }
+
             @property auto ref front() { return source.back; }
-            void popFront() { source.popBack(); }
-            @property auto ref back() { return source.front; }
-            void popBack() { source.popFront(); }
+
+            static if (hasAssignableElements!R)
+            {
+                @property auto front(ElementType!R val)
+                {
+                    source.back = val;
+                }
+            }
 
             static if(is(typeof(.moveBack(source))))
             {
                 ElementType!R moveFront()
                 {
                     return .moveBack(source);
+                }
+            }
+
+            void popFront() { source.popBack(); }
+
+            @property auto save()
+            {
+                return Result(source.save);
+            }
+
+            @property auto ref back() { return source.front; }
+
+            static if (hasAssignableElements!R)
+            {
+                @property auto back(ElementType!R val)
+                {
+                    source.front = val;
                 }
             }
 
@@ -235,18 +254,7 @@ if (isBidirectionalRange!(Unqual!Range))
                 }
             }
 
-            static if (hasAssignableElements!R)
-            {
-                @property auto front(ElementType!R val)
-                {
-                    source.back = val;
-                }
-
-                @property auto back(ElementType!R val)
-                {
-                    source.front = val;
-                }
-            }
+            void popBack() { source.popFront(); }
 
             static if (isRandomAccessRange!(R) && hasLength!(R))
             {
@@ -470,14 +478,6 @@ if (isInputRange!(Unqual!Range))
                     }
                 }
 
-            static if (isForwardRange!R)
-            {
-                @property auto save()
-                {
-                    return Result(source.save, _n);
-                }
-            }
-
             static if (isInfinite!R)
             {
                 enum bool empty = false;
@@ -495,19 +495,19 @@ if (isInputRange!(Unqual!Range))
                 return source.front;
             }
 
-            static if (is(typeof(.moveFront(source))))
-            {
-                ElementType!R moveFront()
-                {
-                    return .moveFront(source);
-                }
-            }
-
             static if (hasAssignableElements!R)
             {
                 @property auto front(ElementType!R val)
                 {
                     source.front = val;
+                }
+            }
+
+            static if (is(typeof(.moveFront(source))))
+            {
+                ElementType!R moveFront()
+                {
+                    return .moveFront(source);
                 }
             }
 
@@ -537,6 +537,14 @@ if (isInputRange!(Unqual!Range))
                 }
             }
 
+            static if (isForwardRange!R)
+            {
+                @property auto save()
+                {
+                    return Result(source.save, _n);
+                }
+            }
+
             static if (isBidirectionalRange!R && hasLength!R)
             {
                 void popBack()
@@ -550,21 +558,21 @@ if (isInputRange!(Unqual!Range))
                     return source.back;
                 }
 
-                static if (is(typeof(.moveBack(source))))
-                {
-                    ElementType!R moveBack()
-                    {
-                        eliminateSlackElements();
-                        return .moveBack(source);
-                    }
-                }
-
                 static if (hasAssignableElements!R)
                 {
                     @property auto back(ElementType!R val)
                     {
                         eliminateSlackElements();
                         source.back = val;
+                    }
+                }
+
+                static if (is(typeof(.moveBack(source))))
+                {
+                    ElementType!R moveBack()
+                    {
+                        eliminateSlackElements();
+                        return .moveBack(source);
                     }
                 }
             }
@@ -576,6 +584,14 @@ if (isInputRange!(Unqual!Range))
                     return source[_n * n];
                 }
 
+                static if (hasAssignableElements!R)
+                {
+                    void opIndexAssign(ElementType!R val, size_t n)
+                    {
+                        source[_n * n] = val;
+                    }
+                }
+
                 /**
                    Forwards to $(D moveAt(source, n)).
                 */
@@ -584,14 +600,6 @@ if (isInputRange!(Unqual!Range))
                     ElementType!R moveAt(size_t n)
                     {
                         return .moveAt(source, _n * n);
-                    }
-                }
-
-                static if (hasAssignableElements!R)
-                {
-                    void opIndexAssign(ElementType!R val, size_t n)
-                    {
-                        source[_n * n] = val;
                     }
                 }
             }
@@ -846,7 +854,7 @@ if (Ranges.length > 0 &&
 
             static if (anySatisfy!(isInfinite, R))
             {
-// Propagate infiniteness.
+                // Propagate infiniteness.
                 enum bool empty = false;
             }
             else
@@ -858,27 +866,6 @@ if (Ranges.length > 0 &&
                         if (!source[i].empty) return false;
                     }
                     return true;
-                }
-            }
-
-            static if (allSatisfy!(isForwardRange, R))
-                @property auto save()
-                {
-                    typeof(this) result = this;
-                    foreach (i, Unused; R)
-                    {
-                        result.source[i] = result.source[i].save;
-                    }
-                    return result;
-                }
-
-            void popFront()
-            {
-                foreach (i, Unused; R)
-                {
-                    if (source[i].empty) continue;
-                    source[i].popFront();
-                    return;
                 }
             }
 
@@ -923,6 +910,27 @@ if (Ranges.length > 0 &&
                 }
             }
 
+            void popFront()
+            {
+                foreach (i, Unused; R)
+                {
+                    if (source[i].empty) continue;
+                    source[i].popFront();
+                    return;
+                }
+            }
+
+            static if (allSatisfy!(isForwardRange, R))
+                @property auto save()
+                {
+                    typeof(this) result = this;
+                    foreach (i, Unused; R)
+                    {
+                        result.source[i] = result.source[i].save;
+                    }
+                    return result;
+                }
+
             static if (allSatisfy!(isBidirectionalRange, R))
             {
                 @property auto ref back()
@@ -933,29 +941,6 @@ if (Ranges.length > 0 &&
                         return fixRef(source[i].back);
                     }
                     assert(false);
-                }
-
-                void popBack()
-                {
-                    foreach_reverse (i, Unused; R)
-                    {
-                        if (source[i].empty) continue;
-                        source[i].popBack();
-                        return;
-                    }
-                }
-
-                static if (allSatisfy!(hasMobileElements, R))
-                {
-                    RvalueElementType moveBack()
-                    {
-                        foreach_reverse (i, Unused; R)
-                        {
-                            if (source[i].empty) continue;
-                            return .moveBack(source[i]);
-                        }
-                        assert(false);
-                    }
                 }
 
                 static if (allSameType && allSatisfy!(hasAssignableElements, R))
@@ -973,21 +958,29 @@ if (Ranges.length > 0 &&
                         assert(false);
                     }
                 }
-            }
 
-            static if (allSatisfy!(hasLength, R))
-            {
-                @property size_t length()
+                static if (allSatisfy!(hasMobileElements, R))
                 {
-                    size_t result;
-                    foreach (i, Unused; R)
+                    RvalueElementType moveBack()
                     {
-                        result += source[i].length;
+                        foreach_reverse (i, Unused; R)
+                        {
+                            if (source[i].empty) continue;
+                            return .moveBack(source[i]);
+                        }
+                        assert(false);
                     }
-                    return result;
                 }
 
-                alias opDollar = length;
+                void popBack()
+                {
+                    foreach_reverse (i, Unused; R)
+                    {
+                        if (source[i].empty) continue;
+                        source[i].popBack();
+                        return;
+                    }
+                }
             }
 
             static if (allSatisfy!(isRandomAccessRange, R))
@@ -1008,27 +1001,6 @@ if (Ranges.length > 0 &&
                         }
                     }
                     assert(false);
-                }
-
-                static if (allSatisfy!(hasMobileElements, R))
-                {
-                    RvalueElementType moveAt(size_t index)
-                    {
-                        foreach (i, Range; R)
-                        {
-                            static if (isInfinite!(Range))
-                            {
-                                return .moveAt(source[i], index);
-                            }
-                            else
-                            {
-                                immutable length = source[i].length;
-                                if (index < length) return .moveAt(source[i], index);
-                                index -= length;
-                            }
-                        }
-                        assert(false);
-                    }
                 }
 
                 static if (allSameType && allSatisfy!(hasAssignableElements, R))
@@ -1053,6 +1025,27 @@ if (Ranges.length > 0 &&
                         }
                         assert(false);
                     }
+
+                static if (allSatisfy!(hasMobileElements, R))
+                {
+                    RvalueElementType moveAt(size_t index)
+                    {
+                        foreach (i, Range; R)
+                        {
+                            static if (isInfinite!(Range))
+                            {
+                                return .moveAt(source[i], index);
+                            }
+                            else
+                            {
+                                immutable length = source[i].length;
+                                if (index < length) return .moveAt(source[i], index);
+                                index -= length;
+                            }
+                        }
+                        assert(false);
+                    }
+                }
             }
 
             static if (allSatisfy!(hasLength, R) && allSatisfy!(hasSlicing, R))
@@ -1095,6 +1088,21 @@ if (Ranges.length > 0 &&
                     }
                     return result;
                 }
+
+            static if (allSatisfy!(hasLength, R))
+            {
+                @property size_t length()
+                {
+                    size_t result;
+                    foreach (i, Unused; R)
+                    {
+                        result += source[i].length;
+                    }
+                    return result;
+                }
+
+                alias opDollar = length;
+            }
         }
         return Result(rs);
     }
@@ -1430,21 +1438,6 @@ if (isInputRange!(Unqual!Range) &&
         return source.front;
     }
 
-    void popFront()
-    {
-        assert(!empty,
-            "Attempting to popFront() past the end of a "
-            ~ Take.stringof);
-        source.popFront();
-        --_maxAvailable;
-    }
-
-    static if (isForwardRange!R)
-        @property Take save()
-        {
-            return Take(source.save, _maxAvailable);
-        }
-
     static if (hasAssignableElements!R)
         @property auto front(ElementType!R v)
         {
@@ -1463,6 +1456,95 @@ if (isInputRange!(Unqual!Range) &&
                 "Attempting to move the front of an empty "
                 ~ Take.stringof);
             return .moveFront(source);
+        }
+    }
+
+    void popFront()
+    {
+        assert(!empty,
+            "Attempting to popFront() past the end of a "
+            ~ Take.stringof);
+        source.popFront();
+        --_maxAvailable;
+    }
+
+    static if (isForwardRange!R)
+        @property Take save()
+        {
+            return Take(source.save, _maxAvailable);
+        }
+
+    static if (isRandomAccessRange!R)   // maybe a bug
+    {
+        @property auto ref back()
+        {
+            assert(!empty,
+                "Attempting to fetch the back of an empty "
+                ~ Take.stringof);
+            return source[this.length - 1];
+        }
+
+        static if (hasAssignableElements!R)
+        {
+            @property auto back(ElementType!R v)
+            {
+                // This has to return auto instead of void because of Bug 4706.
+                assert(!empty,
+                    "Attempting to assign to the back of an empty "
+                    ~ Take.stringof);
+                source[this.length - 1] = v;
+            }
+        }
+
+        static if (hasMobileElements!R)
+        {
+            auto moveBack()
+            {
+                assert(!empty,
+                    "Attempting to move the back of an empty "
+                    ~ Take.stringof);
+                return .moveAt(source, this.length - 1);
+            }
+        }
+
+        void popBack()
+        {
+            assert(!empty,
+                "Attempting to popBack() past the beginning of a "
+                ~ Take.stringof);
+            --_maxAvailable;
+        }
+    }
+    static if (isRandomAccessRange!R)
+    {
+        auto ref opIndex(size_t index)
+        {
+            assert(index < length,
+                "Attempting to index out of the bounds of a "
+                ~ Take.stringof);
+            return source[index];
+        }
+
+        static if (hasAssignableElements!R)
+        {
+            void opIndexAssign(ElementType!R v, size_t index)
+            {
+                assert(index < length,
+                    "Attempting to index out of the bounds of a "
+                    ~ Take.stringof);
+                source[index] = v;
+            }
+        }
+
+        static if (hasMobileElements!R)
+        {
+            auto moveAt(size_t index)
+            {
+                assert(index < length,
+                    "Attempting to index out of the bounds of a "
+                    ~ Take.stringof);
+                return .moveAt(source, index);
+            }
         }
     }
 
@@ -1495,72 +1577,6 @@ if (isInputRange!(Unqual!Range) &&
         }
 
         alias opDollar = length;
-    }
-
-    static if (isRandomAccessRange!R)
-    {
-        void popBack()
-        {
-            assert(!empty,
-                "Attempting to popBack() past the beginning of a "
-                ~ Take.stringof);
-            --_maxAvailable;
-        }
-
-        @property auto ref back()
-        {
-            assert(!empty,
-                "Attempting to fetch the back of an empty "
-                ~ Take.stringof);
-            return source[this.length - 1];
-        }
-
-        auto ref opIndex(size_t index)
-        {
-            assert(index < length,
-                "Attempting to index out of the bounds of a "
-                ~ Take.stringof);
-            return source[index];
-        }
-
-        static if (hasAssignableElements!R)
-        {
-            @property auto back(ElementType!R v)
-            {
-                // This has to return auto instead of void because of Bug 4706.
-                assert(!empty,
-                    "Attempting to assign to the back of an empty "
-                    ~ Take.stringof);
-                source[this.length - 1] = v;
-            }
-
-            void opIndexAssign(ElementType!R v, size_t index)
-            {
-                assert(index < length,
-                    "Attempting to index out of the bounds of a "
-                    ~ Take.stringof);
-                source[index] = v;
-            }
-        }
-
-        static if (hasMobileElements!R)
-        {
-            auto moveBack()
-            {
-                assert(!empty,
-                    "Attempting to move the back of an empty "
-                    ~ Take.stringof);
-                return .moveAt(source, this.length - 1);
-            }
-
-            auto moveAt(size_t index)
-            {
-                assert(index < length,
-                    "Attempting to index out of the bounds of a "
-                    ~ Take.stringof);
-                return .moveAt(source, index);
-            }
-        }
     }
 
     // Nonstandard
@@ -1760,37 +1776,11 @@ if (isInputRange!R)
             private size_t _n;
 
             @property bool empty() const { return !_n; }
+
             @property auto ref front()
             {
                 assert(_n > 0, "front() on an empty " ~ Result.stringof);
                 return _input.front;
-            }
-            void popFront() { _input.popFront(); --_n; }
-            @property size_t length() const { return _n; }
-            alias opDollar = length;
-
-            @property Take!R _takeExactly_Result_asTake()
-            {
-                return typeof(return)(_input, _n);
-            }
-
-            alias _takeExactly_Result_asTake this;
-
-            static if (isForwardRange!R)
-                @property auto save()
-                {
-                    return Result(_input.save, _n);
-                }
-
-            static if (hasMobileElements!R)
-            {
-                auto moveFront()
-                {
-                    assert(!empty,
-                        "Attempting to move the front of an empty "
-                        ~ typeof(this).stringof);
-                    return .moveFront(_input);
-                }
             }
 
             static if (hasAssignableElements!R)
@@ -1803,6 +1793,35 @@ if (isInputRange!R)
                     return _input.front = v;
                 }
             }
+
+            static if (hasMobileElements!R)
+            {
+                auto moveFront()
+                {
+                    assert(!empty,
+                        "Attempting to move the front of an empty "
+                        ~ typeof(this).stringof);
+                    return .moveFront(_input);
+                }
+            }
+
+            void popFront() { _input.popFront(); --_n; }
+
+            static if (isForwardRange!R)
+                @property auto save()
+                {
+                    return Result(_input.save, _n);
+                }
+
+            @property size_t length() const { return _n; }
+            alias opDollar = length;
+
+            @property Take!R _takeExactly_Result_asTake()
+            {
+                return typeof(return)(_input, _n);
+            }
+
+            alias _takeExactly_Result_asTake this;
         }
 
         return Result(range, n);
@@ -1941,23 +1960,28 @@ auto takeOne(R)(R source) if (isInputRange!R)
         {
             private R _source;
             private bool _empty = true;
+
             @property bool empty() const { return _empty; }
             @property auto ref front() { assert(!empty); return _source.front; }
             void popFront() { assert(!empty); _empty = true; }
-            void popBack() { assert(!empty); _empty = true; }
+
             static if (isForwardRange!(Unqual!R))
             {
                 @property auto save() { return Result(_source.save, empty); }
             }
+
             @property auto ref back() { assert(!empty); return _source.front; }
-            @property size_t length() const { return !empty; }
-            alias opDollar = length;
+            void popBack() { assert(!empty); _empty = true; }
+
             auto ref opIndex(size_t n) { assert(n < length); return _source.front; }
             auto opSlice(size_t m, size_t n)
             {
                 assert(m <= n && n < length);
                 return n > m ? this : Result(_source, false);
             }
+            @property size_t length() const { return !empty; }
+            alias opDollar = length;
+
             // Non-standard property
             @property R source() { return _source; }
         }
@@ -2974,15 +2998,6 @@ struct Zip(Ranges...)
         }
     }
 
-    static if (allSatisfy!(isForwardRange, R))
-    {
-        @property Zip save()
-        {
-            //Zip(ranges[0].save, ranges[1].save, ..., stoppingPolicy)
-            return mixin (q{Zip(%(ranges[%s]%|, %), stoppingPolicy)}.format(iota(0, R.length)));
-        }
-    }
-
     private .ElementType!(R[i]) tryGetInit(size_t i)()
     {
         alias E = .ElementType!(R[i]);
@@ -3033,56 +3048,6 @@ struct Zip(Ranges...)
     }
 
 /**
-   Returns the rightmost element.
-*/
-    static if (allSatisfy!(isBidirectionalRange, R))
-    {
-        @property ElementType back()
-        {
-            //TODO: Fixme! BackElement != back of all ranges in case of jagged-ness
-
-            @property tryGetBack(size_t i)(){return ranges[i].empty ? tryGetInit!i() : ranges[i].back;}
-            //ElementType(tryGetBack!0, tryGetBack!1, ...)
-            return mixin(q{ElementType(%(tryGetBack!%s, %))}.format(iota(0, R.length)));
-        }
-
-/**
-   Moves out the back.
-*/
-        static if (allSatisfy!(hasMobileElements, R))
-        {
-            ElementType moveBack()
-            {
-                //TODO: Fixme! BackElement != back of all ranges in case of jagged-ness
-
-                @property tryMoveBack(size_t i)(){return ranges[i].empty ? tryGetInit!i() : .moveFront(ranges[i]);}
-                //ElementType(tryMoveBack!0, tryMoveBack!1, ...)
-                return mixin(q{ElementType(%(tryMoveBack!%s, %))}.format(iota(0, R.length)));
-            }
-        }
-
-/**
-   Returns the current iterated element.
-*/
-        static if (allSatisfy!(hasAssignableElements, R))
-        {
-            @property void back(ElementType v)
-            {
-                //TODO: Fixme! BackElement != back of all ranges in case of jagged-ness.
-                //Not sure the call is even legal for StoppingPolicy.longest
-
-                foreach (i, Unused; R)
-                {
-                    if (!ranges[i].empty)
-                    {
-                        ranges[i].back = v[i];
-                    }
-                }
-            }
-        }
-    }
-
-/**
    Advances to the next element in all controlled ranges.
 */
     void popFront()
@@ -3111,6 +3076,65 @@ struct Zip(Ranges...)
                 ranges[i].popFront();
             }
             break;
+        }
+    }
+
+    static if (allSatisfy!(isForwardRange, R))
+    {
+        @property Zip save()
+        {
+            //Zip(ranges[0].save, ranges[1].save, ..., stoppingPolicy)
+            return mixin (q{Zip(%(ranges[%s]%|, %), stoppingPolicy)}.format(iota(0, R.length)));
+        }
+    }
+
+/**
+   Returns the rightmost element.
+*/
+    static if (allSatisfy!(isBidirectionalRange, R))
+    {
+        @property ElementType back()
+        {
+            //TODO: Fixme! BackElement != back of all ranges in case of jagged-ness
+
+            @property tryGetBack(size_t i)(){return ranges[i].empty ? tryGetInit!i() : ranges[i].back;}
+            //ElementType(tryGetBack!0, tryGetBack!1, ...)
+            return mixin(q{ElementType(%(tryGetBack!%s, %))}.format(iota(0, R.length)));
+        }
+
+/**
+   Returns the current iterated element.
+*/
+        static if (allSatisfy!(hasAssignableElements, R))
+        {
+            @property void back(ElementType v)
+            {
+                //TODO: Fixme! BackElement != back of all ranges in case of jagged-ness.
+                //Not sure the call is even legal for StoppingPolicy.longest
+
+                foreach (i, Unused; R)
+                {
+                    if (!ranges[i].empty)
+                    {
+                        ranges[i].back = v[i];
+                    }
+                }
+            }
+        }
+
+/**
+   Moves out the back.
+*/
+        static if (allSatisfy!(hasMobileElements, R))
+        {
+            ElementType moveBack()
+            {
+                //TODO: Fixme! BackElement != back of all ranges in case of jagged-ness
+
+                @property tryMoveBack(size_t i)(){return ranges[i].empty ? tryGetInit!i() : .moveFront(ranges[i]);}
+                //ElementType(tryMoveBack!0, tryMoveBack!1, ...)
+                return mixin(q{ElementType(%(tryMoveBack!%s, %))}.format(iota(0, R.length)));
+            }
         }
     }
 
@@ -3147,50 +3171,6 @@ struct Zip(Ranges...)
                 }
                 break;
             }
-        }
-    }
-
-/**
-   Returns the length of this range. Defined only if all ranges define
-   $(D length).
-*/
-    static if (allSatisfy!(hasLength, R))
-    {
-        @property auto length()
-        {
-            static if (Ranges.length == 1)
-                return ranges[0].length;
-            else
-            {
-                if (stoppingPolicy == StoppingPolicy.requireSameLength)
-                    return ranges[0].length;
-
-                //[min|max](ranges[0].length, ranges[1].length, ...)
-                import std.algorithm : min, max;
-                if (stoppingPolicy == StoppingPolicy.shortest)
-                    return mixin(q{min(%(ranges[%s].length%|, %))}.format(iota(0, R.length)));
-                else
-                    return mixin(q{max(%(ranges[%s].length%|, %))}.format(iota(0, R.length)));
-            }
-        }
-
-        alias opDollar = length;
-    }
-
-/**
-   Returns a slice of the range. Defined only if all range define
-   slicing.
-*/
-    static if (allSatisfy!(hasSlicing, R))
-    {
-        auto opSlice(size_t from, size_t to)
-        {
-            //Slicing an infinite range yields the type Take!R
-            //For finite ranges, the type Take!R aliases to R
-            alias ZipResult = Zip!(staticMap!(Take, R));
-
-            //ZipResult(ranges[0][from .. to], ranges[1][from .. to], ..., stoppingPolicy)
-            return mixin (q{ZipResult(%(ranges[%s][from .. to]%|, %), stoppingPolicy)}.format(iota(0, R.length)));
         }
     }
 
@@ -3240,6 +3220,50 @@ struct Zip(Ranges...)
                 return mixin (q{ElementType(%(.moveAt(ranges[%s], n)%|, %))}.format(iota(0, R.length)));
             }
         }
+    }
+
+/**
+   Returns a slice of the range. Defined only if all range define
+   slicing.
+*/
+    static if (allSatisfy!(hasSlicing, R))
+    {
+        auto opSlice(size_t from, size_t to)
+        {
+            //Slicing an infinite range yields the type Take!R
+            //For finite ranges, the type Take!R aliases to R
+            alias ZipResult = Zip!(staticMap!(Take, R));
+
+            //ZipResult(ranges[0][from .. to], ranges[1][from .. to], ..., stoppingPolicy)
+            return mixin (q{ZipResult(%(ranges[%s][from .. to]%|, %), stoppingPolicy)}.format(iota(0, R.length)));
+        }
+    }
+
+/**
+   Returns the length of this range. Defined only if all ranges define
+   $(D length).
+*/
+    static if (allSatisfy!(hasLength, R))
+    {
+        @property auto length()
+        {
+            static if (Ranges.length == 1)
+                return ranges[0].length;
+            else
+            {
+                if (stoppingPolicy == StoppingPolicy.requireSameLength)
+                    return ranges[0].length;
+
+                //[min|max](ranges[0].length, ranges[1].length, ...)
+                import std.algorithm : min, max;
+                if (stoppingPolicy == StoppingPolicy.shortest)
+                    return mixin(q{min(%(ranges[%s].length%|, %))}.format(iota(0, R.length)));
+                else
+                    return mixin(q{max(%(ranges[%s].length%|, %))}.format(iota(0, R.length)));
+            }
+        }
+
+        alias opDollar = length;
     }
 }
 
@@ -4054,10 +4078,10 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         @property inout(Value) front() inout { assert(!empty); return current; }
         void popFront() { assert(!empty); current += step; }
 
+        @property auto save() { return this; }
+
         @property inout(Value) back() inout { assert(!empty); return pastLast - step; }
         void popBack() { assert(!empty); pastLast -= step; }
-
-        @property auto save() { return this; }
 
         inout(Value) opIndex(ulong n) inout
         {
@@ -4132,10 +4156,10 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         @property inout(Value) front() inout { assert(!empty); return current; }
         void popFront() { assert(!empty); ++current; }
 
+        @property auto save() { return this; }
+
         @property inout(Value) back() inout { assert(!empty); return cast(inout(Value))(pastLast - 1); }
         void popBack() { assert(!empty); --pastLast; }
-
-        @property auto save() { return this; }
 
         inout(Value) opIndex(ulong n) inout
         {
@@ -4213,6 +4237,9 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
             assert(!empty);
             ++index;
         }
+
+        @property auto save() { return this; }
+
         @property Value back() const
         {
             assert(!empty);
@@ -4223,8 +4250,6 @@ if (isFloatingPoint!(CommonType!(B, E, S)))
             assert(!empty);
             --count;
         }
-
-        @property auto save() { return this; }
 
         Value opIndex(size_t n) const
         {
@@ -4636,20 +4661,19 @@ struct FrontTransversal(Ror,
         return _input.front.front;
     }
 
-    /// Ditto
-    static if (hasMobileElements!RangeType)
-    {
-        ElementType moveFront()
-        {
-            return .moveFront(_input.front);
-        }
-    }
-
     static if (hasAssignableElements!RangeType)
     {
         @property auto front(ElementType val)
         {
             _input.front.front = val;
+        }
+    }
+
+    static if (hasMobileElements!RangeType)
+    {
+        ElementType moveFront()
+        {
+            return .moveFront(_input.front);
         }
     }
 
@@ -4685,15 +4709,15 @@ struct FrontTransversal(Ror,
             assert(!empty);
             return _input.back.front;
         }
-        /// Ditto
-        void popBack()
+
+        static if (hasAssignableElements!RangeType)
         {
-            assert(!empty);
-            _input.popBack();
-            prime();
+            @property auto back(ElementType val)
+            {
+                _input.back.front = val;
+            }
         }
 
-        /// Ditto
         static if (hasMobileElements!RangeType)
         {
             ElementType moveBack()
@@ -4702,12 +4726,12 @@ struct FrontTransversal(Ror,
             }
         }
 
-        static if (hasAssignableElements!RangeType)
+        /// Ditto
+        void popBack()
         {
-            @property auto back(ElementType val)
-            {
-                _input.back.front = val;
-            }
+            assert(!empty);
+            _input.popBack();
+            prime();
         }
     }
 
@@ -4726,7 +4750,6 @@ struct FrontTransversal(Ror,
             return _input[n].front;
         }
 
-        /// Ditto
         static if (hasMobileElements!RangeType)
         {
             ElementType moveAt(size_t n)
@@ -4734,7 +4757,7 @@ struct FrontTransversal(Ror,
                 return .moveFront(_input[n]);
             }
         }
-        /// Ditto
+
         static if (hasAssignableElements!RangeType)
         {
             void opIndexAssign(ElementType val, size_t n)
@@ -4918,7 +4941,6 @@ struct Transversal(Ror,
         return _input.front[_n];
     }
 
-    /// Ditto
     static if (hasMobileElements!InnerRange)
     {
         E moveFront()
@@ -4927,7 +4949,6 @@ struct Transversal(Ror,
         }
     }
 
-    /// Ditto
     static if (hasAssignableElements!InnerRange)
     {
         @property auto front(E val)
@@ -4967,15 +4988,14 @@ struct Transversal(Ror,
             return _input.back[_n];
         }
 
-        /// Ditto
-        void popBack()
+        static if (hasAssignableElements!InnerRange)
         {
-            assert(!empty);
-            _input.popBack();
-            prime();
+            @property auto back(E val)
+            {
+                _input.back[_n] = val;
+            }
         }
 
-        /// Ditto
         static if (hasMobileElements!InnerRange)
         {
             E moveBack()
@@ -4985,19 +5005,17 @@ struct Transversal(Ror,
         }
 
         /// Ditto
-        static if (hasAssignableElements!InnerRange)
+        void popBack()
         {
-            @property auto back(E val)
-            {
-                _input.back[_n] = val;
-            }
+            assert(!empty);
+            _input.popBack();
+            prime();
         }
-
     }
 
     static if (isRandomAccessRange!RangeOfRanges &&
-            (opt == TransverseOptions.assumeNotJagged ||
-                    opt == TransverseOptions.enforceNotJagged))
+               (opt == TransverseOptions.assumeNotJagged ||
+                opt == TransverseOptions.enforceNotJagged))
     {
 /**
    Random-access primitive. It is offered if $(D
@@ -5010,16 +5028,6 @@ struct Transversal(Ror,
             return _input[n][_n];
         }
 
-        /// Ditto
-        static if (hasMobileElements!InnerRange)
-        {
-            E moveAt(size_t n)
-            {
-                return .moveAt(_input[n], _n);
-            }
-        }
-
-        /// Ditto
         static if (hasAssignableElements!InnerRange)
         {
             void opIndexAssign(E val, size_t n)
@@ -5028,17 +5036,21 @@ struct Transversal(Ror,
             }
         }
 
-        /// Ditto
-        static if(hasLength!RangeOfRanges)
+        static if (hasMobileElements!InnerRange)
         {
-            @property size_t length()
+            E moveAt(size_t n)
             {
-                return _input.length;
+                return .moveAt(_input[n], _n);
             }
-
-            alias opDollar = length;
         }
+    }
 
+    auto opSlice() { return this; }
+
+    static if (isRandomAccessRange!RangeOfRanges &&
+               (opt == TransverseOptions.assumeNotJagged ||
+                opt == TransverseOptions.enforceNotJagged))
+    {
 /**
    Slicing if offered if $(D RangeOfRanges) supports slicing and all the
    conditions for supporting indexing are met.
@@ -5052,7 +5064,20 @@ struct Transversal(Ror,
         }
     }
 
-    auto opSlice() { return this; }
+    static if (isRandomAccessRange!RangeOfRanges &&
+               (opt == TransverseOptions.assumeNotJagged ||
+                opt == TransverseOptions.enforceNotJagged))
+    {
+        static if(hasLength!RangeOfRanges)
+        {
+            @property size_t length()
+            {
+                return _input.length;
+            }
+
+            alias opDollar = length;
+        }
+    }
 
 private:
     RangeOfRanges _input;
@@ -5149,6 +5174,16 @@ struct Transposed(RangeOfRanges)
         this._input = input;
     }
 
+    @property bool empty()
+    {
+        if (_input.empty) return true;
+        foreach (e; _input.save)
+        {
+            if (!e.empty) return false;
+        }
+        return true;
+    }
+
     @property auto front()
     {
         import std.algorithm : filter, map;
@@ -5174,25 +5209,15 @@ struct Transposed(RangeOfRanges)
         }
     }
 
-    // ElementType opIndex(size_t n)
-    // {
-    //     return _input[n].front;
-    // }
-
-    @property bool empty()
-    {
-        if (_input.empty) return true;
-        foreach (e; _input.save)
-        {
-            if (!e.empty) return false;
-        }
-        return true;
-    }
-
     @property Transposed save()
     {
         return Transposed(_input.save);
     }
+
+    // ElementType opIndex(size_t n)
+    // {
+    //     return _input[n].front;
+    // }
 
     auto opSlice() { return this; }
 
@@ -5298,19 +5323,6 @@ struct Indexed(Source, Indices)
     }
 
     /// Range primitives
-    @property auto ref front()
-    {
-        assert(!empty);
-        return _source[_indices.front];
-    }
-
-    /// Ditto
-    void popFront()
-    {
-        assert(!empty);
-        _indices.popFront();
-    }
-
     static if(isInfinite!Indices)
     {
         enum bool empty = false;
@@ -5324,26 +5336,22 @@ struct Indexed(Source, Indices)
         }
     }
 
-    static if(isForwardRange!Indices)
+    /// Ditto
+    @property auto ref front()
     {
-        /// Ditto
-        @property typeof(this) save()
-        {
-            // Don't need to save _source because it's never consumed.
-            return typeof(this)(_source, _indices.save);
-        }
+        assert(!empty);
+        return _source[_indices.front];
     }
 
-    /// Ditto
     static if(hasAssignableElements!Source)
     {
+        /// Ditto
         @property auto ref front(ElementType!Source newVal)
         {
             assert(!empty);
             return _source[_indices.front] = newVal;
         }
     }
-
 
     static if(hasMobileElements!Source)
     {
@@ -5352,6 +5360,23 @@ struct Indexed(Source, Indices)
         {
             assert(!empty);
             return .moveAt(_source, _indices.front);
+        }
+    }
+
+    /// Ditto
+    void popFront()
+    {
+        assert(!empty);
+        _indices.popFront();
+    }
+
+    static if(isForwardRange!Indices)
+    {
+        /// Ditto
+        @property typeof(this) save()
+        {
+            // Don't need to save _source because it's never consumed.
+            return typeof(this)(_source, _indices.save);
         }
     }
 
@@ -5365,13 +5390,6 @@ struct Indexed(Source, Indices)
         }
 
         /// Ditto
-        void popBack()
-        {
-           assert(!empty);
-           _indices.popBack();
-        }
-
-        /// Ditto
         static if(hasAssignableElements!Source)
         {
             @property auto ref back(ElementType!Source newVal)
@@ -5381,7 +5399,6 @@ struct Indexed(Source, Indices)
             }
         }
 
-
         static if(hasMobileElements!Source)
         {
             /// Ditto
@@ -5390,6 +5407,46 @@ struct Indexed(Source, Indices)
                 assert(!empty);
                 return .moveAt(_source, _indices.back);
             }
+        }
+
+        /// Ditto
+        void popBack()
+        {
+           assert(!empty);
+           _indices.popBack();
+        }
+    }
+
+    static if(isRandomAccessRange!Indices)
+    {
+        /// Ditto
+        auto ref opIndex(size_t index)
+        {
+            return _source[_indices[index]];
+        }
+
+        static if(hasAssignableElements!Source)
+        {
+            /// Ditto
+            auto opIndexAssign(ElementType!Source newVal, size_t index)
+            {
+                return _source[_indices[index]] = newVal;
+            }
+        }
+
+        static if(hasMobileElements!Source)
+        {
+            /// Ditto
+            auto moveAt(size_t index)
+            {
+                return .moveAt(_source, _indices[index]);
+            }
+        }
+
+        /// Ditto
+        typeof(this) opSlice(size_t a, size_t b)
+        {
+            return typeof(this)(_source, _indices[a..b]);
         }
     }
 
@@ -5402,41 +5459,6 @@ struct Indexed(Source, Indices)
         }
 
         alias opDollar = length;
-    }
-
-    static if(isRandomAccessRange!Indices)
-    {
-        /// Ditto
-        auto ref opIndex(size_t index)
-        {
-            return _source[_indices[index]];
-        }
-
-        /// Ditto
-        typeof(this) opSlice(size_t a, size_t b)
-        {
-            return typeof(this)(_source, _indices[a..b]);
-        }
-
-
-        static if(hasAssignableElements!Source)
-        {
-            /// Ditto
-            auto opIndexAssign(ElementType!Source newVal, size_t index)
-            {
-                return _source[_indices[index]] = newVal;
-            }
-        }
-
-
-        static if(hasMobileElements!Source)
-        {
-            /// Ditto
-            auto moveAt(size_t index)
-            {
-                return .moveAt(_source, _indices[index]);
-            }
-        }
     }
 
     // All this stuff is useful if someone wants to index an Indexed
@@ -5453,7 +5475,7 @@ struct Indexed(Source, Indices)
     /**
     Returns the indices range.
     */
-     @property Indices indices()
+    @property Indices indices()
     {
         return _indices;
     }
@@ -5550,7 +5572,19 @@ struct Chunks(Source)
         _chunkSize = chunkSize;
     }
 
-    /// Forward range primitives. Always present.
+    static if (!isInfinite!Source)
+    {
+        /// Forward range primitives. Always present.
+        @property bool empty()
+        {
+            return _source.empty;
+        }
+    }
+    else
+        // undocumented
+        enum empty = false;
+
+    /// Ditto
     @property auto front()
     {
         assert(!empty);
@@ -5563,16 +5597,6 @@ struct Chunks(Source)
         assert(!empty);
         _source.popFrontN(_chunkSize);
     }
-
-    static if (!isInfinite!Source)
-        /// Ditto
-        @property bool empty()
-        {
-            return _source.empty;
-        }
-    else
-        // undocumented
-        enum empty = false;
 
     /// Ditto
     @property typeof(this) save()
@@ -5594,6 +5618,30 @@ struct Chunks(Source)
         }
         //Note: No point in defining opDollar here without slicing.
         //opDollar is defined below in the hasSlicing!Source section
+    }
+
+    //Bidirectional range primitives
+    static if (hasSlicing!Source && hasLength!Source)
+    {
+        /**
+        Bidirectional range primitives. Provided only if both
+        $(D hasSlicing!Source) and $(D hasLength!Source) are $(D true).
+         */
+        @property auto back()
+        {
+            assert(!empty, "back called on empty chunks");
+            immutable len = _source.length;
+            immutable start = (len - 1) / _chunkSize * _chunkSize;
+            return _source[start .. len];
+        }
+
+        /// Ditto
+        void popBack()
+        {
+            assert(!empty, "popBack() called on empty chunks");
+            immutable end = (_source.length - 1) / _chunkSize * _chunkSize;
+            _source = _source[0 .. end];
+        }
     }
 
     static if (hasSlicing!Source)
@@ -5643,36 +5691,21 @@ struct Chunks(Source)
             static if (hasSliceToEnd)
             {
                 private static struct DollarToken{}
-                DollarToken opDollar()
-                {
-                    return DollarToken();
-                }
+
                 //Slice to dollar
                 typeof(this) opSlice(size_t lower, DollarToken)
                 {
                     return typeof(this)(_source[lower * _chunkSize .. $], _chunkSize);
                 }
+
+                DollarToken opDollar()
+                {
+                    return DollarToken();
+                }
             }
         }
         else
         {
-            //Dollar token carries a static type, with no extra information.
-            //It can lazily transform into _source.length on algorithmic
-            //operations such as : chunks[$/2, $-1];
-            private static struct DollarToken
-            {
-                Chunks!Source* mom;
-                @property size_t momLength()
-                {
-                    return mom.length;
-                }
-                alias momLength this;
-            }
-            DollarToken opDollar()
-            {
-                return DollarToken(&this);
-            }
-
             //Slice overloads optimized for using dollar. Without this, to slice to end, we would...
             //1. Evaluate chunks.length
             //2. Multiply by _chunksSize
@@ -5705,30 +5738,23 @@ struct Chunks(Source)
                 assert(upper == length, "chunks slicing index out of bounds");
                 return this[$ .. $];
             }
-        }
-    }
 
-    //Bidirectional range primitives
-    static if (hasSlicing!Source && hasLength!Source)
-    {
-        /**
-        Bidirectional range primitives. Provided only if both
-        $(D hasSlicing!Source) and $(D hasLength!Source) are $(D true).
-         */
-        @property auto back()
-        {
-            assert(!empty, "back called on empty chunks");
-            immutable len = _source.length;
-            immutable start = (len - 1) / _chunkSize * _chunkSize;
-            return _source[start .. len];
-        }
-
-        /// Ditto
-        void popBack()
-        {
-            assert(!empty, "popBack() called on empty chunks");
-            immutable end = (_source.length - 1) / _chunkSize * _chunkSize;
-            _source = _source[0 .. end];
+            //Dollar token carries a static type, with no extra information.
+            //It can lazily transform into _source.length on algorithmic
+            //operations such as : chunks[$/2, $-1];
+            private static struct DollarToken
+            {
+                Chunks!Source* mom;
+                @property size_t momLength()
+                {
+                    return mom.length;
+                }
+                alias momLength this;
+            }
+            DollarToken opDollar()
+            {
+                return DollarToken(&this);
+            }
         }
     }
 
@@ -5857,6 +5883,11 @@ private struct OnlyResult(T, size_t arity)
         ++frontIndex;
     }
 
+    OnlyResult save() @property
+    {
+        return this;
+    }
+
     T back() @property
     {
         assert(!empty);
@@ -5868,18 +5899,6 @@ private struct OnlyResult(T, size_t arity)
         assert(!empty);
         --backIndex;
     }
-
-    OnlyResult save() @property
-    {
-        return this;
-    }
-
-    size_t length() @property
-    {
-        return backIndex - frontIndex;
-    }
-
-    alias opDollar = length;
 
     T opIndex(size_t idx)
     {
@@ -5915,6 +5934,13 @@ private struct OnlyResult(T, size_t arity)
         return result;
     }
 
+    size_t length() @property
+    {
+        return backIndex - frontIndex;
+    }
+
+    alias opDollar = length;
+
     private size_t frontIndex = 0;
     private size_t backIndex = 0;
 
@@ -5933,20 +5959,23 @@ private struct OnlyResult(T, size_t arity)
 // Specialize for single-element results
 private struct OnlyResult(T, size_t arity : 1)
 {
-    @property T front() { assert(!_empty); return _value; }
-    @property T back() { assert(!_empty); return _value; }
-    @property bool empty() const { return _empty; }
-    @property size_t length() const { return !_empty; }
-    @property auto save() { return this; }
-    void popFront() { assert(!_empty); _empty = true; }
-    void popBack() { assert(!_empty); _empty = true; }
-    alias opDollar = length;
-
     private this()(auto ref T value)
     {
         this._value = value;
         this._empty = false;
     }
+
+    @property bool empty() const { return _empty; }
+    @property T front() { assert(!_empty); return _value; }
+    void popFront() { assert(!_empty); _empty = true; }
+
+    @property auto save() { return this; }
+
+    @property T back() { assert(!_empty); return _value; }
+    void popBack() { assert(!_empty); _empty = true; }
+
+    @property size_t length() const { return !_empty; }
+    alias opDollar = length;
 
     T opIndex(size_t i)
     {
@@ -5987,13 +6016,16 @@ private struct OnlyResult(T, size_t arity : 0)
     private static struct EmptyElementType {}
 
     bool empty() @property { return true; }
-    size_t length() @property { return 0; }
-    alias opDollar = length;
     EmptyElementType front() @property { assert(false); }
     void popFront() { assert(false); }
+
+    OnlyResult save() @property { return this; }
+
     EmptyElementType back() @property { assert(false); }
     void popBack() { assert(false); }
-    OnlyResult save() @property { return this; }
+
+    size_t length() @property { return 0; }
+    alias opDollar = length;
 
     EmptyElementType opIndex(size_t i)
     {
@@ -6303,13 +6335,7 @@ body
         Range range;
         Enumerator index;
 
-        public:
-        ElemType front() @property
-        {
-            assert(!range.empty);
-            return typeof(return)(index, range.front);
-        }
-
+    public:
         static if (isInfinite!Range)
             enum bool empty = false;
         else
@@ -6318,6 +6344,12 @@ body
             {
                 return range.empty;
             }
+        }
+
+        ElemType front() @property
+        {
+            assert(!range.empty);
+            return typeof(return)(index, range.front);
         }
 
         void popFront()
@@ -6337,13 +6369,6 @@ body
 
         static if (hasLength!Range)
         {
-            size_t length() @property
-            {
-                return range.length;
-            }
-
-            alias opDollar = length;
-
             static if (isBidirectionalRange!Range)
             {
                 ElemType back() @property
@@ -6358,6 +6383,16 @@ body
                     range.popBack();
                 }
             }
+        }
+
+        static if (hasLength!Range)
+        {
+            size_t length() @property
+            {
+                return range.length;
+            }
+
+            alias opDollar = length;
         }
 
         static if (isRandomAccessRange!Range)
@@ -6379,17 +6414,17 @@ body
             }
             else
             {
+                auto opSlice(size_t i, size_t j)
+                {
+                    return this[i .. $].takeExactly(j - 1);
+                }
+
                 static struct DollarToken {}
                 enum opDollar = DollarToken.init;
 
                 Result opSlice(size_t i, DollarToken)
                 {
                     return typeof(return)(range[i .. $], cast(Enumerator)(index + i));
-                }
-
-                auto opSlice(size_t i, size_t j)
-                {
-                    return this[i .. $].takeExactly(j - 1);
                 }
             }
         }
@@ -6418,8 +6453,8 @@ pure @safe nothrow unittest
 
     static struct HasSlicing
     {
-        typeof(this) front() @property { return typeof(this).init; }
         bool empty() @property { return true; }
+        typeof(this) front() @property { return typeof(this).init; }
         void popFront() {}
 
         typeof(this) opSlice(size_t, size_t)
@@ -6551,8 +6586,8 @@ version(none) // @@@BUG@@@ 10939
         {
             immutable(int)[] _values = values;
 
-            int front() @property { assert(false); }
             bool empty() @property { assert(false); }
+            int front() @property { assert(false); }
             void popFront() { assert(false); }
 
             int length() @property
@@ -6741,16 +6776,6 @@ if (isInputRange!Range)
     }
 
     /// Ditto
-    static if (isForwardRange!Range)
-    @property auto save()
-    {
-        // Avoid the constructor
-        typeof(this) result = this;
-        result._input = _input.save;
-        return result;
-    }
-
-    /// Ditto
     @property auto ref front()
     {
         return _input.front;
@@ -6760,6 +6785,16 @@ if (isInputRange!Range)
     void popFront()
     {
         _input.popFront();
+    }
+
+    /// Ditto
+    static if (isForwardRange!Range)
+    @property auto save()
+    {
+        // Avoid the constructor
+        typeof(this) result = this;
+        result._input = _input.save;
+        return result;
     }
 
     /// Ditto
@@ -6778,6 +6813,16 @@ if (isInputRange!Range)
     }
 
     /// Ditto
+    static if (hasLength!Range)
+    {
+        @property size_t length()          //const
+        {
+            return _input.length;
+        }
+        alias opDollar = length;
+    }
+
+    /// Ditto
     static if (isRandomAccessRange!Range)
         auto ref opIndex(size_t i)
         {
@@ -6793,16 +6838,6 @@ if (isInputRange!Range)
             result._input = _input[a .. b];// skip checking
             return result;
         }
-
-    /// Ditto
-    static if (hasLength!Range)
-    {
-        @property size_t length()          //const
-        {
-            return _input.length;
-        }
-        alias opDollar = length;
-    }
 
 /**
    Releases the controlled range and returns it.
@@ -7417,7 +7452,6 @@ public:
         _range = range;
     }
 
-
     /++
         This does not assign the pointer of $(D rhs) to this $(D RefRange).
         Rather it assigns the range pointed to by $(D rhs) to the range pointed
@@ -7498,186 +7532,48 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
     }
 
 
-    version(StdDdoc)
+    static if(!isInfinite!R)
     {
-        /++ +/
-        @property auto front() {assert(0);}
-        /++ Ditto +/
-        @property auto front() const {assert(0);}
-        /++ Ditto +/
-        @property auto front(ElementType!R value) {assert(0);}
-    }
-    else
-    {
-        @property auto front()
-        {
-            return (*_range).front;
-        }
-
-        static if(is(typeof((*(cast(const R*)_range)).front))) @property ElementType!R front() const
-        {
-            return (*_range).front;
-        }
-
-        static if(is(typeof((*_range).front = (*_range).front))) @property auto front(ElementType!R value)
-        {
-            return (*_range).front = value;
-        }
-    }
-
-
-    version(StdDdoc)
-    {
-        @property bool empty(); ///
-        @property bool empty() const; ///Ditto
-    }
-    else static if(isInfinite!R)
-        enum empty = false;
-    else
-    {
+        ///
         @property bool empty()
         {
             return (*_range).empty;
         }
-
-        static if(is(typeof((*cast(const R*)_range).empty))) @property bool empty() const
+        static if(is(typeof((*cast(const R*)_range).empty)))
         {
-            return (*_range).empty;
+            /// Ditto
+            @property bool empty() const
+            {
+                return (*_range).empty;
+            }
         }
-    }
-
-
-    /++ +/
-    void popFront()
-    {
-        return (*_range).popFront();
-    }
-
-
-    version(StdDdoc)
-    {
-        /++ +/
-        @property auto save() {assert(0);}
-        /++ Ditto +/
-        @property auto save() const {assert(0);}
-        /++ Ditto +/
-        auto opSlice() {assert(0);}
-        /++ Ditto +/
-        auto opSlice() const {assert(0);}
     }
     else
     {
-        static if(isSafe!((R* r) => (*r).save))
-        {
-            @property auto save() @trusted
-            {
-                mixin(_genSave());
-            }
-
-            static if(is(typeof((*cast(const R*)_range).save))) @property auto save() @trusted const
-            {
-                mixin(_genSave());
-            }
-        }
-        else
-        {
-            @property auto save()
-            {
-                mixin(_genSave());
-            }
-
-            static if(is(typeof((*cast(const R*)_range).save))) @property auto save() const
-            {
-                mixin(_genSave());
-            }
-        }
-
-        auto opSlice()()
-        {
-            return save;
-        }
-
-        auto opSlice()() const
-        {
-            return save;
-        }
-
-        private static string _genSave() @safe pure nothrow
-        {
-            return `import std.conv;` ~
-                   `alias S = typeof((*_range).save);` ~
-                   `static assert(isForwardRange!S, S.stringof ~ " is not a forward range.");` ~
-                   `auto mem = new void[S.sizeof];` ~
-                   `emplace!S(mem, cast(S)(*_range).save);` ~
-                   `return RefRange!S(cast(S*)mem.ptr);`;
-        }
-
-        static assert(isForwardRange!RefRange);
+        enum empty = false;
     }
 
-
-    version(StdDdoc)
+    /++ +/
+    @property auto front()
     {
-        /++
-            Only defined if $(D isBidirectionalRange!R) is $(D true).
-          +/
-        @property auto back() {assert(0);}
-        /++ Ditto +/
-        @property auto back() const {assert(0);}
-        /++ Ditto +/
-        @property auto back(ElementType!R value) {assert(0);}
+        return (*_range).front;
     }
-    else static if(isBidirectionalRange!R)
-    {
-        @property auto back()
-        {
-            return (*_range).back;
-        }
-
-        static if(is(typeof((*(cast(const R*)_range)).back))) @property ElementType!R back() const
-        {
-            return (*_range).back;
-        }
-
-        static if(is(typeof((*_range).back = (*_range).back))) @property auto back(ElementType!R value)
-        {
-            return (*_range).back = value;
-        }
-    }
-
-
     /++ Ditto +/
-    static if(isBidirectionalRange!R) void popBack()
+    static if (is(typeof((*(cast(const R*)_range)).front)))
     {
-        return (*_range).popBack();
-    }
-
-
-    version(StdDdoc)
-    {
-        /++
-            Only defined if $(D isRandomAccesRange!R) is $(D true).
-          +/
-        auto ref opIndex(IndexType)(IndexType index) {assert(0);}
-
-        /++ Ditto +/
-        auto ref opIndex(IndexType)(IndexType index) const {assert(0);}
-    }
-    else static if(isRandomAccessRange!R)
-    {
-        auto ref opIndex(IndexType)(IndexType index)
-            if(is(typeof((*_range)[index])))
+        @property auto front() const
         {
-            return (*_range)[index];
-        }
-
-        auto ref opIndex(IndexType)(IndexType index) const
-            if(is(typeof((*cast(const R*)_range)[index])))
-        {
-            return (*_range)[index];
+            return (*_range).front;
         }
     }
-
+    /++ Ditto +/
+    static if (is(typeof((*_range).front = (*_range).front)))
+    {
+        @property auto front(ElementType!R value)
+        {
+            return (*_range).front = value;
+        }
+    }
 
     /++
         Only defined if $(D hasMobileElements!R) and $(D isForwardRange!R) are
@@ -7688,6 +7584,76 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
         return (*_range).moveFront();
     }
 
+    /++ +/
+    void popFront()
+    {
+        return (*_range).popFront();
+    }
+
+    static if (!isSafe!((R* r) => (*r).save))
+    {
+        /++ +/
+        @property auto save()
+        {
+            mixin(_genSave());
+        }
+
+        /++ Ditto +/
+        static if(is(typeof((*cast(const R*)_range).save)))
+        {
+            @property auto save() const
+            {
+                mixin(_genSave());
+            }
+        }
+    }
+    else
+    {
+        @property auto save() @trusted
+        {
+            mixin(_genSave());
+        }
+
+        static if(is(typeof((*cast(const R*)_range).save))) @property auto save() @trusted const
+        {
+            mixin(_genSave());
+        }
+    }
+
+    private static string _genSave() @safe pure nothrow
+    {
+        return `import std.conv;` ~
+               `alias S = typeof((*_range).save);` ~
+               `static assert(isForwardRange!S, S.stringof ~ " is not a forward range.");` ~
+               `auto mem = new void[S.sizeof];` ~
+               `emplace!S(mem, cast(S)(*_range).save);` ~
+               `return RefRange!S(cast(S*)mem.ptr);`;
+    }
+    static assert(isForwardRange!RefRange);
+
+    /++
+        Only defined if $(D isBidirectionalRange!R) is $(D true).
+      +/
+    @property auto back()
+    {
+        return (*_range).back;
+    }
+    /++ Ditto +/
+    static if(is(typeof((*(cast(const R*)_range)).back)))
+    {
+        @property auto back() const
+        {
+            return (*_range).back;
+        }
+    }
+    /++ Ditto +/
+    static if (is(typeof((*_range).back = (*_range).back)))
+    {
+        @property auto back(ElementType!R value)
+        {
+            return (*_range).back = value;
+        }
+    }
 
     /++
         Only defined if $(D hasMobileElements!R) and $(D isBidirectionalRange!R)
@@ -7698,6 +7664,32 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
         return (*_range).moveBack();
     }
 
+    /++ Ditto +/
+    static if(isBidirectionalRange!R)
+    {
+        void popBack()
+        {
+            return (*_range).popBack();
+        }
+    }
+
+    static if(isRandomAccessRange!R)
+    {
+        /++
+            Only defined if $(D isRandomAccesRange!R) is $(D true).
+          +/
+        auto ref opIndex(IndexType)(IndexType index)
+            if(is(typeof((*_range)[index])))
+        {
+            return (*_range)[index];
+        }
+        /++ Ditto +/
+        auto ref opIndex(IndexType)(IndexType index) const
+            if(is(typeof((*cast(const R*)_range)[index])))
+        {
+            return (*_range)[index];
+        }
+    }
 
     /++
         Only defined if $(D hasMobileElements!R) and $(D isRandomAccessRange!R)
@@ -7709,45 +7701,41 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
         return (*_range).moveAt(index);
     }
 
+    /++ +/
+    auto opSlice()()
+    {
+        return save;
+    }
 
-    version(StdDdoc)
+    /++ Ditto +/
+    auto opSlice()() const
+    {
+        return save;
+    }
+
+    static if(hasLength!R)
     {
         /++
             Only defined if $(D hasLength!R) is $(D true).
           +/
-        @property auto length() {assert(0);}
-
-        /++ Ditto +/
-        @property auto length() const {assert(0);}
-    }
-    else static if(hasLength!R)
-    {
         @property auto length()
         {
             return (*_range).length;
         }
 
-        static if(is(typeof((*cast(const R*)_range).length))) @property auto length() const
+        /// ditto
+        static if(is(typeof((*cast(const R*)_range).length)))
+        @property auto length() const
         {
             return (*_range).length;
         }
     }
 
-
-    version(StdDdoc)
+    static if(hasSlicing!R)
     {
         /++
             Only defined if $(D hasSlicing!R) is $(D true).
           +/
-        auto opSlice(IndexType1, IndexType2)
-                    (IndexType1 begin, IndexType2 end) {assert(0);}
-
-        /++ Ditto +/
-        auto opSlice(IndexType1, IndexType2)
-                    (IndexType1 begin, IndexType2 end) const {assert(0);}
-    }
-    else static if(hasSlicing!R)
-    {
         auto opSlice(IndexType1, IndexType2)
                     (IndexType1 begin, IndexType2 end)
             if(is(typeof((*_range)[begin .. end])))
@@ -7755,6 +7743,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
             mixin(_genOpSlice());
         }
 
+        /++ Ditto +/
         auto opSlice(IndexType1, IndexType2)
                     (IndexType1 begin, IndexType2 end) const
             if(is(typeof((*cast(const R*)_range)[begin .. end])))
@@ -7772,7 +7761,6 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
                    `return RefRange!S(cast(S*)mem.ptr);`;
         }
     }
-
 
 private:
 
@@ -8077,8 +8065,8 @@ unittest
 {
     struct S
     {
-        @property int front() @safe const pure nothrow { return 0; }
         enum bool empty = false;
+        @property int front() @safe const pure nothrow { return 0; }
         void popFront() @safe pure nothrow { }
         @property auto save() @safe pure nothrow { return this; }
     }
@@ -8092,8 +8080,8 @@ unittest
 {
     class C
     {
-        @property int front() @safe const pure nothrow { return 0; }
         @property bool empty() @safe const pure nothrow { return false; }
+        @property int front() @safe const pure nothrow { return 0; }
         void popFront() @safe pure nothrow { }
         @property auto save() @safe pure nothrow { return this; }
     }
@@ -8106,8 +8094,8 @@ unittest
 
     struct S
     {
-        @property int front() @safe const pure nothrow { return 0; }
         @property bool empty() @safe const pure nothrow { return false; }
+        @property int front() @safe const pure nothrow { return 0; }
         void popFront() @safe pure nothrow { }
 
         int i = 27;
@@ -8152,7 +8140,8 @@ auto refRange(R)(R* range)
     zip(r, r);
     roundRobin(r, r);
 
-    struct NRAR {
+    struct NRAR
+    {
         typeof(r) input;
         @property empty() { return input.empty; }
         @property front() { return input.front; }
@@ -8167,7 +8156,8 @@ auto refRange(R)(R* range)
     // fix for std.range
     joiner([r], [9]);
 
-    struct NRAR2 {
+    struct NRAR2
+    {
         NRAR input;
         @property empty() { return true; }
         @property front() { return input; }
@@ -8229,14 +8219,6 @@ if (isInputRange!R1 && isOutputRange!(R2, ElementType!R1))
             private bool _frontAccessed;
         }
 
-        static if (hasLength!R1)
-        {
-            @property length()
-            {
-                return _input.length;
-            }
-        }
-
         static if (isInfinite!R1)
         {
             enum bool empty = false;
@@ -8244,6 +8226,19 @@ if (isInputRange!R1 && isOutputRange!(R2, ElementType!R1))
         else
         {
             @property bool empty() { return _input.empty; }
+        }
+
+        @property auto ref front()
+        {
+            static if (!pipeOnPop)
+            {
+                if (!_frontAccessed)
+                {
+                    _frontAccessed = true;
+                    put(_output, _input.front);
+                }
+            }
+            return _input.front;
         }
 
         void popFront()
@@ -8260,17 +8255,12 @@ if (isInputRange!R1 && isOutputRange!(R2, ElementType!R1))
             _input.popFront();
         }
 
-        @property auto ref front()
+        static if (hasLength!R1)
         {
-            static if (!pipeOnPop)
+            @property length()
             {
-                if (!_frontAccessed)
-                {
-                    _frontAccessed = true;
-                    put(_output, _input.front);
-                }
+                return _input.length;
             }
-            return _input.front;
         }
     }
 

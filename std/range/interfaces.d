@@ -81,7 +81,8 @@ import std.typetuple;
  *
  * Examples:
  * ---
- * void useRange(InputRange!int range) {
+ * void useRange(InputRange!int range)
+ * {
  *     // Function body.
  * }
  *
@@ -106,18 +107,19 @@ import std.typetuple;
  * See_Also:
  * $(LREF inputRangeObject)
  */
-interface InputRange(E) {
+interface InputRange(E)
+{
     ///
-    @property E front();
+    @property bool empty();
 
     ///
-    E moveFront();
+    @property E front();
 
     ///
     void popFront();
 
     ///
-    @property bool empty();
+    E moveFront();
 
     /* Measurements of the benefits of using opApply instead of range primitives
      * for foreach, using timings for iterating over an iota(100_000_000) range
@@ -139,13 +141,15 @@ interface InputRange(E) {
 }
 
 /**Interface for a forward range of type $(D E).*/
-interface ForwardRange(E) : InputRange!E {
+interface ForwardRange(E) : InputRange!E
+{
     ///
     @property ForwardRange!E save();
 }
 
 /**Interface for a bidirectional range of type $(D E).*/
-interface BidirectionalRange(E) : ForwardRange!(E) {
+interface BidirectionalRange(E) : ForwardRange!(E)
+{
     ///
     @property BidirectionalRange!E save();
 
@@ -153,14 +157,15 @@ interface BidirectionalRange(E) : ForwardRange!(E) {
     @property E back();
 
     ///
-    E moveBack();
+    void popBack();
 
     ///
-    void popBack();
+    E moveBack();
 }
 
 /**Interface for a finite random access range of type $(D E).*/
-interface RandomAccessFinite(E) : BidirectionalRange!(E) {
+interface RandomAccessFinite(E) : BidirectionalRange!(E)
+{
     ///
     @property RandomAccessFinite!E save();
 
@@ -178,38 +183,43 @@ interface RandomAccessFinite(E) : BidirectionalRange!(E) {
 
     // Can't support slicing until issues with requiring slicing for all
     // finite random access ranges are fully resolved.
-    version(none) {
+    version(none)
+    {
         ///
         RandomAccessFinite!E opSlice(size_t, size_t);
     }
 }
 
 /**Interface for an infinite random access range of type $(D E).*/
-interface RandomAccessInfinite(E) : ForwardRange!E {
-    ///
-    E moveAt(size_t);
-
+interface RandomAccessInfinite(E) : ForwardRange!E
+{
     ///
     @property RandomAccessInfinite!E save();
 
     ///
     E opIndex(size_t);
+
+    ///
+    E moveAt(size_t);
 }
 
 /**Adds assignable elements to InputRange.*/
-interface InputAssignable(E) : InputRange!E {
+interface InputAssignable(E) : InputRange!E
+{
     ///
     @property void front(E newVal);
 }
 
 /**Adds assignable elements to ForwardRange.*/
-interface ForwardAssignable(E) : InputAssignable!E, ForwardRange!E {
+interface ForwardAssignable(E) : InputAssignable!E, ForwardRange!E
+{
     ///
     @property ForwardAssignable!E save();
 }
 
 /**Adds assignable elements to BidirectionalRange.*/
-interface BidirectionalAssignable(E) : ForwardAssignable!E, BidirectionalRange!E {
+interface BidirectionalAssignable(E) : ForwardAssignable!E, BidirectionalRange!E
+{
     ///
     @property BidirectionalAssignable!E save();
 
@@ -218,7 +228,8 @@ interface BidirectionalAssignable(E) : ForwardAssignable!E, BidirectionalRange!E
 }
 
 /**Adds assignable elements to RandomAccessFinite.*/
-interface RandomFiniteAssignable(E) : RandomAccessFinite!E, BidirectionalAssignable!E {
+interface RandomFiniteAssignable(E) : RandomAccessFinite!E, BidirectionalAssignable!E
+{
     ///
     @property RandomFiniteAssignable!E save();
 
@@ -228,7 +239,8 @@ interface RandomFiniteAssignable(E) : RandomAccessFinite!E, BidirectionalAssigna
 
 /**Interface for an output range of type $(D E).  Usage is similar to the
  * $(D InputRange) interface and descendants.*/
-interface OutputRange(E) {
+interface OutputRange(E)
+{
     ///
     void put(E);
 }
@@ -259,12 +271,14 @@ private string putMethods(E...)()
 /**Implements the $(D OutputRange) interface for all types E and wraps the
  * $(D put) method for each type $(D E) in a virtual function.
  */
-class OutputRangeObject(R, E...) : staticMap!(OutputRange, E) {
+class OutputRangeObject(R, E...) : staticMap!(OutputRange, E)
+{
     // @BUG 4689:  There should be constraints on this template class, but
     // DMD won't let me put them in.
     private R _range;
 
-    this(R range) {
+    this(R range)
+    {
         this._range = range;
     }
 
@@ -273,33 +287,55 @@ class OutputRangeObject(R, E...) : staticMap!(OutputRange, E) {
 
 
 /**Returns the interface type that best matches $(D R).*/
-template MostDerivedInputRange(R) if (isInputRange!(Unqual!R)) {
+template MostDerivedInputRange(R) if (isInputRange!(Unqual!R))
+{
     private alias E = ElementType!R;
 
-    static if (isRandomAccessRange!R) {
-        static if (isInfinite!R) {
+    static if (isRandomAccessRange!R)
+    {
+        static if (isInfinite!R)
+        {
             alias MostDerivedInputRange = RandomAccessInfinite!E;
-        } else static if (hasAssignableElements!R) {
+        }
+        else static if (hasAssignableElements!R)
+        {
             alias MostDerivedInputRange = RandomFiniteAssignable!E;
-        } else {
+        }
+        else
+        {
             alias MostDerivedInputRange = RandomAccessFinite!E;
         }
-    } else static if (isBidirectionalRange!R) {
-        static if (hasAssignableElements!R) {
+    }
+    else static if (isBidirectionalRange!R)
+    {
+        static if (hasAssignableElements!R)
+        {
             alias MostDerivedInputRange = BidirectionalAssignable!E;
-        } else {
+        }
+        else
+        {
             alias MostDerivedInputRange = BidirectionalRange!E;
         }
-    } else static if (isForwardRange!R) {
-        static if (hasAssignableElements!R) {
+    }
+    else static if (isForwardRange!R)
+    {
+        static if (hasAssignableElements!R)
+        {
             alias MostDerivedInputRange = ForwardAssignable!E;
-        } else {
+        }
+        else
+        {
             alias MostDerivedInputRange = ForwardRange!E;
         }
-    } else {
-        static if (hasAssignableElements!R) {
+    }
+    else
+    {
+        static if (hasAssignableElements!R)
+        {
             alias MostDerivedInputRange = InputAssignable!E;
-        } else {
+        }
+        else
+        {
             alias MostDerivedInputRange = InputRange!E;
         }
     }
@@ -309,76 +345,100 @@ template MostDerivedInputRange(R) if (isInputRange!(Unqual!R)) {
  * all relevant range primitives in virtual functions.  If $(D R) is already
  * derived from the $(D InputRange) interface, aliases itself away.
  */
-template InputRangeObject(R) if (isInputRange!(Unqual!R)) {
-    static if (is(R : InputRange!(ElementType!R))) {
+template InputRangeObject(R) if (isInputRange!(Unqual!R))
+{
+    static if (is(R : InputRange!(ElementType!R)))
+    {
         alias InputRangeObject = R;
-    } else static if (!is(Unqual!R == R)) {
+    }
+    else static if (!is(Unqual!R == R))
+    {
         alias InputRangeObject = InputRangeObject!(Unqual!R);
-    } else {
-
+    }
+    else
+    {
         ///
-        class InputRangeObject : MostDerivedInputRange!(R) {
+        class InputRangeObject : MostDerivedInputRange!(R)
+        {
             private R _range;
             private alias E = ElementType!R;
 
-            this(R range) {
+            this(R range)
+            {
                 this._range = range;
             }
 
-            @property E front() { return _range.front; }
-
-            E moveFront() {
-                return .moveFront(_range);
-            }
-
-            void popFront() { _range.popFront(); }
             @property bool empty() { return _range.empty; }
 
-            static if (isForwardRange!R) {
-                @property typeof(this) save() {
-                    return new typeof(this)(_range.save);
-                }
-            }
+            @property E front() { return _range.front; }
 
-            static if (hasAssignableElements!R) {
-                @property void front(E newVal) {
+            void popFront() { _range.popFront(); }
+
+            static if (hasAssignableElements!R)
+            {
+                @property void front(E newVal)
+                {
                     _range.front = newVal;
                 }
             }
 
-            static if (isBidirectionalRange!R) {
+            E moveFront()
+            {
+                return .moveFront(_range);
+            }
+
+            static if (isForwardRange!R)
+            {
+                @property typeof(this) save()
+                {
+                    return new typeof(this)(_range.save);
+                }
+            }
+
+            static if (isBidirectionalRange!R)
+            {
                 @property E back() { return _range.back; }
 
-                E moveBack() {
-                    return .moveBack(_range);
+                static if (hasAssignableElements!R)
+                {
+                    @property void back(E newVal)
+                    {
+                        _range.back = newVal;
+                    }
                 }
 
                 void popBack() { return _range.popBack(); }
 
-                static if (hasAssignableElements!R) {
-                    @property void back(E newVal) {
-                        _range.back = newVal;
-                    }
+                E moveBack()
+                {
+                    return .moveBack(_range);
                 }
             }
 
-            static if (isRandomAccessRange!R) {
-                E opIndex(size_t index) {
+            static if (isRandomAccessRange!R)
+            {
+                E opIndex(size_t index)
+                {
                     return _range[index];
                 }
 
-                E moveAt(size_t index) {
-                    return .moveAt(_range, index);
-                }
-
-                static if (hasAssignableElements!R) {
-                    void opIndexAssign(E val, size_t index) {
+                static if (hasAssignableElements!R)
+                {
+                    void opIndexAssign(E val, size_t index)
+                    {
                         _range[index] = val;
                     }
                 }
 
-                static if (!isInfinite!R) {
-                    @property size_t length() {
+                E moveAt(size_t index)
+                {
+                    return .moveAt(_range, index);
+                }
+
+                static if (!isInfinite!R)
+                {
+                    @property size_t length()
+                    {
                         return _range.length;
                     }
 
@@ -387,8 +447,10 @@ template InputRangeObject(R) if (isInputRange!(Unqual!R)) {
                     // Can't support slicing until all the issues with
                     // requiring slicing support for finite random access
                     // ranges are resolved.
-                    version(none) {
-                        typeof(this) opSlice(size_t lower, size_t upper) {
+                    version(none)
+                    {
+                        typeof(this) opSlice(size_t lower, size_t upper)
+                        {
                             return new typeof(this)(_range[lower..upper]);
                         }
                     }
@@ -397,28 +459,26 @@ template InputRangeObject(R) if (isInputRange!(Unqual!R)) {
 
             // Optimization:  One delegate call is faster than three virtual
             // function calls.  Use opApply for foreach syntax.
-            int opApply(int delegate(E) dg) {
-                int res;
-
-                for(auto r = _range; !r.empty; r.popFront()) {
-                    res = dg(r.front);
-                    if (res) break;
+            int opApply(int delegate(E) dg)
+            {
+                for(auto r = _range; !r.empty; r.popFront())
+                {
+                    if (int res = dg(r.front))
+                        return res;
                 }
-
-                return res;
+                return 0;
             }
 
-            int opApply(int delegate(size_t, E) dg) {
-                int res;
-
+            int opApply(int delegate(size_t, E) dg)
+            {
                 size_t i = 0;
-                for(auto r = _range; !r.empty; r.popFront()) {
-                    res = dg(i, r.front);
-                    if (res) break;
+                for(auto r = _range; !r.empty; r.popFront())
+                {
+                    if (int res = dg(i, r.front))
+                        return res;
                     i++;
                 }
-
-                return res;
+                return 0;
             }
         }
     }
@@ -427,10 +487,14 @@ template InputRangeObject(R) if (isInputRange!(Unqual!R)) {
 /**Convenience function for creating an $(D InputRangeObject) of the proper type.
  * See $(LREF InputRange) for an example.
  */
-InputRangeObject!R inputRangeObject(R)(R range) if (isInputRange!R) {
-    static if (is(R : InputRange!(ElementType!R))) {
+InputRangeObject!R inputRangeObject(R)(R range) if (isInputRange!R)
+{
+    static if (is(R : InputRange!(ElementType!R)))
+    {
         return range;
-    } else {
+    }
+    else
+    {
         return new InputRangeObject!R(range);
     }
 }
@@ -448,10 +512,11 @@ InputRangeObject!R inputRangeObject(R)(R range) if (isInputRange!R) {
  static assert(is(typeof(appWrapped) : OutputRange!(uint)));
  ---
 */
-template outputRangeObject(E...) {
-
+template outputRangeObject(E...)
+{
     ///
-    OutputRangeObject!(R, E) outputRangeObject(R)(R range) {
+    OutputRangeObject!(R, E) outputRangeObject(R)(R range)
+    {
         return new OutputRangeObject!(R, E)(range);
     }
 }
@@ -460,10 +525,11 @@ template outputRangeObject(E...) {
 unittest 
 {
     import std.internal.test.dummyrange;
-	import std.algorithm : equal;
-	import std.array;
+    import std.algorithm : equal;
+    import std.array;
 
-    static void testEquality(R)(iInputRange r1, R r2) {
+    static void testEquality(R)(iInputRange r1, R r2)
+    {
         assert(equal(r1, r2));
     }
 
@@ -483,7 +549,8 @@ unittest
 
     assert(inputRangeObject(arrWrapped) is arrWrapped);
 
-    foreach(DummyType; AllDummyRanges) {
+    foreach(DummyType; AllDummyRanges)
+    {
         auto d = DummyType.init;
         static assert(propagatesRangeType!(DummyType,
                         typeof(inputRangeObject(d))));

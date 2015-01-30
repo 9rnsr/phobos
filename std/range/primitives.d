@@ -125,8 +125,8 @@ following code should compile for any input range.
 ----
 R r;              // can define a range object
 if (r.empty) {}   // can test for empty
-r.popFront();     // can invoke popFront()
 auto h = r.front; // can get the front of the range of non-void type
+r.popFront();     // can invoke popFront()
 ----
 
 The semantics of an input range (not checkable during compilation) are
@@ -147,8 +147,8 @@ template isInputRange(R)
     {
         R r = R.init;     // can define a range object
         if (r.empty) {}   // can test for empty
-        r.popFront();     // can invoke popFront()
         auto h = r.front; // can get the front of the range
+        r.popFront();     // can invoke popFront()
     }));
 }
 
@@ -157,9 +157,9 @@ template isInputRange(R)
     struct A {}
     struct B
     {
-        void popFront();
         @property bool empty();
         @property int front();
+        void popFront();
     }
     static assert(!isInputRange!(A));
     static assert( isInputRange!(B));
@@ -805,18 +805,18 @@ template isBidirectionalRange(R)
     struct A {}
     struct B
     {
-        void popFront();
         @property bool empty();
         @property int front();
+        void popFront();
     }
     struct C
     {
         @property bool empty();
-        @property C save();
-        void popFront();
         @property int front();
-        void popBack();
+        void popFront();
+        @property C save();
         @property int back();
+        void popBack();
     }
     static assert(!isBidirectionalRange!(A));
     static assert(!isBidirectionalRange!(B));
@@ -896,24 +896,24 @@ template isRandomAccessRange(R)
     struct A {}
     struct B
     {
-        void popFront();
         @property bool empty();
         @property int front();
+        void popFront();
     }
     struct C
     {
-        void popFront();
         @property bool empty();
         @property int front();
-        void popBack();
+        void popFront();
         @property int back();
+        void popBack();
     }
     struct D
     {
         @property bool empty();
-        @property D save();
         @property int front();
         void popFront();
+        @property D save();
         @property int back();
         void popBack();
         ref int opIndex(uint);
@@ -1471,9 +1471,9 @@ template hasSlicing(R)
     static assert(!hasSlicing!string);
     static assert( hasSlicing!dstring);
 
-    enum rangeFuncs = "@property int front();" ~
+    enum rangeFuncs = "@property bool empty();" ~
+                      "@property int front();" ~
                       "void popFront();" ~
-                      "@property bool empty();" ~
                       "@property auto save() { return this; }" ~
                       "@property size_t length();";
 
@@ -1489,8 +1489,8 @@ template hasSlicing(R)
     struct InfOnes
     {
         enum empty = false;
-        void popFront() {}
         @property int front() { return 1; }
+        void popFront() {}
         @property InfOnes save() { return this; }
         auto opSlice(size_t i, size_t j) { return takeExactly(this, j - i); }
         auto opSlice(size_t i, Dollar d) { return this; }
@@ -1786,14 +1786,21 @@ void popBackExactly(Range)(ref Range r, size_t n)
 */
 ElementType!R moveFront(R)(R r)
 {
-    static if (is(typeof(&r.moveFront))) {
+    static if (is(typeof(&r.moveFront)))
+    {
         return r.moveFront();
-    } else static if (!hasElaborateCopyConstructor!(ElementType!R)) {
+    }
+    else static if (!hasElaborateCopyConstructor!(ElementType!R))
+    {
         return r.front;
-    } else static if (is(typeof(&(r.front())) == ElementType!R*)) {
+    }
+    else static if (is(typeof(&(r.front())) == ElementType!R*))
+    {
         import std.algorithm : move;
         return move(r.front);
-    } else {
+    }
+    else
+    {
         static assert(0,
                 "Cannot move front of a range with a postblit and an rvalue front.");
     }
@@ -1835,14 +1842,21 @@ ElementType!R moveFront(R)(R r)
 */
 ElementType!R moveBack(R)(R r)
 {
-    static if (is(typeof(&r.moveBack))) {
+    static if (is(typeof(&r.moveBack)))
+    {
         return r.moveBack();
-    } else static if (!hasElaborateCopyConstructor!(ElementType!R)) {
+    }
+    else static if (!hasElaborateCopyConstructor!(ElementType!R))
+    {
         return r.back;
-    } else static if (is(typeof(&(r.back())) == ElementType!R*)) {
+    }
+    else static if (is(typeof(&(r.back())) == ElementType!R*))
+    {
         import std.algorithm : move;
         return move(r.back);
-    } else {
+    }
+    else
+    {
         static assert(0,
                 "Cannot move back of a range with a postblit and an rvalue back.");
     }
@@ -1855,10 +1869,10 @@ ElementType!R moveBack(R)(R r)
     {
         int payload = 5;
         @property bool empty() { return false; }
-        @property TestRange save() { return this; }
         @property ref int front() { return payload; }
-        @property ref int back() { return payload; }
         void popFront() { }
+        @property TestRange save() { return this; }
+        @property ref int back() { return payload; }
         void popBack() { }
     }
     static assert(isBidirectionalRange!TestRange);
@@ -1874,14 +1888,21 @@ ElementType!R moveBack(R)(R r)
 */
 ElementType!R moveAt(R, I)(R r, I i) if (isIntegral!I)
 {
-    static if (is(typeof(&r.moveAt))) {
+    static if (is(typeof(&r.moveAt)))
+    {
         return r.moveAt(i);
-    } else static if (!hasElaborateCopyConstructor!(ElementType!(R))) {
+    }
+    else static if (!hasElaborateCopyConstructor!(ElementType!(R)))
+    {
         return r[i];
-    } else static if (is(typeof(&r[i]) == ElementType!R*)) {
+    }
+    else static if (is(typeof(&r[i]) == ElementType!R*))
+    {
         import std.algorithm : move;
         return move(r[i]);
-    } else {
+    }
+    else
+    {
         static assert(0,
                 "Cannot move element of a range with a postblit and rvalue elements.");
     }
@@ -1901,15 +1922,18 @@ ElementType!R moveAt(R, I)(R r, I i) if (isIntegral!I)
 {
     import std.internal.test.dummyrange;
 
-    foreach(DummyType; AllDummyRanges) {
+    foreach(DummyType; AllDummyRanges)
+    {
         auto d = DummyType.init;
         assert(moveFront(d) == 1);
 
-        static if (isBidirectionalRange!DummyType) {
+        static if (isBidirectionalRange!DummyType)
+        {
             assert(moveBack(d) == 10);
         }
 
-        static if (isRandomAccessRange!DummyType) {
+        static if (isRandomAccessRange!DummyType)
+        {
             assert(moveAt(d, 2) == 3);
         }
     }

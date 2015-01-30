@@ -1670,10 +1670,10 @@ if (isRandomAccessRange!R1 && isBidirectionalRange!R2
     {
         int[] payload;
         @property bool empty() { return payload.empty; }
-        @property BiRange save() { return this; }
         @property ref int front() { return payload[0]; }
-        @property ref int back() { return payload[$ - 1]; }
         void popFront() { return payload.popFront(); }
+        @property BiRange save() { return this; }
+        @property ref int back() { return payload[$ - 1]; }
         void popBack() { return payload.popBack(); }
     }
     //static assert(isBidirectionalRange!BiRange);

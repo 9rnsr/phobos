@@ -251,12 +251,12 @@ auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
         R impl;
 
         // Input range API
-        @property auto front() { return impl.front; }
-        void popFront() { impl.popFront(); }
         static if (isInfinite!R)
             enum empty = false;
         else
             @property bool empty() { return impl.empty; }
+        @property auto front() { return impl.front; }
+        void popFront() { impl.popFront(); }
 
         // Forward range API
         @property auto save() { return typeof(this)(impl.save); }
@@ -294,12 +294,12 @@ auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
         R impl;
 
         // Input range API
-        @property auto front() { return impl.front; }
-        void popFront() { impl.popFront(); }
         static if (isInfinite!R)
             enum empty = false;
         else
             @property bool empty() { return impl.empty; }
+        @property auto front() { return impl.front; }
+        void popFront() { impl.popFront(); }
     }
     auto inpWrap(R)(R r) { return InpRangeWrapper!R(r); }
 
@@ -862,16 +862,18 @@ public:
         adjustPosition();
     }
 
-    void popFront()
-    {
-        r1.popFront();
-        adjustPosition();
-    }
+    @property bool empty() { return r1.empty; }
 
     @property auto ref front()
     {
         assert(!empty);
         return r1.front;
+    }
+
+    void popFront()
+    {
+        r1.popFront();
+        adjustPosition();
     }
 
     static if (isForwardRange!R1 && isForwardRange!R2)
@@ -884,8 +886,6 @@ public:
             return ret;
         }
     }
-
-    @property bool empty() { return r1.empty; }
 }
 
 /// Ditto
@@ -973,6 +973,12 @@ public:
         return false;
     }
 
+    @property ElementType front()
+    {
+        assert(!empty);
+        return _input[0].front;
+    }
+
     void popFront()
     {
         assert(!empty);
@@ -987,12 +993,6 @@ public:
             r.popFront();
         }
         adjustPosition();
-    }
-
-    @property ElementType front()
-    {
-        assert(!empty);
-        return _input[0].front;
     }
 
     static if (allSatisfy!(isForwardRange, Rs))
@@ -1103,6 +1103,16 @@ public:
         adjustPosition();
     }
 
+    @property bool empty() { return r1.empty && r2.empty; }
+
+    @property auto ref front()
+    {
+        assert(!empty);
+        bool chooseR1 = r2.empty || !r1.empty && comp(r1.front, r2.front);
+        assert(chooseR1 || r1.empty || comp(r2.front, r1.front));
+        return chooseR1 ? r1.front : r2.front;
+    }
+
     void popFront()
     {
         assert(!empty);
@@ -1124,14 +1134,6 @@ public:
         adjustPosition();
     }
 
-    @property auto ref front()
-    {
-        assert(!empty);
-        bool chooseR1 = r2.empty || !r1.empty && comp(r1.front, r2.front);
-        assert(chooseR1 || r1.empty || comp(r2.front, r1.front));
-        return chooseR1 ? r1.front : r2.front;
-    }
-
     static if (isForwardRange!R1 && isForwardRange!R2)
     {
         @property typeof(this) save()
@@ -1143,9 +1145,7 @@ public:
         }
     }
 
-    ref auto opSlice() { return this; }
-
-    @property bool empty() { return r1.empty && r2.empty; }
+    auto ref opSlice() { return this; }
 }
 
 /// Ditto
@@ -1239,6 +1239,19 @@ public:
         return _crt == _crt.max;
     }
 
+    @property ElementType front()
+    {
+        assert(!empty);
+        // Assume _crt is correct
+        foreach (i, U; Rs)
+        {
+            if (i < _crt) continue;
+            assert(!_r[i].empty);
+            return _r[i].front;
+        }
+        assert(false);
+    }
+
     void popFront()
     {
         // Assumes _crt is correct
@@ -1251,19 +1264,6 @@ public:
             _r[i].popFront();
             adjustPosition();
             return;
-        }
-        assert(false);
-    }
-
-    @property ElementType front()
-    {
-        assert(!empty);
-        // Assume _crt is correct
-        foreach (i, U; Rs)
-        {
-            if (i < _crt) continue;
-            assert(!_r[i].empty);
-            return _r[i].front;
         }
         assert(false);
     }

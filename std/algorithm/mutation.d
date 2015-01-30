@@ -247,14 +247,11 @@ Elements can be swapped across ranges of different types:
         {
             T[] data;
             size_t i;
-            @property
-            {
-                R save() { return this; }
-                bool empty() { return i >= data.length; }
-                T front() { return data[i]; }
-                T front(real e) { return data[i] = cast(T) e; }
-            }
+            @property bool empty() { return i >= data.length; }
+            @property T front() { return data[i]; }
+            @property T front(real e) { return data[i] = cast(T) e; }
             void popFront() { ++i; }
+            @property R save() { return this; }
         }
         auto a = R!int([1, 2, 3, 4, 5]);
         auto b = R!real([6, 7, 8, 9]);

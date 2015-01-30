@@ -332,20 +332,10 @@ private struct Cache(R, bool bidir)
             return source.empty;
         }
 
-    static if (hasLength!R) auto length() @property
-    {
-        return source.length;
-    }
-
     E front() @property
     {
         version(assert) if (empty) throw new RangeError();
         return caches[0];
-    }
-    static if (bidir) E back() @property
-    {
-        version(assert) if (empty) throw new RangeError();
-        return caches[1];
     }
 
     void popFront()
@@ -354,15 +344,6 @@ private struct Cache(R, bool bidir)
         source.popFront();
         if (!source.empty)
             caches[0] = source.front;
-        else
-            caches = CacheTypes.init;
-    }
-    static if (bidir) void popBack()
-    {
-        version(assert) if (empty) throw new RangeError();
-        source.popBack();
-        if (!source.empty)
-            caches[1] = source.back;
         else
             caches = CacheTypes.init;
     }
@@ -378,6 +359,30 @@ private struct Cache(R, bool bidir)
         {
             return typeof(this)(source.save, caches);
         }
+    }
+
+    static if (bidir)
+    {
+        E back() @property
+        {
+            version(assert) if (empty) throw new RangeError();
+            return caches[1];
+        }
+
+        void popBack()
+        {
+            version(assert) if (empty) throw new RangeError();
+            source.popBack();
+            if (!source.empty)
+                caches[1] = source.back;
+            else
+                caches = CacheTypes.init;
+        }
+    }
+
+    static if (hasLength!R) auto length() @property
+    {
+        return source.length;
     }
 
     static if (hasSlicing!R)
@@ -541,14 +546,22 @@ private struct MapResult(alias fun, Range)
         }
     }
 
+    @property auto ref front()
+    {
+        return fun(_input.front);
+    }
+
     void popFront()
     {
         _input.popFront();
     }
 
-    @property auto ref front()
+    static if (isForwardRange!R)
     {
-        return fun(_input.front);
+        @property auto save()
+        {
+            return typeof(this)(_input.save);
+        }
     }
 
     static if (isRandomAccessRange!R)
@@ -602,14 +615,6 @@ private struct MapResult(alias fun, Range)
                 import std.range : take;
                 return this[low .. $].take(high - low);
             }
-        }
-    }
-
-    static if (isForwardRange!R)
-    {
-        @property auto save()
-        {
-            return typeof(this)(_input.save);
         }
     }
 }
@@ -1004,17 +1009,17 @@ private struct FilterResult(alias pred, Range)
         @property bool empty() { return _input.empty; }
     }
 
+    @property auto ref front()
+    {
+        return _input.front;
+    }
+
     void popFront()
     {
         do
         {
             _input.popFront();
         } while (!_input.empty && !pred(_input.front));
-    }
-
-    @property auto ref front()
-    {
-        return _input.front;
     }
 
     static if (isForwardRange!R)
@@ -1178,6 +1183,11 @@ private struct FilterBidiResult(alias pred, Range)
 
     @property bool empty() { return _input.empty; }
 
+    @property auto ref front()
+    {
+        return _input.front;
+    }
+
     void popFront()
     {
         do
@@ -1186,9 +1196,14 @@ private struct FilterBidiResult(alias pred, Range)
         } while (!_input.empty && !pred(_input.front));
     }
 
-    @property auto ref front()
+    @property auto save()
     {
-        return _input.front;
+        return typeof(this)(_input.save);
+    }
+
+    @property auto ref back()
+    {
+        return _input.back;
     }
 
     void popBack()
@@ -1197,16 +1212,6 @@ private struct FilterBidiResult(alias pred, Range)
         {
             _input.popBack();
         } while (!_input.empty && !pred(_input.back));
-    }
-
-    @property auto ref back()
-    {
-        return _input.back;
-    }
-
-    @property auto save()
-    {
-        return typeof(this)(_input.save);
     }
 }
 
@@ -1241,24 +1246,6 @@ struct Group(alias pred, R) if (isInputRange!R)
         if (!_input.empty) popFront();
     }
 
-    void popFront()
-    {
-        if (_input.empty)
-        {
-            _current[1] = 0;
-        }
-        else
-        {
-            _current = tuple(_input.front, 1u);
-            _input.popFront();
-            while (!_input.empty && comp(_current[0], _input.front))
-            {
-                ++_current[1];
-                _input.popFront();
-            }
-        }
-    }
-
     static if (isInfinite!R)
     {
         enum bool empty = false;  // Propagate infiniteness.
@@ -1277,8 +1264,28 @@ struct Group(alias pred, R) if (isInputRange!R)
         return _current;
     }
 
-    static if (isForwardRange!R) {
-        @property typeof(this) save() {
+    void popFront()
+    {
+        if (_input.empty)
+        {
+            _current[1] = 0;
+        }
+        else
+        {
+            _current = tuple(_input.front, 1u);
+            _input.popFront();
+            while (!_input.empty && comp(_current[0], _input.front))
+            {
+                ++_current[1];
+                _input.popFront();
+            }
+        }
+    }
+
+    static if (isForwardRange!R)
+    {
+        @property typeof(this) save()
+        {
             typeof(this) ret = this;
             ret._input = this._input.save;
             ret._current = this._current;
@@ -1394,6 +1401,7 @@ private struct GroupByChunkImpl(alias pred, Range)
     }
 
     @property ElementType!Range front() { return r.front; }
+
     void popFront() { r.popFront(); }
 }
 
@@ -1486,6 +1494,7 @@ private struct GroupByImpl(alias pred, Range)
         }
 
         @property bool empty() { return groupNum == size_t.max; }
+
         @property auto ref front() { return current.front; }
 
         void popFront()
@@ -1523,6 +1532,7 @@ private struct GroupByImpl(alias pred, Range)
     }
 
     @property bool empty() { return impl.current.empty; }
+
     @property auto front() { return Group(impl); }
 
     void popFront()
@@ -3153,13 +3163,6 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
             _separator = separator;
         }
 
-        @property Range front()
-        {
-            assert(!empty);
-            ensureFrontLength();
-            return _input[0 .. _frontLength];
-        }
-
         static if (isInfinite!Range)
         {
             enum bool empty = false;  // Propagate infiniteness
@@ -3170,6 +3173,13 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
             {
                 return _frontLength == RIndexType.max && _input.empty;
             }
+        }
+
+        @property Range front()
+        {
+            assert(!empty);
+            ensureFrontLength();
+            return _input[0 .. _frontLength];
         }
 
         void popFront()
@@ -3364,7 +3374,8 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
     import std.algorithm.comparison : equal;
 
     // Test by-reference separator
-    class RefSep {
+    class RefSep
+    {
     @safe:
         string _impl;
         this(string s) { _impl = s; }
@@ -3667,6 +3678,11 @@ if (isSomeChar!C)
             getFirst();
         }
 
+        @property bool empty() const @safe pure nothrow
+        {
+            return _s.empty;
+        }
+
         @property C[] front() pure @safe
         {
             version(assert) if (empty) throw new RangeError();
@@ -3679,11 +3695,6 @@ if (isSomeChar!C)
             version(assert) if (empty) throw new RangeError();
             _s = _s[_frontLength .. $].stripLeft();
             getFirst();
-        }
-
-        @property bool empty() const @safe pure nothrow
-        {
-            return _s.empty;
         }
 
         @property inout(Result) save() inout @safe pure nothrow
@@ -4060,10 +4071,16 @@ private struct UniqResult(alias pred, Range)
         _input = input;
     }
 
-    auto opSlice()
+    static if (isInfinite!Range)
     {
-        return this;
+        enum bool empty = false;  // Propagate infiniteness.
     }
+    else
+    {
+        @property bool empty() { return _input.empty; }
+    }
+
+    @property ElementType!Range front() { return _input.front; }
 
     void popFront()
     {
@@ -4075,10 +4092,18 @@ private struct UniqResult(alias pred, Range)
         while (!_input.empty && pred(last, _input.front));
     }
 
-    @property ElementType!Range front() { return _input.front; }
+    static if (isForwardRange!Range)
+    {
+        @property typeof(this) save()
+        {
+            return typeof(this)(_input.save);
+        }
+    }
 
     static if (isBidirectionalRange!Range)
     {
+        @property ElementType!Range back() { return _input.back; }
+
         void popBack()
         {
             auto last = _input.back;
@@ -4088,23 +4113,11 @@ private struct UniqResult(alias pred, Range)
             }
             while (!_input.empty && pred(last, _input.back));
         }
-
-        @property ElementType!Range back() { return _input.back; }
     }
 
-    static if (isInfinite!Range)
+    auto opSlice()
     {
-        enum bool empty = false;  // Propagate infiniteness.
-    }
-    else
-    {
-        @property bool empty() { return _input.empty; }
-    }
-
-    static if (isForwardRange!Range) {
-        @property typeof(this) save() {
-            return typeof(this)(_input.save);
-        }
+        return this;
     }
 }
 
