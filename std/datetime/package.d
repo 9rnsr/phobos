@@ -440,63 +440,6 @@ public import std.datetime.util;
 //==============================================================================
 
 /++
-    Whether the given type defines all of the necessary functions for it to
-    function as a time point.
-  +/
-enum bool isTimePoint(T) =
-    hasMin!T &&
-    hasMax!T &&
-    hasOverloadedOpBinaryWithDuration!T &&
-    hasOverloadedOpAssignWithDuration!T &&
-    hasOverloadedOpBinaryWithSelf!T;
-
-unittest
-{
-    import std.typetuple : TypeTuple;
-
-    foreach (T; TypeTuple!(
-                    Date,       const Date,         immutable Date,
-                    DateTime,   const DateTime,     immutable DateTime,
-                    TimeOfDay,  const TimeOfDay,    immutable TimeOfDay,
-                    SysTime,    const SysTime,      immutable SysTime))
-    {
-        static assert(isTimePoint!T);
-    }
-}
-
-/++
-    Whether the given Gregorian Year is a leap year.
-
-    Params:
-        year = The year to to be tested.
- +/
-static bool yearIsLeapYear(int year) @safe pure nothrow
-{
-    if (year % 400 == 0)
-        return true;
-    if (year % 100 == 0)
-        return false;
-    return year % 4 == 0;
-}
-
-unittest
-{
-    import std.format : format;
-    foreach (year; [1, 2, 3, 5, 6, 7, 100, 200, 300, 500, 600, 700, 1998, 1999,
-                   2001, 2002, 2003, 2005, 2006, 2007, 2009, 2010, 2011])
-    {
-        assert(!yearIsLeapYear(+year), format("year: %s.", year));
-        assert(!yearIsLeapYear(-year), format("year: %s.", year));
-    }
-
-    foreach (year; [0, 4, 8, 400, 800, 1600, 1996, 2000, 2004, 2008, 2012])
-    {
-        assert(yearIsLeapYear(+year), format("year: %s.", year));
-        assert(yearIsLeapYear(-year), format("year: %s.", year));
-    }
-}
-
-/++
     Converts a $(D time_t) (which uses midnight, January 1st, 1970 UTC as its
     epoch and seconds as its units) to std time (which uses midnight,
     January 1st, 1 A.D. UTC and hnsecs as its units).
@@ -933,7 +876,7 @@ DosFileTime SysTimeToDosFileTime(SysTime sysTime) @safe
         throw new DateTimeException("DOS File Times cannot hold dates past 2107.");
 
     uint retval = 0;
-    retval = (dateTime.year - 1980) << 25;
+    retval |= (dateTime.year - 1980) << 25;
     retval |= (dateTime.month & 0x0F) << 21;
     retval |= (dateTime.day & 0x1F) << 16;
     retval |= (dateTime.hour & 0x1F) << 11;
@@ -945,14 +888,9 @@ DosFileTime SysTimeToDosFileTime(SysTime sysTime) @safe
 
 unittest
 {
-    assert(SysTimeToDosFileTime(SysTime(DateTime(1980, 1, 1, 0, 0, 0))) ==
-                    0b00000000001000010000000000000000);
-
-    assert(SysTimeToDosFileTime(SysTime(DateTime(2107, 12, 31, 23, 59, 58))) ==
-                    0b11111111100111111011111101111101);
-
-    assert(SysTimeToDosFileTime(SysTime(DateTime(2011, 1, 31, 16, 34, 44))) ==
-                    0x3E3F8456);
+    assert(SysTimeToDosFileTime(SysTime(DateTime(1980,  1,  1,  0,  0,  0))) == 0b00000000001000010000000000000000);
+    assert(SysTimeToDosFileTime(SysTime(DateTime(2107, 12, 31, 23, 59, 58))) == 0b11111111100111111011111101111101);
+    assert(SysTimeToDosFileTime(SysTime(DateTime(2011,  1, 31, 16, 34, 44))) == 0x3E3F8456);
 }
 
 
@@ -1049,7 +987,8 @@ SysTime parseRFC822DateTime(R)(R value) @safe
             }
             default: throw new DateTimeException(format("Invalid day-of-week: %s", dowStr));
         }
-afterDoW: stripAndCheckLen(value[3 .. value.length], ",7Dec1200:00A".length);
+    afterDoW:
+        stripAndCheckLen(value[3 .. value.length], ",7Dec1200:00A".length);
         if (value[0] != ',')
             throw new DateTimeException("day-of-week missing comma");
         stripAndCheckLen(value[1 .. value.length], "7Dec1200:00A".length);
@@ -1879,18 +1818,18 @@ unittest
   +/
 bool valid(string units)(int value) @safe pure nothrow
     if (units == "months" ||
-       units == "hours" ||
-       units == "minutes" ||
-       units == "seconds")
+        units == "hours" ||
+        units == "minutes" ||
+        units == "seconds")
 {
     static if (units == "months")
-        return value >= Month.jan && value <= Month.dec;
+        return Month.jan <= value && value <= Month.dec;
     else static if (units == "hours")
-        return value >= 0 && value <= TimeOfDay.maxHour;
+        return 0 <= value && value <= TimeOfDay.maxHour;
     else static if (units == "minutes")
-        return value >= 0 && value <= TimeOfDay.maxMinute;
+        return 0 <= value && value <= TimeOfDay.maxMinute;
     else static if (units == "seconds")
-        return value >= 0 && value <= TimeOfDay.maxSecond;
+        return 0 <= value && value <= TimeOfDay.maxSecond;
 }
 
 ///
@@ -2715,7 +2654,8 @@ R _stripCFWS(R)(R range)
                 }
                 break outer;
             }
-            default: return range[i .. e];
+            default:
+                return range[i .. e];
         }
     }
     return range[e .. e];
@@ -2855,104 +2795,5 @@ unittest
     {
         scope(failure) writeln(str);
         assert(_convDigits!int(str) == -1);
-    }
-}
-
-
-/+
-    Whether the given type defines the static property min which returns the
-    minimum value for the type.
-  +/
-enum bool hasMin(T) =
-    __traits(hasMember, T, "min") &&
-    __traits(isStaticFunction, T.min) &&
-    is(typeof(T.min) == Unqual!T);
-
-/+
-    Whether the given type defines the static property max which returns the
-    maximum value for the type.
-  +/
-enum bool hasMax(T) =
-    __traits(hasMember, T, "max") &&
-    __traits(isStaticFunction, T.max) &&
-    is(typeof(T.max) == Unqual!T);
-
-/+
-    Whether the given type defines the overloaded opBinary operators that a time
-    point is supposed to define which work with time durations. Namely:
-
-    $(BOOKTABLE,
-    $(TR $(TD TimePoint opBinary"+"(duration)))
-    $(TR $(TD TimePoint opBinary"-"(duration)))
-    )
-  +/
-enum bool hasOverloadedOpBinaryWithDuration(T) =
-    __traits(compiles, T.init + dur!"days"(5)) &&
-             is(typeof(T.init + dur!"days"(5)) == Unqual!T) &&
-    __traits(compiles, T.init - dur!"days"(5)) &&
-             is(typeof(T.init - dur!"days"(5)) == Unqual!T) &&
-    __traits(compiles, T.init + TickDuration.from!"hnsecs"(5)) &&
-             is(typeof(T.init + TickDuration.from!"hnsecs"(5)) == Unqual!T) &&
-    __traits(compiles, T.init - TickDuration.from!"hnsecs"(5)) &&
-             is(typeof(T.init - TickDuration.from!"hnsecs"(5)) == Unqual!T);
-
-/+
-    Whether the given type defines the overloaded opOpAssign operators that a time point is supposed
-    to define. Namely:
-
-    $(BOOKTABLE,
-    $(TR $(TD TimePoint opOpAssign"+"(duration)))
-    $(TR $(TD TimePoint opOpAssign"-"(duration)))
-    )
-  +/
-enum bool hasOverloadedOpAssignWithDuration(T) =
-    is(typeof(
-    {
-        auto  d = dur!"days"(5);
-        auto td = TickDuration.from!"hnsecs"(5);
-        alias U = Unqual!T;
-        static assert(is(typeof(U.init +=  d) == U));
-        static assert(is(typeof(U.init -=  d) == U));
-        static assert(is(typeof(U.init += td) == U));
-        static assert(is(typeof(U.init -= td) == U));
-    }));
-
-/+
-    Whether the given type defines the overloaded opBinary operator that a time point is supposed
-    to define which works with itself. Namely:
-
-    $(BOOKTABLE,
-    $(TR $(TD duration opBinary"-"(Date)))
-    )
-  +/
-enum bool hasOverloadedOpBinaryWithSelf(T) =
-    __traits(compiles, T.init - T.init) &&
-    is(Unqual!(typeof(T.init - T.init)) == Duration);
-
-unittest
-{
-    import std.typetuple : TypeTuple;
-
-    foreach (TP; TypeTuple!(Date, DateTime, TimeOfDay, SysTime))
-    {
-        static assert(hasMin!(TP));
-        static assert(hasMin!(const TP));
-        static assert(hasMin!(immutable TP));
-
-        static assert(hasMax!(TP));
-        static assert(hasMax!(const TP));
-        static assert(hasMax!(immutable TP));
-
-        static assert(hasOverloadedOpBinaryWithDuration!(TP));
-        static assert(hasOverloadedOpBinaryWithDuration!(const TP));
-        static assert(hasOverloadedOpBinaryWithDuration!(immutable TP));
-
-        static assert(hasOverloadedOpAssignWithDuration!(TP));
-        static assert(hasOverloadedOpAssignWithDuration!(const TP));
-        static assert(hasOverloadedOpAssignWithDuration!(immutable TP));
-
-        static assert(hasOverloadedOpBinaryWithSelf!(TP));
-        static assert(hasOverloadedOpBinaryWithSelf!(const TP));
-        static assert(hasOverloadedOpBinaryWithSelf!(immutable TP));
     }
 }

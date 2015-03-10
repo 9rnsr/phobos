@@ -12,10 +12,9 @@
 +/
 module std.datetime.timepoint;
 
+public import core.time;
 import std.datetime;
 import std.datetime.timezone;
-
-public import core.time;
 
 import core.stdc.time;
 
@@ -16903,6 +16902,171 @@ private:
 }
 
 
+//==============================================================================
+// Section with trait templates.
+//==============================================================================
+
+/++
+    Whether the given type defines all of the necessary functions for it to
+    function as a time point.
+  +/
+enum bool isTimePoint(T) =
+    hasMin!T &&
+    hasMax!T &&
+    hasOverloadedOpBinaryWithDuration!T &&
+    hasOverloadedOpAssignWithDuration!T &&
+    hasOverloadedOpBinaryWithSelf!T;
+
+/+
+    Whether the given type defines the static property min which returns the
+    minimum value for the type.
+  +/
+private enum bool hasMin(T) =
+    __traits(hasMember, T, "min") &&
+    __traits(isStaticFunction, T.min) &&
+    is(typeof(T.min) == Unqual!T);
+
+/+
+    Whether the given type defines the static property max which returns the
+    maximum value for the type.
+  +/
+private enum bool hasMax(T) =
+    __traits(hasMember, T, "max") &&
+    __traits(isStaticFunction, T.max) &&
+    is(typeof(T.max) == Unqual!T);
+
+/+
+    Whether the given type defines the overloaded opBinary operators that a time
+    point is supposed to define which work with time durations. Namely:
+
+    $(BOOKTABLE,
+    $(TR $(TD TimePoint opBinary"+"(duration)))
+    $(TR $(TD TimePoint opBinary"-"(duration)))
+    )
+  +/
+private enum bool hasOverloadedOpBinaryWithDuration(T) =
+    __traits(compiles, T.init + dur!"days"(5)) &&
+             is(typeof(T.init + dur!"days"(5)) == Unqual!T) &&
+    __traits(compiles, T.init - dur!"days"(5)) &&
+             is(typeof(T.init - dur!"days"(5)) == Unqual!T) &&
+    __traits(compiles, T.init + TickDuration.from!"hnsecs"(5)) &&
+             is(typeof(T.init + TickDuration.from!"hnsecs"(5)) == Unqual!T) &&
+    __traits(compiles, T.init - TickDuration.from!"hnsecs"(5)) &&
+             is(typeof(T.init - TickDuration.from!"hnsecs"(5)) == Unqual!T);
+
+/+
+    Whether the given type defines the overloaded opOpAssign operators that a time point is supposed
+    to define. Namely:
+
+    $(BOOKTABLE,
+    $(TR $(TD TimePoint opOpAssign"+"(duration)))
+    $(TR $(TD TimePoint opOpAssign"-"(duration)))
+    )
+  +/
+private enum bool hasOverloadedOpAssignWithDuration(T) =
+    is(typeof(
+    {
+        auto  d = dur!"days"(5);
+        auto td = TickDuration.from!"hnsecs"(5);
+        alias U = Unqual!T;
+        static assert(is(typeof(U.init +=  d) == U));
+        static assert(is(typeof(U.init -=  d) == U));
+        static assert(is(typeof(U.init += td) == U));
+        static assert(is(typeof(U.init -= td) == U));
+    }));
+
+/+
+    Whether the given type defines the overloaded opBinary operator that a time point is supposed
+    to define which works with itself. Namely:
+
+    $(BOOKTABLE,
+    $(TR $(TD duration opBinary"-"(Date)))
+    )
+  +/
+private enum bool hasOverloadedOpBinaryWithSelf(T) =
+    __traits(compiles, T.init - T.init) &&
+    is(Unqual!(typeof(T.init - T.init)) == Duration);
+
+// Tests for the four time-point types
+unittest
+{
+    import std.typetuple : TypeTuple;
+
+    foreach (TP; TypeTuple!(Date, DateTime, TimeOfDay, SysTime))
+    {
+        static assert(isTimePoint!(TP));
+        static assert(isTimePoint!(const TP));
+        static assert(isTimePoint!(immutable TP));
+
+        static assert(hasMin!(TP));
+        static assert(hasMin!(const TP));
+        static assert(hasMin!(immutable TP));
+
+        static assert(hasMax!(TP));
+        static assert(hasMax!(const TP));
+        static assert(hasMax!(immutable TP));
+
+        static assert(hasOverloadedOpBinaryWithDuration!(TP));
+        static assert(hasOverloadedOpBinaryWithDuration!(const TP));
+        static assert(hasOverloadedOpBinaryWithDuration!(immutable TP));
+
+        static assert(hasOverloadedOpAssignWithDuration!(TP));
+        static assert(hasOverloadedOpAssignWithDuration!(const TP));
+        static assert(hasOverloadedOpAssignWithDuration!(immutable TP));
+
+        static assert(hasOverloadedOpBinaryWithSelf!(TP));
+        static assert(hasOverloadedOpBinaryWithSelf!(const TP));
+        static assert(hasOverloadedOpBinaryWithSelf!(immutable TP));
+
+        /* Issue 6642 */
+        static assert(!hasUnsharedAliasing!TP);
+    }
+}
+
+
+//==============================================================================
+// Section with public helper functions.
+//==============================================================================
+
+/++
+    Whether the given Gregorian Year is a leap year.
+
+    Params:
+        year = The year to to be tested.
+ +/
+static bool yearIsLeapYear(int year) @safe pure nothrow
+{
+    if (year % 400 == 0)
+        return true;
+    if (year % 100 == 0)
+        return false;
+    return year % 4 == 0;
+}
+
+unittest
+{
+    import std.format : format;
+    foreach (year; [1, 2, 3, 5, 6, 7, 100, 200, 300, 500, 600, 700, 1998, 1999,
+                   2001, 2002, 2003, 2005, 2006, 2007, 2009, 2010, 2011])
+    {
+        assert(!yearIsLeapYear(+year), format("year: %s.", year));
+        assert(!yearIsLeapYear(-year), format("year: %s.", year));
+    }
+
+    foreach (year; [0, 4, 8, 400, 800, 1600, 1996, 2000, 2004, 2008, 2012])
+    {
+        assert(yearIsLeapYear(+year), format("year: %s.", year));
+        assert(yearIsLeapYear(-year), format("year: %s.", year));
+    }
+}
+
+//==============================================================================
+// Section with private helper functions.
+//==============================================================================
+
+private:
+
+
 /+
     Splits out a particular unit from hnsecs and gives the value for that
     unit and the remaining hnsecs. It really shouldn't be used unless unless
@@ -17000,6 +17164,10 @@ unittest
     assert(hnsecs == 2595000000007L);
 }
 
+
+//==============================================================================
+// Section for unittest.
+//==============================================================================
 
 version(unittest)
 {
@@ -17351,14 +17519,4 @@ version(unittest)
             }
         }
     }
-}
-
-
-unittest
-{
-    /* Issue 6642 */
-    static assert(!hasUnsharedAliasing!SysTime);
-    static assert(!hasUnsharedAliasing!Date);
-    static assert(!hasUnsharedAliasing!TimeOfDay);
-    static assert(!hasUnsharedAliasing!DateTime);
 }
