@@ -197,7 +197,7 @@ STD_MODULES = $(addprefix std/, \
   array ascii base64 bigint bitmanip compiler complex concurrency \
   $(addprefix container/, array binaryheap dlist rbtree slist util) \
   conv cstream csv demangle \
-  $(addprefix datetime/, package timepoint interval timezone util) \
+  $(addprefix datetime/, package timepoint interval timezone conv util) \
   $(addprefix digest/, digest crc md ripemd sha) \
   encoding exception \
   $(addprefix experimental/logger/, core filelogger nulllogger multilogger) \

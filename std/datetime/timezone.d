@@ -13,8 +13,8 @@
 module std.datetime.timezone;
 
 public import core.time;
-
-import std.datetime;
+import std.datetime.timepoint;
+import std.datetime.conv;
 
 import std.traits;
 
@@ -894,6 +894,7 @@ public:
 
     unittest
     {
+        import std.datetime : Clock;
         auto currTime = Clock.currStdTime;
         LocalTime().dstInEffect(currTime);
     }

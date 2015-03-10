@@ -13,7 +13,7 @@
 module std.datetime.timepoint;
 
 public import core.time;
-import std.datetime;
+import std.datetime.conv;
 import std.datetime.timezone;
 
 import core.stdc.time;

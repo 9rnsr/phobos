@@ -122,7 +122,7 @@ SRC_STD_3a= std\signals.d std\typetuple.d std\traits.d \
 	std\compiler.d \
 	std\system.d std\concurrency.d
 
-SRC_STD_3b= std\datetime\package.d std\datetime\timepoint.d std\datetime\interval.d std\datetime\timezone.d std\datetime\util.d
+SRC_STD_3b= std\datetime\package.d std\datetime\timepoint.d std\datetime\interval.d std\datetime\timezone.d std\datetime\conv.d std\datetime\util.d
 
 #can't place SRC_STD_DIGEST in SRC_STD_REST because of out-of-memory issues
 SRC_STD_DIGEST= std\digest\crc.d std\digest\sha.d std\digest\md.d \
@@ -165,7 +165,7 @@ SRC=	unittest.d index.d
 
 SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\math.d std\string.d std\path.d \
-	std\datetime\package.d std\datetime\timepoint.d std\datetime\interval.d std\datetime\timezone.d std\datetime\util.d \
+	std\datetime\package.d std\datetime\timepoint.d std\datetime\interval.d std\datetime\timezone.d std\datetime\conv.d std\datetime\util.d \
 	std\csv.d std\file.d std\compiler.d std\system.d \
 	std\outbuffer.d std\base64.d \
 	std\metastrings.d std\mmfile.d \
@@ -479,6 +479,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -conf= -cov=95 -unittest -main -run std\datetime\timepoint.d 
 	$(DMD) -conf= -cov=95 -unittest -main -run std\datetime\interval.d 
 	$(DMD) -conf= -cov=95 -unittest -main -run std\datetime\timezone.d 
+	$(DMD) -conf= -cov=95 -unittest -main -run std\datetime\conv.d 
 	$(DMD) -conf= -cov=95 -unittest -main -run std\datetime\util.d
 	$(DMD) -conf= -cov=96 -unittest -main -run std\uuid.d
 	$(DMD) -conf= -cov=100 -unittest -main -run std\digest\crc.d

@@ -14,10 +14,8 @@ module std.datetime.util;
 
 public import core.time;
 
-import std.datetime : Clock;
 import std.traits;
-// FIXME
-import std.functional; //: unaryFun;
+import std.functional : unaryFun;
 
 
 /++
@@ -46,6 +44,8 @@ enum AutoStart
   +/
 @safe struct StopWatch
 {
+    import std.datetime : Clock;
+
 public:
     /++
        Auto start with constructor.

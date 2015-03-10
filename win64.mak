@@ -112,7 +112,7 @@ SRC_STD_2a_HEAVY= std\array.d std\functional.d std\path.d std\outbuffer.d std\ut
 
 SRC_STD_math=std\math.d
 SRC_STD_3= std\csv.d std\complex.d std\numeric.d std\bigint.d
-SRC_STD_3c= std\datetime\package.d std\datetime\timepoint.d std\datetime\interval.d std\datetime\timezone.d std\datetime\util.d \
+SRC_STD_3c= std\datetime\package.d std\datetime\timepoint.d std\datetime\interval.d std\datetime\timezone.d std\datetime\conv.d std\datetime\util.d \
 	std\bitmanip.d std\typecons.d
 
 SRC_STD_3a= std\uni.d std\base64.d std\ascii.d \
@@ -183,7 +183,7 @@ SRC=	unittest.d index.d
 
 SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\math.d std\string.d std\path.d \
-	std\datetime\package.d std\datetime\timepoint.d std\datetime\interval.d std\datetime\timezone.d std\datetime\util.d \ 
+	std\datetime\package.d std\datetime\timepoint.d std\datetime\interval.d std\datetime\timezone.d std\datetime\conv.d std\datetime\util.d \ 
 	std\csv.d std\file.d std\compiler.d std\system.d \
 	std\outbuffer.d std\base64.d \
 	std\metastrings.d std\mmfile.d \
