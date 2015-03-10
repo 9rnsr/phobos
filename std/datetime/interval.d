@@ -7200,10 +7200,10 @@ unittest
   +/
 static TP delegate(in TP) everyDayOfWeek(TP, Direction dir = Direction.fwd)(DayOfWeek dayOfWeek) nothrow
     if (isTimePoint!TP &&
-       (dir == Direction.fwd || dir == Direction.bwd) &&
-       __traits(hasMember, TP, "dayOfWeek") &&
-       !__traits(isStaticFunction, TP.dayOfWeek) &&
-       is(typeof(TP.dayOfWeek) == DayOfWeek))
+        (dir == Direction.fwd || dir == Direction.bwd) &&
+        __traits(hasMember, TP, "dayOfWeek") &&
+        !__traits(isStaticFunction, TP.dayOfWeek) &&
+        is(typeof(TP.dayOfWeek) == DayOfWeek))
 {
     TP func(in TP tp)
     {
@@ -7304,10 +7304,10 @@ unittest
   +/
 static TP delegate(in TP) everyMonth(TP, Direction dir = Direction.fwd)(int month)
     if (isTimePoint!TP &&
-       (dir == Direction.fwd || dir == Direction.bwd) &&
-       __traits(hasMember, TP, "month") &&
-       !__traits(isStaticFunction, TP.month) &&
-       is(typeof(TP.month) == Month))
+        (dir == Direction.fwd || dir == Direction.bwd) &&
+        __traits(hasMember, TP, "month") &&
+        !__traits(isStaticFunction, TP.month) &&
+        is(typeof(TP.month) == Month))
 {
     enforceValid!"months"(month);
 
@@ -7428,8 +7428,8 @@ unittest
 static TP delegate(in TP) everyDuration(TP, Direction dir = Direction.fwd, D)
                                        (D duration) nothrow
     if (isTimePoint!TP &&
-       __traits(compiles, TP.init + duration) &&
-       (dir == Direction.fwd || dir == Direction.bwd))
+        __traits(compiles, TP.init + duration) &&
+        (dir == Direction.fwd || dir == Direction.bwd))
 {
     TP func(in TP tp)
     {
@@ -7531,10 +7531,10 @@ static TP delegate(in TP) everyDuration(TP, Direction dir = Direction.fwd, D)
                                         AllowDayOverflow allowOverflow = AllowDayOverflow.yes,
                                         D duration = dur!"days"(0)) nothrow
     if (isTimePoint!TP &&
-       __traits(compiles, TP.init + duration) &&
-       __traits(compiles, TP.init.add!"years"(years)) &&
-       __traits(compiles, TP.init.add!"months"(months)) &&
-       (dir == Direction.fwd || dir == Direction.bwd))
+        __traits(compiles, TP.init + duration) &&
+        __traits(compiles, TP.init.add!"years"(years)) &&
+        __traits(compiles, TP.init.add!"months"(months)) &&
+        (dir == Direction.fwd || dir == Direction.bwd))
 {
     TP func(in TP tp)
     {

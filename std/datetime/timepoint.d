@@ -16999,7 +16999,7 @@ private:
   +/
 long splitUnitsFromHNSecs(string units)(ref long hnsecs) @safe pure nothrow
     if (validTimeUnits(units) &&
-       CmpTimeUnits!(units, "months") < 0)
+        CmpTimeUnits!(units, "months") < 0)
 {
     immutable value = convert!("hnsecs", units)(hnsecs);
     hnsecs -= convert!(units, "hnsecs")(value);
@@ -17036,7 +17036,7 @@ unittest
   +/
 long getUnitsFromHNSecs(string units)(long hnsecs) @safe pure nothrow
     if (validTimeUnits(units) &&
-       CmpTimeUnits!(units, "months") < 0)
+        CmpTimeUnits!(units, "months") < 0)
 {
     return convert!("hnsecs", units)(hnsecs);
 }
@@ -17066,7 +17066,7 @@ unittest
   +/
 long removeUnitsFromHNSecs(string units)(long hnsecs) @safe pure nothrow
     if (validTimeUnits(units) &&
-       CmpTimeUnits!(units, "months") < 0)
+        CmpTimeUnits!(units, "months") < 0)
 {
     immutable value = convert!("hnsecs", units)(hnsecs);
 
