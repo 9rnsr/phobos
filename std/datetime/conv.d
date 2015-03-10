@@ -98,8 +98,16 @@ enum AllowDayOverflow
   +/
 immutable string[] timeStrings =
 [
-    "hnsecs", "usecs", "msecs", "seconds", "minutes",
-    "hours", "days", "weeks", "months", "years"
+    "hnsecs",
+    "usecs",
+    "msecs",
+    "seconds",
+    "minutes",
+    "hours",
+    "days",
+    "weeks",
+    "months",
+    "years"
 ];
 
 
@@ -365,10 +373,11 @@ else version(Windows)
 
     SYSTEMTIME SysTimeToSYSTEMTIME(in SysTime sysTime) @safe
     {
-        immutable dt = cast(DateTime)sysTime;
+        import std.exception : enforce;
 
-        if (dt.year < 1601)
-            throw new DateTimeException("SYSTEMTIME cannot hold dates prior to the year 1601.");
+        immutable dt = cast(DateTime)sysTime;
+        enforce(dt.year >= 1601,
+                new DateTimeException("SYSTEMTIME cannot hold dates prior to the year 1601."));
 
         SYSTEMTIME st;
 
@@ -406,13 +415,14 @@ else version(Windows)
 
     long FILETIMEToStdTime(const FILETIME* ft) @safe
     {
+        import std.exception : enforce;
+
         ULARGE_INTEGER ul;
         ul.HighPart = ft.dwHighDateTime;
         ul.LowPart = ft.dwLowDateTime;
         ulong tempHNSecs = ul.QuadPart;
-
-        if (tempHNSecs > long.max - hnsecsFrom1601)
-            throw new DateTimeException("The given FILETIME cannot be represented as a stdTime value.");
+        enforce(tempHNSecs <= long.max - hnsecsFrom1601,
+                new DateTimeException("The given FILETIME cannot be represented as a stdTime value."));
 
         return cast(long)tempHNSecs + hnsecsFrom1601;
     }
@@ -444,8 +454,10 @@ else version(Windows)
 
     FILETIME stdTimeToFILETIME(long stdTime) @safe
     {
-        if (stdTime < hnsecsFrom1601)
-            throw new DateTimeException("The given stdTime value cannot be represented as a FILETIME.");
+        import std.exception : enforce;
+
+        enforce(hnsecsFrom1601 <= stdTime,
+                new DateTimeException("The given stdTime value cannot be represented as a FILETIME."));
 
         ULARGE_INTEGER ul;
         ul.QuadPart = cast(ulong)stdTime - hnsecsFrom1601;
@@ -496,10 +508,11 @@ alias DosFileTime = uint;
   +/
 SysTime DosFileTimeToSysTime(DosFileTime dft, immutable TimeZone tz = LocalTime()) @safe
 {
-    uint dt = cast(uint)dft;
+    import std.exception : enforce;
 
-    if (dt == 0)
-        throw new DateTimeException("Invalid DosFileTime.");
+    uint dt = cast(uint)dft;
+    enforce(dt != 0,
+            new DateTimeException("Invalid DosFileTime."));
 
     int year = ((dt >> 25) & 0x7F) + 1980;
     int month = ((dt >> 21) & 0x0F);       // 1..12
@@ -539,13 +552,13 @@ unittest
   +/
 DosFileTime SysTimeToDosFileTime(SysTime sysTime) @safe
 {
+    import std.exception : enforce;
+
     auto dateTime = cast(DateTime)sysTime;
-
-    if (dateTime.year < 1980)
-        throw new DateTimeException("DOS File Times cannot hold dates prior to 1980.");
-
-    if (dateTime.year > 2107)
-        throw new DateTimeException("DOS File Times cannot hold dates past 2107.");
+    enforce(1980 <= dateTime.year,
+            new DateTimeException("DOS File Times cannot hold dates prior to 1980."));
+    enforce(dateTime.year <= 2107,
+            new DateTimeException("DOS File Times cannot hold dates past 2107."));
 
     uint retval = 0;
     retval |= (dateTime.year - 1980) << 25;
@@ -554,7 +567,6 @@ DosFileTime SysTimeToDosFileTime(SysTime sysTime) @safe
     retval |= (dateTime.hour & 0x1F) << 11;
     retval |= (dateTime.minute & 0x3F) << 5;
     retval |= (dateTime.second >> 1) & 0x1F;
-
     return cast(DosFileTime)retval;
 }
 
@@ -609,7 +621,8 @@ SysTime parseRFC822DateTime()(in char[] value) @safe
 /++ Ditto +/
 SysTime parseRFC822DateTime(R)(R value) @safe
     if (isRandomAccessRange!R && hasSlicing!R && hasLength!R &&
-       (is(Unqual!(ElementType!R) == char) || is(Unqual!(ElementType!R) == ubyte)))
+        (is(Unqual!(ElementType!R) == char) ||
+         is(Unqual!(ElementType!R) == ubyte)))
 {
     import std.functional : not;
     import std.ascii : isDigit;
@@ -617,16 +630,18 @@ SysTime parseRFC822DateTime(R)(R value) @safe
     import std.string : capitalize, format;
     import std.conv : to;
     import std.algorithm : find, all;
+    import std.exception : enforce;
 
     void stripAndCheckLen(R valueBefore, size_t minLen, size_t line = __LINE__)
     {
         value = _stripCFWS(valueBefore);
-        if (value.length < minLen)
-            throw new DateTimeException("date-time value too short", __FILE__, line);
+        enforce(minLen <= value.length,
+                new DateTimeException("date-time value too short", __FILE__, line));
     }
     stripAndCheckLen(value, "7Dec1200:00A".length);
 
-    static if (isArray!R && (is(ElementEncodingType!R == char) || is(ElementEncodingType!R == ubyte)))
+    static if (isArray!R && (is(ElementEncodingType!R == char) ||
+                             is(ElementEncodingType!R == ubyte)))
     {
         static string sliceAsString(R str) @trusted
         {
@@ -657,20 +672,21 @@ SysTime parseRFC822DateTime(R)(R value) @safe
                 case dowC:
                     goto afterDoW;
             }
-            default: throw new DateTimeException(format("Invalid day-of-week: %s", dowStr));
+            default:
+                throw new DateTimeException(format("Invalid day-of-week: %s", dowStr));
         }
     afterDoW:
         stripAndCheckLen(value[3 .. value.length], ",7Dec1200:00A".length);
-        if (value[0] != ',')
-            throw new DateTimeException("day-of-week missing comma");
+        enforce(value[0] == ',',
+                new DateTimeException("day-of-week missing comma"));
         stripAndCheckLen(value[1 .. value.length], "7Dec1200:00A".length);
     }
 
     // day
     immutable digits = std.ascii.isDigit(value[1]) ? 2 : 1;
     immutable day = _convDigits!short(value[0 .. digits]);
-    if (day == -1)
-        throw new DateTimeException("Invalid day");
+    enforce(day != -1,
+            new DateTimeException("Invalid day"));
     stripAndCheckLen(value[digits .. value.length], "Dec1200:00A".length);
 
     // month
@@ -688,7 +704,8 @@ SysTime parseRFC822DateTime(R)(R value) @safe
                     goto afterMon;
                 }
             }
-            default: throw new DateTimeException(format("Invalid month: %s", monStr));
+            default:
+                throw new DateTimeException(format("Invalid month: %s", monStr));
         }
     afterMon:
         stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
@@ -697,34 +714,31 @@ SysTime parseRFC822DateTime(R)(R value) @safe
     // year
     auto found = value[2 .. value.length].find!(not!(std.ascii.isDigit))();
     size_t yearLen = value.length - found.length;
-    if (found.length == 0)
-        throw new DateTimeException("Invalid year");
+    enforce(!found.empty,
+            new DateTimeException("Invalid year"));
     if (found[0] == ':')
         yearLen -= 2;
     auto year = _convDigits!short(value[0 .. yearLen]);
     if (year < 1900)
     {
-        if (year == -1)
-            throw new DateTimeException("Invalid year");
-        if (yearLen < 4)
-        {
-            if (yearLen == 3)
-                year += 1900;
-            else if (yearLen == 2)
-                year += year < 50 ? 2000 : 1900;
-            else
-                throw new DateTimeException("Invalid year. Too few digits.");
-        }
+        enforce(year != -1,
+                new DateTimeException("Invalid year"));
+        enforce(yearLen < 4,
+                new DateTimeException("Invalid year. Cannot be earlier than 1900."));
+        if (yearLen == 3)
+            year += 1900;
+        else if (yearLen == 2)
+            year += year < 50 ? 2000 : 1900;
         else
-            throw new DateTimeException("Invalid year. Cannot be earlier than 1900.");
+            throw new DateTimeException("Invalid year. Too few digits.");
     }
     stripAndCheckLen(value[yearLen .. value.length], "00:00A".length);
 
     // hour
     immutable hour = _convDigits!short(value[0 .. 2]);
     stripAndCheckLen(value[2 .. value.length], ":00A".length);
-    if (value[0] != ':')
-        throw new DateTimeException("Invalid hour");
+    enforce(value[0] == ':',
+            new DateTimeException("Invalid hour"));
     stripAndCheckLen(value[1 .. value.length], "00A".length);
 
     // minute
@@ -745,12 +759,12 @@ SysTime parseRFC822DateTime(R)(R value) @safe
 
     immutable(TimeZone) parseTZ(int sign)
     {
-        if (value.length < 5)
-            throw new DateTimeException("Invalid timezone");
+        enforce(5 <= value.length,
+                new DateTimeException("Invalid timezone"));
         immutable zoneHours = _convDigits!short(value[1 .. 3]);
         immutable zoneMinutes = _convDigits!short(value[3 .. 5]);
-        if (zoneHours == -1 || zoneMinutes == -1 || zoneMinutes > 59)
-            throw new DateTimeException("Invalid timezone");
+        enforce(zoneHours != -1 && zoneMinutes != -1 && zoneMinutes <= 59,
+                new DateTimeException("Invalid timezone"));
         value = value[5 .. value.length];
         immutable utcOffset = (dur!"hours"(zoneHours) + dur!"minutes"(zoneMinutes)) * sign;
         if (utcOffset == Duration.zero)
@@ -773,7 +787,8 @@ SysTime parseRFC822DateTime(R)(R value) @safe
         immutable tzLen = value.length - find(value, ' ', '\t', '(')[0].length;
         switch (sliceAsString(value[0 .. tzLen <= 4 ? tzLen : 4]))
         {
-            case "UT": case "GMT": tz = UTC(); break;
+            case "UT":
+            case "GMT": tz = UTC(); break;
             case "EST": tz = new immutable SimpleTimeZone(dur!"hours"(-5)); break;
             case "EDT": tz = new immutable SimpleTimeZone(dur!"hours"(-4)); break;
             case "CST": tz = new immutable SimpleTimeZone(dur!"hours"(-6)); break;
@@ -782,15 +797,14 @@ SysTime parseRFC822DateTime(R)(R value) @safe
             case "MDT": tz = new immutable SimpleTimeZone(dur!"hours"(-6)); break;
             case "PST": tz = new immutable SimpleTimeZone(dur!"hours"(-8)); break;
             case "PDT": tz = new immutable SimpleTimeZone(dur!"hours"(-7)); break;
-            case "J": case "j": throw new DateTimeException("Invalid timezone");
+            case "J":
+            case "j":   throw new DateTimeException("Invalid timezone");
             default:
             {
-                if (all!(std.ascii.isAlpha)(value[0 .. tzLen]))
-                {
-                    tz = new immutable SimpleTimeZone(Duration.zero);
-                    break;
-                }
-                throw new DateTimeException("Invalid timezone");
+                enforce(all!(std.ascii.isAlpha)(value[0 .. tzLen]),
+                        new DateTimeException("Invalid timezone"));
+                tz = new immutable SimpleTimeZone(Duration.zero);
+                break;
             }
         }
         value = value[tzLen .. value.length];
@@ -802,8 +816,8 @@ SysTime parseRFC822DateTime(R)(R value) @safe
     // that if the next character is printable (and not part of CFWS), then it
     // might be part of the timezone and thus affect what the timezone was
     // supposed to be, so we'll throw, but otherwise, we'll just ignore it.
-    if (!value.empty && std.ascii.isPrintable(value[0]) && value[0] != ' ' && value[0] != '(')
-        throw new DateTimeException("Invalid timezone");
+    enforce(value.empty || !std.ascii.isPrintable(value[0]) || value[0] == ' ' || value[0] == '(',
+            new DateTimeException("Invalid timezone"));
 
     try
         return SysTime(DateTime(year, month, day, hour, minute, second), tz);
@@ -1130,7 +1144,7 @@ unittest
     import std.string;
     import std.typecons;
     import std.typetuple;
-    import std.exception : assertThrown, collectExceptionMsg, enforce;
+    import std.exception : assertThrown, collectExceptionMsg;
     import std.stdio : writeln, writefln;
 
     auto std1 = SysTime(DateTime(2012, 12, 21, 13, 14, 15), UTC());
@@ -1545,32 +1559,16 @@ bool valid(string units)(int year, int month, int day) @safe pure nothrow
   +/
 void enforceValid(string units)(int value, string file = __FILE__, size_t line = __LINE__) @safe pure
     if (units == "months" ||
-       units == "hours" ||
-       units == "minutes" ||
-       units == "seconds")
+        units == "hours" ||
+        units == "minutes" ||
+        units == "seconds")
 {
+    import std.exception : enforce;
     import std.format : format;
 
-    static if (units == "months")
-    {
-        if (!valid!units(value))
-            throw new DateTimeException(format("%s is not a valid month of the year.", value), file, line);
-    }
-    else static if (units == "hours")
-    {
-        if (!valid!units(value))
-            throw new DateTimeException(format("%s is not a valid hour of the day.", value), file, line);
-    }
-    else static if (units == "minutes")
-    {
-        if (!valid!units(value))
-            throw new DateTimeException(format("%s is not a valid minute of an hour.", value), file, line);
-    }
-    else static if (units == "seconds")
-    {
-        if (!valid!units(value))
-            throw new DateTimeException(format("%s is not a valid second of a minute.", value), file, line);
-    }
+    enum fmtStr = "%s is not a valid "~units[0..$-1]~" of the "~nextLargerTimeUnits!units[0..$-1]~".";
+    enforce(valid!units(value),
+            new DateTimeException(format(fmtStr, value), file, line));
 }
 
 
@@ -1591,9 +1589,11 @@ void enforceValid(string units)
                  (int year, Month month, int day, string file = __FILE__, size_t line = __LINE__) @safe pure
     if (units == "days")
 {
+    import std.exception : enforce;
     import std.format : format;
-    if (!valid!"days"(year, month, day))
-        throw new DateTimeException(format("%s is not a valid day in %s in %s", day, month, year), file, line);
+
+    enforce(valid!"days"(year, month, day),
+            new DateTimeException(format("%s is not a valid day in %s in %s", day, month, year), file, line));
 }
 
 
@@ -1762,20 +1762,17 @@ static string fracSecsToISOString(int hnsecs) @safe pure nothrow
     import std.format : format;
     assert(hnsecs >= 0);
 
-    try
-    {
-        if (hnsecs == 0)
-            return "";
+    scope(failure) assert(0, "format() threw.");
 
-        string isoString = format(".%07d", hnsecs);
+    if (hnsecs == 0)
+        return "";
 
-        while (isoString[$ - 1] == '0')
-            isoString.popBack();
+    string isoString = format(".%07d", hnsecs);
 
-        return isoString;
-    }
-    catch (Exception e)
-        assert(0, "format() threw.");
+    while (isoString[$ - 1] == '0')
+        isoString.popBack();
+
+    return isoString;
 }
 
 unittest
@@ -1921,7 +1918,8 @@ unittest
   +/
 R _stripCFWS(R)(R range)
     if (isRandomAccessRange!R && hasSlicing!R && hasLength!R &&
-       (is(Unqual!(ElementType!R) == char) || is(Unqual!(ElementType!R) == ubyte)))
+        (is(Unqual!(ElementType!R) == char) ||
+         is(Unqual!(ElementType!R) == ubyte)))
 {
     immutable e = range.length;
     outer: for (size_t i = 0; i < e; )
@@ -2220,55 +2218,55 @@ body
 unittest
 {
     //Test A.D.
-    assert(maxDay(1999, 1) == 31);
-    assert(maxDay(1999, 2) == 28);
-    assert(maxDay(1999, 3) == 31);
-    assert(maxDay(1999, 4) == 30);
-    assert(maxDay(1999, 5) == 31);
-    assert(maxDay(1999, 6) == 30);
-    assert(maxDay(1999, 7) == 31);
-    assert(maxDay(1999, 8) == 31);
-    assert(maxDay(1999, 9) == 30);
-    assert(maxDay(1999, 10) == 31);
-    assert(maxDay(1999, 11) == 30);
-    assert(maxDay(1999, 12) == 31);
+    assert(maxDay( 1999,  1) == 31);
+    assert(maxDay( 1999,  2) == 28);
+    assert(maxDay( 1999,  3) == 31);
+    assert(maxDay( 1999,  4) == 30);
+    assert(maxDay( 1999,  5) == 31);
+    assert(maxDay( 1999,  6) == 30);
+    assert(maxDay( 1999,  7) == 31);
+    assert(maxDay( 1999,  8) == 31);
+    assert(maxDay( 1999,  9) == 30);
+    assert(maxDay( 1999, 10) == 31);
+    assert(maxDay( 1999, 11) == 30);
+    assert(maxDay( 1999, 12) == 31);
 
-    assert(maxDay(2000, 1) == 31);
-    assert(maxDay(2000, 2) == 29);
-    assert(maxDay(2000, 3) == 31);
-    assert(maxDay(2000, 4) == 30);
-    assert(maxDay(2000, 5) == 31);
-    assert(maxDay(2000, 6) == 30);
-    assert(maxDay(2000, 7) == 31);
-    assert(maxDay(2000, 8) == 31);
-    assert(maxDay(2000, 9) == 30);
-    assert(maxDay(2000, 10) == 31);
-    assert(maxDay(2000, 11) == 30);
-    assert(maxDay(2000, 12) == 31);
+    assert(maxDay( 2000,  1) == 31);
+    assert(maxDay( 2000,  2) == 29);
+    assert(maxDay( 2000,  3) == 31);
+    assert(maxDay( 2000,  4) == 30);
+    assert(maxDay( 2000,  5) == 31);
+    assert(maxDay( 2000,  6) == 30);
+    assert(maxDay( 2000,  7) == 31);
+    assert(maxDay( 2000,  8) == 31);
+    assert(maxDay( 2000,  9) == 30);
+    assert(maxDay( 2000, 10) == 31);
+    assert(maxDay( 2000, 11) == 30);
+    assert(maxDay( 2000, 12) == 31);
 
     //Test B.C.
-    assert(maxDay(-1999, 1) == 31);
-    assert(maxDay(-1999, 2) == 28);
-    assert(maxDay(-1999, 3) == 31);
-    assert(maxDay(-1999, 4) == 30);
-    assert(maxDay(-1999, 5) == 31);
-    assert(maxDay(-1999, 6) == 30);
-    assert(maxDay(-1999, 7) == 31);
-    assert(maxDay(-1999, 8) == 31);
-    assert(maxDay(-1999, 9) == 30);
+    assert(maxDay(-1999,  1) == 31);
+    assert(maxDay(-1999,  2) == 28);
+    assert(maxDay(-1999,  3) == 31);
+    assert(maxDay(-1999,  4) == 30);
+    assert(maxDay(-1999,  5) == 31);
+    assert(maxDay(-1999,  6) == 30);
+    assert(maxDay(-1999,  7) == 31);
+    assert(maxDay(-1999,  8) == 31);
+    assert(maxDay(-1999,  9) == 30);
     assert(maxDay(-1999, 10) == 31);
     assert(maxDay(-1999, 11) == 30);
     assert(maxDay(-1999, 12) == 31);
 
-    assert(maxDay(-2000, 1) == 31);
-    assert(maxDay(-2000, 2) == 29);
-    assert(maxDay(-2000, 3) == 31);
-    assert(maxDay(-2000, 4) == 30);
-    assert(maxDay(-2000, 5) == 31);
-    assert(maxDay(-2000, 6) == 30);
-    assert(maxDay(-2000, 7) == 31);
-    assert(maxDay(-2000, 8) == 31);
-    assert(maxDay(-2000, 9) == 30);
+    assert(maxDay(-2000,  1) == 31);
+    assert(maxDay(-2000,  2) == 29);
+    assert(maxDay(-2000,  3) == 31);
+    assert(maxDay(-2000,  4) == 30);
+    assert(maxDay(-2000,  5) == 31);
+    assert(maxDay(-2000,  6) == 30);
+    assert(maxDay(-2000,  7) == 31);
+    assert(maxDay(-2000,  8) == 31);
+    assert(maxDay(-2000,  9) == 30);
     assert(maxDay(-2000, 10) == 31);
     assert(maxDay(-2000, 11) == 30);
     assert(maxDay(-2000, 12) == 31);
@@ -2287,53 +2285,48 @@ DayOfWeek getDayOfWeek(int day) @safe pure nothrow
     //January 1st, 1 A.D. was a Monday
     if (day >= 0)
         return cast(DayOfWeek)(day % 7);
-    else
-    {
-        immutable dow = cast(DayOfWeek)((day % 7) + 7);
 
-        if (dow == 7)
-            return DayOfWeek.sun;
-        else
-            return dow;
-    }
+    immutable dow = cast(DayOfWeek)((day % 7) + 7);
+
+    return dow == 7 ? DayOfWeek.sun : dow;
 }
 
 unittest
 {
     //Test A.D.
-    assert(getDayOfWeek(SysTime(Date(1, 1, 1)).dayOfGregorianCal) == DayOfWeek.mon);
-    assert(getDayOfWeek(SysTime(Date(1, 1, 2)).dayOfGregorianCal) == DayOfWeek.tue);
-    assert(getDayOfWeek(SysTime(Date(1, 1, 3)).dayOfGregorianCal) == DayOfWeek.wed);
-    assert(getDayOfWeek(SysTime(Date(1, 1, 4)).dayOfGregorianCal) == DayOfWeek.thu);
-    assert(getDayOfWeek(SysTime(Date(1, 1, 5)).dayOfGregorianCal) == DayOfWeek.fri);
-    assert(getDayOfWeek(SysTime(Date(1, 1, 6)).dayOfGregorianCal) == DayOfWeek.sat);
-    assert(getDayOfWeek(SysTime(Date(1, 1, 7)).dayOfGregorianCal) == DayOfWeek.sun);
-    assert(getDayOfWeek(SysTime(Date(1, 1, 8)).dayOfGregorianCal) == DayOfWeek.mon);
-    assert(getDayOfWeek(SysTime(Date(1, 1, 9)).dayOfGregorianCal) == DayOfWeek.tue);
-    assert(getDayOfWeek(SysTime(Date(2, 1, 1)).dayOfGregorianCal) == DayOfWeek.tue);
-    assert(getDayOfWeek(SysTime(Date(3, 1, 1)).dayOfGregorianCal) == DayOfWeek.wed);
-    assert(getDayOfWeek(SysTime(Date(4, 1, 1)).dayOfGregorianCal) == DayOfWeek.thu);
-    assert(getDayOfWeek(SysTime(Date(5, 1, 1)).dayOfGregorianCal) == DayOfWeek.sat);
-    assert(getDayOfWeek(SysTime(Date(2000, 1, 1)).dayOfGregorianCal) == DayOfWeek.sat);
-    assert(getDayOfWeek(SysTime(Date(2010, 8, 22)).dayOfGregorianCal) == DayOfWeek.sun);
-    assert(getDayOfWeek(SysTime(Date(2010, 8, 23)).dayOfGregorianCal) == DayOfWeek.mon);
-    assert(getDayOfWeek(SysTime(Date(2010, 8, 24)).dayOfGregorianCal) == DayOfWeek.tue);
-    assert(getDayOfWeek(SysTime(Date(2010, 8, 25)).dayOfGregorianCal) == DayOfWeek.wed);
-    assert(getDayOfWeek(SysTime(Date(2010, 8, 26)).dayOfGregorianCal) == DayOfWeek.thu);
-    assert(getDayOfWeek(SysTime(Date(2010, 8, 27)).dayOfGregorianCal) == DayOfWeek.fri);
-    assert(getDayOfWeek(SysTime(Date(2010, 8, 28)).dayOfGregorianCal) == DayOfWeek.sat);
-    assert(getDayOfWeek(SysTime(Date(2010, 8, 29)).dayOfGregorianCal) == DayOfWeek.sun);
+    assert(getDayOfWeek(SysTime(Date(   1,  1,  1)).dayOfGregorianCal) == DayOfWeek.mon);
+    assert(getDayOfWeek(SysTime(Date(   1,  1,  2)).dayOfGregorianCal) == DayOfWeek.tue);
+    assert(getDayOfWeek(SysTime(Date(   1,  1,  3)).dayOfGregorianCal) == DayOfWeek.wed);
+    assert(getDayOfWeek(SysTime(Date(   1,  1,  4)).dayOfGregorianCal) == DayOfWeek.thu);
+    assert(getDayOfWeek(SysTime(Date(   1,  1,  5)).dayOfGregorianCal) == DayOfWeek.fri);
+    assert(getDayOfWeek(SysTime(Date(   1,  1,  6)).dayOfGregorianCal) == DayOfWeek.sat);
+    assert(getDayOfWeek(SysTime(Date(   1,  1,  7)).dayOfGregorianCal) == DayOfWeek.sun);
+    assert(getDayOfWeek(SysTime(Date(   1,  1,  8)).dayOfGregorianCal) == DayOfWeek.mon);
+    assert(getDayOfWeek(SysTime(Date(   1,  1,  9)).dayOfGregorianCal) == DayOfWeek.tue);
+    assert(getDayOfWeek(SysTime(Date(   2,  1,  1)).dayOfGregorianCal) == DayOfWeek.tue);
+    assert(getDayOfWeek(SysTime(Date(   3,  1,  1)).dayOfGregorianCal) == DayOfWeek.wed);
+    assert(getDayOfWeek(SysTime(Date(   4,  1,  1)).dayOfGregorianCal) == DayOfWeek.thu);
+    assert(getDayOfWeek(SysTime(Date(   5,  1,  1)).dayOfGregorianCal) == DayOfWeek.sat);
+    assert(getDayOfWeek(SysTime(Date(2000,  1,  1)).dayOfGregorianCal) == DayOfWeek.sat);
+    assert(getDayOfWeek(SysTime(Date(2010,  8, 22)).dayOfGregorianCal) == DayOfWeek.sun);
+    assert(getDayOfWeek(SysTime(Date(2010,  8, 23)).dayOfGregorianCal) == DayOfWeek.mon);
+    assert(getDayOfWeek(SysTime(Date(2010,  8, 24)).dayOfGregorianCal) == DayOfWeek.tue);
+    assert(getDayOfWeek(SysTime(Date(2010,  8, 25)).dayOfGregorianCal) == DayOfWeek.wed);
+    assert(getDayOfWeek(SysTime(Date(2010,  8, 26)).dayOfGregorianCal) == DayOfWeek.thu);
+    assert(getDayOfWeek(SysTime(Date(2010,  8, 27)).dayOfGregorianCal) == DayOfWeek.fri);
+    assert(getDayOfWeek(SysTime(Date(2010,  8, 28)).dayOfGregorianCal) == DayOfWeek.sat);
+    assert(getDayOfWeek(SysTime(Date(2010,  8, 29)).dayOfGregorianCal) == DayOfWeek.sun);
 
     //Test B.C.
-    assert(getDayOfWeek(SysTime(Date(0, 12, 31)).dayOfGregorianCal) == DayOfWeek.sun);
-    assert(getDayOfWeek(SysTime(Date(0, 12, 30)).dayOfGregorianCal) == DayOfWeek.sat);
-    assert(getDayOfWeek(SysTime(Date(0, 12, 29)).dayOfGregorianCal) == DayOfWeek.fri);
-    assert(getDayOfWeek(SysTime(Date(0, 12, 28)).dayOfGregorianCal) == DayOfWeek.thu);
-    assert(getDayOfWeek(SysTime(Date(0, 12, 27)).dayOfGregorianCal) == DayOfWeek.wed);
-    assert(getDayOfWeek(SysTime(Date(0, 12, 26)).dayOfGregorianCal) == DayOfWeek.tue);
-    assert(getDayOfWeek(SysTime(Date(0, 12, 25)).dayOfGregorianCal) == DayOfWeek.mon);
-    assert(getDayOfWeek(SysTime(Date(0, 12, 24)).dayOfGregorianCal) == DayOfWeek.sun);
-    assert(getDayOfWeek(SysTime(Date(0, 12, 23)).dayOfGregorianCal) == DayOfWeek.sat);
+    assert(getDayOfWeek(SysTime(Date(   0, 12, 31)).dayOfGregorianCal) == DayOfWeek.sun);
+    assert(getDayOfWeek(SysTime(Date(   0, 12, 30)).dayOfGregorianCal) == DayOfWeek.sat);
+    assert(getDayOfWeek(SysTime(Date(   0, 12, 29)).dayOfGregorianCal) == DayOfWeek.fri);
+    assert(getDayOfWeek(SysTime(Date(   0, 12, 28)).dayOfGregorianCal) == DayOfWeek.thu);
+    assert(getDayOfWeek(SysTime(Date(   0, 12, 27)).dayOfGregorianCal) == DayOfWeek.wed);
+    assert(getDayOfWeek(SysTime(Date(   0, 12, 26)).dayOfGregorianCal) == DayOfWeek.tue);
+    assert(getDayOfWeek(SysTime(Date(   0, 12, 25)).dayOfGregorianCal) == DayOfWeek.mon);
+    assert(getDayOfWeek(SysTime(Date(   0, 12, 24)).dayOfGregorianCal) == DayOfWeek.sun);
+    assert(getDayOfWeek(SysTime(Date(   0, 12, 23)).dayOfGregorianCal) == DayOfWeek.sat);
 }
 
 
@@ -2343,7 +2336,7 @@ unittest
 string monthToString(Month month) @safe pure
 {
     import std.format : format;
-    assert(month >= Month.jan && month <= Month.dec, format("Invalid month: %s", month));
+    assert(Month.jan  <= month && month <= Month.dec, format("Invalid month: %s", month));
     return _monthNames[month - Month.jan];
 }
 
@@ -2400,7 +2393,7 @@ unittest
     import std.stdio : writeln;
 
     foreach (badStr; ["Ja", "Janu", "Januar", "Januarys", "JJanuary", "JANUARY",
-                     "JAN", "january", "jaNuary", "jaN", "jaNuaRy", "jAn"])
+                      "JAN", "january", "jaNuary", "jaN", "jaNuaRy", "jAn"])
     {
         scope(failure) writeln(badStr);
         assertThrown!DateTimeException(monthFromString(badStr));
@@ -2419,7 +2412,7 @@ unittest
   +/
 template nextSmallerTimeUnits(string units)
     if (validTimeUnits(units) &&
-       timeStrings.front != units)
+        timeStrings.front != units)
 {
     import std.algorithm : countUntil;
     enum nextSmallerTimeUnits = timeStrings[countUntil(timeStrings, units) - 1];
@@ -2427,15 +2420,15 @@ template nextSmallerTimeUnits(string units)
 
 unittest
 {
-    assert(nextSmallerTimeUnits!"years" == "months");
-    assert(nextSmallerTimeUnits!"months" == "weeks");
-    assert(nextSmallerTimeUnits!"weeks" == "days");
-    assert(nextSmallerTimeUnits!"days" == "hours");
-    assert(nextSmallerTimeUnits!"hours" == "minutes");
-    assert(nextSmallerTimeUnits!"minutes" == "seconds");
-    assert(nextSmallerTimeUnits!"seconds" == "msecs");
-    assert(nextSmallerTimeUnits!"msecs" == "usecs");
-    assert(nextSmallerTimeUnits!"usecs" == "hnsecs");
+    static assert(nextSmallerTimeUnits!"years"   == "months");
+    static assert(nextSmallerTimeUnits!"months"  == "weeks");
+    static assert(nextSmallerTimeUnits!"weeks"   == "days");
+    static assert(nextSmallerTimeUnits!"days"    == "hours");
+    static assert(nextSmallerTimeUnits!"hours"   == "minutes");
+    static assert(nextSmallerTimeUnits!"minutes" == "seconds");
+    static assert(nextSmallerTimeUnits!"seconds" == "msecs");
+    static assert(nextSmallerTimeUnits!"msecs"   == "usecs");
+    static assert(nextSmallerTimeUnits!"usecs"   == "hnsecs");
     static assert(!__traits(compiles, nextSmallerTimeUnits!"hnsecs"));
 }
 
@@ -2445,7 +2438,7 @@ unittest
   +/
 template nextLargerTimeUnits(string units)
     if (validTimeUnits(units) &&
-       timeStrings.back != units)
+        timeStrings.back != units)
 {
     import std.algorithm : countUntil;
     enum nextLargerTimeUnits = timeStrings[countUntil(timeStrings, units) + 1];
@@ -2453,14 +2446,14 @@ template nextLargerTimeUnits(string units)
 
 unittest
 {
-    assert(nextLargerTimeUnits!"hnsecs" == "usecs");
-    assert(nextLargerTimeUnits!"usecs" == "msecs");
-    assert(nextLargerTimeUnits!"msecs" == "seconds");
-    assert(nextLargerTimeUnits!"seconds" == "minutes");
-    assert(nextLargerTimeUnits!"minutes" == "hours");
-    assert(nextLargerTimeUnits!"hours" == "days");
-    assert(nextLargerTimeUnits!"days" == "weeks");
-    assert(nextLargerTimeUnits!"weeks" == "months");
-    assert(nextLargerTimeUnits!"months" == "years");
+    static assert(nextLargerTimeUnits!"hnsecs"  == "usecs");
+    static assert(nextLargerTimeUnits!"usecs"   == "msecs");
+    static assert(nextLargerTimeUnits!"msecs"   == "seconds");
+    static assert(nextLargerTimeUnits!"seconds" == "minutes");
+    static assert(nextLargerTimeUnits!"minutes" == "hours");
+    static assert(nextLargerTimeUnits!"hours"   == "days");
+    static assert(nextLargerTimeUnits!"days"    == "weeks");
+    static assert(nextLargerTimeUnits!"weeks"   == "months");
+    static assert(nextLargerTimeUnits!"months"  == "years");
     static assert(!__traits(compiles, nextLargerTimeUnits!"years"));
 }
