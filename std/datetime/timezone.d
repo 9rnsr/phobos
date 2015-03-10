@@ -3,10 +3,10 @@
 /++
     Module containing Date/Time functionality.
 
-    Copyright: Copyright 2010 - 2011
+    Copyright: Copyright 2010 - 2015
     License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-    Authors:   Jonathan M Davis and Kato Shoichi
-    Source:    $(PHOBOSSRC std/_datetime.d)
+    Authors:   Jonathan M Davis, Kato Shoichi, and Kenji Hara
+    Source:    $(PHOBOSSRC std/datetime/_timezone.d)
     Macros:
         LREF2=<a href="#$1">$(D $2)</a>
 +/
@@ -49,7 +49,7 @@ public:
             $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of
               Time Zones)
       +/
-    @property string name() @safe const nothrow
+    @property string name() const @safe nothrow
     {
         return _name;
     }
@@ -62,7 +62,7 @@ public:
         However, on Windows, it may be the unabbreviated name (e.g. Pacific
         Standard Time). Regardless, it is not the same as name.
       +/
-    @property string stdName() @safe const nothrow
+    @property string stdName() const @safe nothrow
     {
         return _stdName;
     }
@@ -75,7 +75,7 @@ public:
         However, on Windows, it may be the unabbreviated name (e.g. Pacific
         Daylight Time). Regardless, it is not the same as name.
       +/
-    @property string dstName() @safe const nothrow
+    @property string dstName() const @safe nothrow
     {
         return _dstName;
     }
@@ -87,7 +87,7 @@ public:
         but will still return true for $(D hasDST) because the time zone did at
         some point have DST.
       +/
-    @property abstract bool hasDST() @safe const nothrow;
+    @property abstract bool hasDST() const @safe nothrow;
 
 
     /++
@@ -99,7 +99,7 @@ public:
             stdTime = The UTC time that needs to be checked for DST in this time
                       zone.
       +/
-    abstract bool dstInEffect(long stdTime) @safe const nothrow;
+    abstract bool dstInEffect(long stdTime) const @safe nothrow;
 
 
     /++
@@ -110,7 +110,7 @@ public:
             stdTime = The UTC time that needs to be adjusted to this time zone's
                       time.
       +/
-    abstract long utcToTZ(long stdTime) @safe const nothrow;
+    abstract long utcToTZ(long stdTime) const @safe nothrow;
 
 
     /++
@@ -121,7 +121,7 @@ public:
             adjTime = The time in this time zone that needs to be adjusted to
                       UTC time.
       +/
-    abstract long tzToUTC(long adjTime) @safe const nothrow;
+    abstract long tzToUTC(long adjTime) const @safe nothrow;
 
 
     /++
@@ -132,7 +132,7 @@ public:
             stdTime = The UTC time for which to get the offset from UTC for this
                       time zone.
       +/
-    Duration utcOffsetAt(long stdTime) @safe const nothrow
+    Duration utcOffsetAt(long stdTime) const @safe nothrow
     {
         return dur!"hnsecs"(utcToTZ(stdTime) - stdTime);
     }
@@ -641,7 +641,7 @@ public:
                 $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List
                   of Time Zones)
           +/
-        @property override string name() @safe const nothrow;
+        @property override string name() const @safe nothrow;
     }
 
 
@@ -661,41 +661,37 @@ public:
     {
         version(Posix)
         {
+            scope(failure) assert(0, "to!string(tzname[0]) failed.");
+
             import std.conv : to;
-            try
-                return to!string(tzname[0]);
-            catch (Exception e)
-                assert(0, "to!string(tzname[0]) failed.");
+            return to!string(tzname[0]);
         }
         else version(Windows)
         {
-            try
+            scope(failure) assert(0, "GetTimeZoneInformation() threw.");
+
+            TIME_ZONE_INFORMATION tzInfo;
+            GetTimeZoneInformation(&tzInfo);
+
+            //Cannot use to!string() like this should, probably due to bug http://d.puremagic.com/issues/show_bug.cgi?id=5016
+            //return to!string(tzInfo.StandardName);
+
+            wchar[32] str;
+
+            foreach (i, ref wchar c; str)
+                c = tzInfo.StandardName[i];
+
+            string retval;
+
+            foreach (dchar c; str)
             {
-                TIME_ZONE_INFORMATION tzInfo;
-                GetTimeZoneInformation(&tzInfo);
+                if (c == '\0')
+                    break;
 
-                //Cannot use to!string() like this should, probably due to bug http://d.puremagic.com/issues/show_bug.cgi?id=5016
-                //return to!string(tzInfo.StandardName);
-
-                wchar[32] str;
-
-                foreach (i, ref wchar c; str)
-                    c = tzInfo.StandardName[i];
-
-                string retval;
-
-                foreach (dchar c; str)
-                {
-                    if (c == '\0')
-                        break;
-
-                    retval ~= c;
-                }
-
-                return retval;
+                retval ~= c;
             }
-            catch (Exception e)
-                assert(0, "GetTimeZoneInformation() threw.");
+
+            return retval;
         }
     }
 
@@ -732,46 +728,42 @@ public:
     {
         version(Posix)
         {
+            scope(failure) assert(0, "to!string(tzname[1]) failed.");
+
             import std.conv : to;
-            try
-                return to!string(tzname[1]);
-            catch (Exception e)
-                assert(0, "to!string(tzname[1]) failed.");
+            return to!string(tzname[1]);
         }
         else version(Windows)
         {
-            try
+            scope(failure) assert(0, "GetTimeZoneInformation() threw.");
+
+            TIME_ZONE_INFORMATION tzInfo;
+            GetTimeZoneInformation(&tzInfo);
+
+            //Cannot use to!string() like this should, probably due to bug http://d.puremagic.com/issues/show_bug.cgi?id=5016
+            //return to!string(tzInfo.DaylightName);
+
+            wchar[32] str;
+
+            foreach (i, ref wchar c; str)
+                c = tzInfo.DaylightName[i];
+
+            string retval;
+
+            foreach (dchar c; str)
             {
-                TIME_ZONE_INFORMATION tzInfo;
-                GetTimeZoneInformation(&tzInfo);
+                if (c == '\0')
+                    break;
 
-                //Cannot use to!string() like this should, probably due to bug http://d.puremagic.com/issues/show_bug.cgi?id=5016
-                //return to!string(tzInfo.DaylightName);
-
-                wchar[32] str;
-
-                foreach (i, ref wchar c; str)
-                    c = tzInfo.DaylightName[i];
-
-                string retval;
-
-                foreach (dchar c; str)
-                {
-                    if (c == '\0')
-                        break;
-
-                    retval ~= c;
-                }
-
-                return retval;
+                retval ~= c;
             }
-            catch (Exception e)
-                assert(0, "GetTimeZoneInformation() threw.");
+
+            return retval;
         }
     }
 
     unittest
-{
+    {
         assert(LocalTime().dstName !is null);
 
         version(Posix)
@@ -801,31 +793,25 @@ public:
                 return cast(bool)(daylight);
             else
             {
-                try
-                {
-                    auto currYear = (cast(Date)Clock.currTime()).year;
-                    auto janOffset = SysTime(Date(currYear, 1, 4), cast(immutable)this).stdTime -
-                                     SysTime(Date(currYear, 1, 4), UTC()).stdTime;
-                    auto julyOffset = SysTime(Date(currYear, 7, 4), cast(immutable)this).stdTime -
-                                      SysTime(Date(currYear, 7, 4), UTC()).stdTime;
+                scope(failure) assert(0, "Clock.currTime() threw.");
 
-                    return janOffset != julyOffset;
-                }
-                catch (Exception e)
-                    assert(0, "Clock.currTime() threw.");
+                auto currYear = (cast(Date)Clock.currTime()).year;
+                auto janOffset = SysTime(Date(currYear, 1, 4), cast(immutable)this).stdTime -
+                                 SysTime(Date(currYear, 1, 4), UTC()).stdTime;
+                auto julyOffset = SysTime(Date(currYear, 7, 4), cast(immutable)this).stdTime -
+                                  SysTime(Date(currYear, 7, 4), UTC()).stdTime;
+
+                return janOffset != julyOffset;
             }
         }
         else version(Windows)
         {
-            try
-            {
-                TIME_ZONE_INFORMATION tzInfo;
-                GetTimeZoneInformation(&tzInfo);
+            scope(failure) assert(0, "GetTimeZoneInformation() threw.");
 
-                return tzInfo.DaylightDate.wMonth != 0;
-            }
-            catch (Exception e)
-                assert(0, "GetTimeZoneInformation() threw.");
+            TIME_ZONE_INFORMATION tzInfo;
+            GetTimeZoneInformation(&tzInfo);
+
+            return tzInfo.DaylightDate.wMonth != 0;
         }
     }
 
@@ -881,13 +867,10 @@ public:
                     return cast(bool)(timeInfo.tm_isdst);
             }
 
+            scope(failure) assert(0, "The impossible happened. GetTimeZoneInformation() threw.");
+
             TIME_ZONE_INFORMATION tzInfo;
-
-            try
-                GetTimeZoneInformation(&tzInfo);
-            catch (Exception e)
-                assert(0, "The impossible happened. GetTimeZoneInformation() threw.");
-
+            GetTimeZoneInformation(&tzInfo);
             return WindowsTimeZone._dstInEffect(&tzInfo, stdTime);
         }
     }
@@ -923,13 +906,10 @@ public:
         }
         else version(Windows)
         {
+            scope(failure) assert(0, "GetTimeZoneInformation() threw.");
+
             TIME_ZONE_INFORMATION tzInfo;
-
-            try
-                GetTimeZoneInformation(&tzInfo);
-            catch (Exception e)
-                assert(0, "GetTimeZoneInformation() threw.");
-
+            GetTimeZoneInformation(&tzInfo);
             return WindowsTimeZone._utcToTZ(&tzInfo, stdTime, hasDST);
         }
     }
@@ -979,13 +959,10 @@ public:
         }
         else version(Windows)
         {
+            scope(failure) assert(0, "GetTimeZoneInformation() threw.");
+
             TIME_ZONE_INFORMATION tzInfo;
-
-            try
-                GetTimeZoneInformation(&tzInfo);
-            catch (Exception e)
-                assert(0, "GetTimeZoneInformation() threw.");
-
+            GetTimeZoneInformation(&tzInfo);
             return WindowsTimeZone._tzToUTC(&tzInfo, adjTime, hasDST);
         }
     }
@@ -1192,7 +1169,7 @@ public:
     /++
         Always returns false.
       +/
-    @property override bool hasDST() @safe const nothrow
+    @property override bool hasDST() const @safe nothrow
     {
         return false;
     }
@@ -1201,7 +1178,7 @@ public:
     /++
         Always returns false.
       +/
-    override bool dstInEffect(long stdTime) @safe const nothrow
+    override bool dstInEffect(long stdTime) const @safe nothrow
     {
         return false;
     }
@@ -1217,7 +1194,7 @@ public:
         See_Also:
             $(D TimeZone.utcToTZ)
       +/
-    override long utcToTZ(long stdTime) @safe const nothrow
+    override long utcToTZ(long stdTime) const @safe nothrow
     {
         return stdTime;
     }
@@ -1249,7 +1226,7 @@ public:
             adjTime = The time in this time zone that needs to be adjusted to
                       UTC time.
       +/
-    override long tzToUTC(long adjTime) @safe const nothrow
+    override long tzToUTC(long adjTime) const @safe nothrow
     {
         return adjTime;
     }
@@ -1278,7 +1255,7 @@ public:
             stdTime = The UTC time for which to get the offset from UTC for this
                       time zone.
       +/
-    override Duration utcOffsetAt(long stdTime) @safe const nothrow
+    override Duration utcOffsetAt(long stdTime) const @safe nothrow
     {
         return dur!"hnsecs"(0);
     }
@@ -1315,7 +1292,7 @@ public:
     /++
         Always returns false.
       +/
-    @property override bool hasDST() @safe const nothrow
+    @property override bool hasDST() const @safe nothrow
     {
         return false;
     }
@@ -1324,7 +1301,7 @@ public:
     /++
         Always returns false.
       +/
-    override bool dstInEffect(long stdTime) @safe const nothrow
+    override bool dstInEffect(long stdTime) const @safe nothrow
     {
         return false;
     }
@@ -1338,7 +1315,7 @@ public:
             stdTime = The UTC time that needs to be adjusted to this time zone's
                       time.
       +/
-    override long utcToTZ(long stdTime) @safe const nothrow
+    override long utcToTZ(long stdTime) const @safe nothrow
     {
         return stdTime + _utcOffset.total!"hnsecs";
     }
@@ -1366,7 +1343,7 @@ public:
             adjTime = The time in this time zone that needs to be adjusted to
                       UTC time.
       +/
-    override long tzToUTC(long adjTime) @safe const nothrow
+    override long tzToUTC(long adjTime) const @safe nothrow
     {
         return adjTime - _utcOffset.total!"hnsecs";
     }
@@ -1393,7 +1370,7 @@ public:
             stdTime = The UTC time for which to get the offset from UTC for this
                       time zone.
       +/
-    override Duration utcOffsetAt(long stdTime) @safe const nothrow
+    override Duration utcOffsetAt(long stdTime) const @safe nothrow
     {
         return _utcOffset;
     }
@@ -1446,7 +1423,7 @@ public:
         The amount of time the offset from UTC is (negative is west of UTC,
         positive is east).
       +/
-    @property Duration utcOffset() @safe const pure nothrow
+    @property Duration utcOffset() const @safe pure nothrow
     {
         return _utcOffset;
     }
@@ -1705,7 +1682,7 @@ public:
         dates but will still return true for $(D hasDST) because the time zone
         did at some point have DST.
       +/
-    @property override bool hasDST() @safe const nothrow
+    @property override bool hasDST() const @safe nothrow
     {
         return _hasDST;
     }
@@ -1720,7 +1697,7 @@ public:
             stdTime = The UTC time that needs to be checked for DST in this time
                       zone.
       +/
-    override bool dstInEffect(long stdTime) @safe const nothrow
+    override bool dstInEffect(long stdTime) const @safe nothrow
     {
         assert(!_transitions.empty);
 
@@ -1744,7 +1721,7 @@ public:
             stdTime = The UTC time that needs to be adjusted to this time zone's
                       time.
       +/
-    override long utcToTZ(long stdTime) @safe const nothrow
+    override long utcToTZ(long stdTime) const @safe nothrow
     {
         assert(!_transitions.empty);
 
@@ -1769,7 +1746,7 @@ public:
             adjTime = The time in this time zone that needs to be adjusted to
                       UTC time.
       +/
-    override long tzToUTC(long adjTime) @safe const nothrow
+    override long tzToUTC(long adjTime) const @safe nothrow
     {
         assert(!_transitions.empty);
 
@@ -2424,7 +2401,7 @@ private:
     }
 
 
-    int calculateLeapSeconds(long stdTime) @safe const pure nothrow
+    int calculateLeapSeconds(long stdTime) const @safe pure nothrow
     {
         if (_leapSeconds.empty)
             return 0;
@@ -2525,7 +2502,7 @@ version(StdDdoc)
             current dates but will still return true for $(D hasDST) because the
             time zone did at some point have DST.
           +/
-        @property override bool hasDST() @safe const nothrow;
+        @property override bool hasDST() const @safe nothrow;
 
 
         /++
@@ -2537,7 +2514,7 @@ version(StdDdoc)
                 stdTime = The UTC time that needs to be checked for DST in this
                           time zone.
           +/
-        override bool dstInEffect(long stdTime) @safe const nothrow;
+        override bool dstInEffect(long stdTime) const @safe nothrow;
 
 
         /++
@@ -2549,7 +2526,7 @@ version(StdDdoc)
                 stdTime = The UTC time that needs to be adjusted to this time
                           zone's time.
           +/
-        override long utcToTZ(long stdTime) @safe const nothrow;
+        override long utcToTZ(long stdTime) const @safe nothrow;
 
 
         /++
@@ -2561,7 +2538,7 @@ version(StdDdoc)
                 adjTime = The time in this time zone that needs to be adjusted
                           to UTC time.
           +/
-        override long tzToUTC(long adjTime) @safe const nothrow;
+        override long tzToUTC(long adjTime) const @safe nothrow;
 
 
         /++
@@ -2627,25 +2604,25 @@ else version(Windows)
 
     public:
 
-        @property override bool hasDST() @safe const nothrow
+        @property override bool hasDST() const @safe nothrow
         {
             return _tzInfo.DaylightDate.wMonth != 0;
         }
 
 
-        override bool dstInEffect(long stdTime) @safe const nothrow
+        override bool dstInEffect(long stdTime) const @safe nothrow
         {
             return _dstInEffect(&_tzInfo, stdTime);
         }
 
 
-        override long utcToTZ(long stdTime) @safe const nothrow
+        override long utcToTZ(long stdTime) const @safe nothrow
         {
             return _utcToTZ(&_tzInfo, stdTime, hasDST);
         }
 
 
-        override long tzToUTC(long adjTime) @safe const nothrow
+        override long tzToUTC(long adjTime) const @safe nothrow
         {
             return _tzToUTC(&_tzInfo, adjTime, hasDST);
         }
@@ -2735,75 +2712,72 @@ else version(Windows)
 
         static bool _dstInEffect(const TIME_ZONE_INFORMATION* tzInfo, long stdTime) @trusted nothrow
         {
-            try
-            {
-                if (tzInfo.DaylightDate.wMonth == 0)
-                    return false;
+            scope(failure) assert(0, "DateTime's constructor threw.");
 
-                auto utcDateTime = cast(DateTime)SysTime(stdTime, UTC());
-
-                //The limits of what SystemTimeToTzSpecificLocalTime will accept.
-                if (utcDateTime.year < 1601)
-                {
-                    if (utcDateTime.month == Month.feb && utcDateTime.day == 29)
-                        utcDateTime.day = 28;
-
-                    utcDateTime.year = 1601;
-                }
-                else if (utcDateTime.year > 30_827)
-                {
-                    if (utcDateTime.month == Month.feb && utcDateTime.day == 29)
-                        utcDateTime.day = 28;
-
-                    utcDateTime.year = 30_827;
-                }
-
-                //SystemTimeToTzSpecificLocalTime doesn't act correctly at the
-                //beginning or end of the year (bleh). Unless some bizarre time
-                //zone changes DST on January 1st or December 31st, this should
-                //fix the problem.
-                if (utcDateTime.month == Month.jan)
-                {
-                    if (utcDateTime.day == 1)
-                        utcDateTime.day = 2;
-                }
-                else if (utcDateTime.month == Month.dec && utcDateTime.day == 31)
-                    utcDateTime.day = 30;
-
-                SYSTEMTIME utcTime = void;
-                SYSTEMTIME otherTime = void;
-
-                utcTime.wYear = utcDateTime.year;
-                utcTime.wMonth = utcDateTime.month;
-                utcTime.wDay = utcDateTime.day;
-                utcTime.wHour = utcDateTime.hour;
-                utcTime.wMinute = utcDateTime.minute;
-                utcTime.wSecond = utcDateTime.second;
-                utcTime.wMilliseconds = 0;
-
-                immutable result = SystemTimeToTzSpecificLocalTime(cast(TIME_ZONE_INFORMATION*)tzInfo,
-                                                                   &utcTime,
-                                                                   &otherTime);
-                assert(result);
-
-                immutable otherDateTime = DateTime(otherTime.wYear,
-                                                   otherTime.wMonth,
-                                                   otherTime.wDay,
-                                                   otherTime.wHour,
-                                                   otherTime.wMinute,
-                                                   otherTime.wSecond);
-                immutable diff = utcDateTime - otherDateTime;
-                immutable minutes = diff.total!"minutes" - tzInfo.Bias;
-
-                if (minutes == tzInfo.DaylightBias)
-                    return true;
-
-                assert(minutes == tzInfo.StandardBias);
-
+            if (tzInfo.DaylightDate.wMonth == 0)
                 return false;
+
+            auto utcDateTime = cast(DateTime)SysTime(stdTime, UTC());
+
+            //The limits of what SystemTimeToTzSpecificLocalTime will accept.
+            if (utcDateTime.year < 1601)
+            {
+                if (utcDateTime.month == Month.feb && utcDateTime.day == 29)
+                    utcDateTime.day = 28;
+
+                utcDateTime.year = 1601;
             }
-            catch (Exception e)
-                assert(0, "DateTime's constructor threw.");
+            else if (utcDateTime.year > 30_827)
+            {
+                if (utcDateTime.month == Month.feb && utcDateTime.day == 29)
+                    utcDateTime.day = 28;
+
+                utcDateTime.year = 30_827;
+            }
+
+            //SystemTimeToTzSpecificLocalTime doesn't act correctly at the
+            //beginning or end of the year (bleh). Unless some bizarre time
+            //zone changes DST on January 1st or December 31st, this should
+            //fix the problem.
+            if (utcDateTime.month == Month.jan)
+            {
+                if (utcDateTime.day == 1)
+                    utcDateTime.day = 2;
+            }
+            else if (utcDateTime.month == Month.dec && utcDateTime.day == 31)
+                utcDateTime.day = 30;
+
+            SYSTEMTIME utcTime = void;
+            SYSTEMTIME otherTime = void;
+
+            utcTime.wYear         = utcDateTime.year;
+            utcTime.wMonth        = utcDateTime.month;
+            utcTime.wDay          = utcDateTime.day;
+            utcTime.wHour         = utcDateTime.hour;
+            utcTime.wMinute       = utcDateTime.minute;
+            utcTime.wSecond       = utcDateTime.second;
+            utcTime.wMilliseconds = 0;
+
+            immutable result = SystemTimeToTzSpecificLocalTime(cast(TIME_ZONE_INFORMATION*)tzInfo,
+                                                               &utcTime,
+                                                               &otherTime);
+            assert(result);
+
+            immutable otherDateTime = DateTime(otherTime.wYear,
+                                               otherTime.wMonth,
+                                               otherTime.wDay,
+                                               otherTime.wHour,
+                                               otherTime.wMinute,
+                                               otherTime.wSecond);
+            immutable diff = utcDateTime - otherDateTime;
+            immutable minutes = diff.total!"minutes" - tzInfo.Bias;
+
+            if (minutes == tzInfo.DaylightBias)
+                return true;
+
+            assert(minutes == tzInfo.StandardBias);
+
+            return false;
         }
 
         unittest
@@ -2829,98 +2803,95 @@ else version(Windows)
         {
             if (hasDST)
             {
-                try
+                scope(failure) assert(0, "SysTime's constructor threw.");
+
+                bool dstInEffectForLocalDateTime(DateTime localDateTime)
                 {
-                    bool dstInEffectForLocalDateTime(DateTime localDateTime)
+                    //The limits of what SystemTimeToTzSpecificLocalTime will accept.
+                    if (localDateTime.year < 1601)
                     {
-                        //The limits of what SystemTimeToTzSpecificLocalTime will accept.
-                        if (localDateTime.year < 1601)
-                        {
-                            if (localDateTime.month == Month.feb && localDateTime.day == 29)
-                                localDateTime.day = 28;
+                        if (localDateTime.month == Month.feb && localDateTime.day == 29)
+                            localDateTime.day = 28;
 
-                            localDateTime.year = 1601;
-                        }
-                        else if (localDateTime.year > 30_827)
-                        {
-                            if (localDateTime.month == Month.feb && localDateTime.day == 29)
-                                localDateTime.day = 28;
+                        localDateTime.year = 1601;
+                    }
+                    else if (localDateTime.year > 30_827)
+                    {
+                        if (localDateTime.month == Month.feb && localDateTime.day == 29)
+                            localDateTime.day = 28;
 
-                            localDateTime.year = 30_827;
-                        }
-
-                        //SystemTimeToTzSpecificLocalTime doesn't act correctly at the
-                        //beginning or end of the year (bleh). Unless some bizarre time
-                        //zone changes DST on January 1st or December 31st, this should
-                        //fix the problem.
-                        if (localDateTime.month == Month.jan)
-                        {
-                            if (localDateTime.day == 1)
-                                localDateTime.day = 2;
-                        }
-                        else if (localDateTime.month == Month.dec && localDateTime.day == 31)
-                            localDateTime.day = 30;
-
-                        SYSTEMTIME utcTime = void;
-                        SYSTEMTIME localTime = void;
-
-                        localTime.wYear = localDateTime.year;
-                        localTime.wMonth = localDateTime.month;
-                        localTime.wDay = localDateTime.day;
-                        localTime.wHour = localDateTime.hour;
-                        localTime.wMinute = localDateTime.minute;
-                        localTime.wSecond = localDateTime.second;
-                        localTime.wMilliseconds = 0;
-
-                        immutable result = TzSpecificLocalTimeToSystemTime(cast(TIME_ZONE_INFORMATION*)tzInfo,
-                                                                           &localTime,
-                                                                           &utcTime);
-                        assert(result);
-
-                        immutable utcDateTime = DateTime(utcTime.wYear,
-                                                         utcTime.wMonth,
-                                                         utcTime.wDay,
-                                                         utcTime.wHour,
-                                                         utcTime.wMinute,
-                                                         utcTime.wSecond);
-
-                        immutable diff = localDateTime - utcDateTime;
-                        immutable minutes = -tzInfo.Bias - diff.total!"minutes";
-
-                        if (minutes == tzInfo.DaylightBias)
-                            return true;
-
-                        assert(minutes == tzInfo.StandardBias);
-
-                        return false;
+                        localDateTime.year = 30_827;
                     }
 
-                    auto localDateTime = cast(DateTime)SysTime(adjTime, UTC());
-                    auto localDateTimeBefore = localDateTime - dur!"hours"(1);
-                    auto localDateTimeAfter = localDateTime + dur!"hours"(1);
+                    //SystemTimeToTzSpecificLocalTime doesn't act correctly at the
+                    //beginning or end of the year (bleh). Unless some bizarre time
+                    //zone changes DST on January 1st or December 31st, this should
+                    //fix the problem.
+                    if (localDateTime.month == Month.jan)
+                    {
+                        if (localDateTime.day == 1)
+                            localDateTime.day = 2;
+                    }
+                    else if (localDateTime.month == Month.dec && localDateTime.day == 31)
+                        localDateTime.day = 30;
 
-                    auto dstInEffectNow = dstInEffectForLocalDateTime(localDateTime);
-                    auto dstInEffectBefore = dstInEffectForLocalDateTime(localDateTimeBefore);
-                    auto dstInEffectAfter = dstInEffectForLocalDateTime(localDateTimeAfter);
+                    SYSTEMTIME utcTime = void;
+                    SYSTEMTIME localTime = void;
 
-                    bool isDST;
+                    localTime.wYear = localDateTime.year;
+                    localTime.wMonth = localDateTime.month;
+                    localTime.wDay = localDateTime.day;
+                    localTime.wHour = localDateTime.hour;
+                    localTime.wMinute = localDateTime.minute;
+                    localTime.wSecond = localDateTime.second;
+                    localTime.wMilliseconds = 0;
 
-                    if (dstInEffectBefore && dstInEffectNow && dstInEffectAfter)
-                        isDST = true;
-                    else if (!dstInEffectBefore && !dstInEffectNow && !dstInEffectAfter)
-                        isDST = false;
-                    else if (!dstInEffectBefore && dstInEffectAfter)
-                        isDST = false;
-                    else if (dstInEffectBefore && !dstInEffectAfter)
-                        isDST = dstInEffectNow;
-                    else
-                        assert(0, "Bad Logic.");
+                    immutable result = TzSpecificLocalTimeToSystemTime(cast(TIME_ZONE_INFORMATION*)tzInfo,
+                                                                       &localTime,
+                                                                       &utcTime);
+                    assert(result);
 
-                    if (isDST)
-                        return adjTime + convert!("minutes", "hnsecs")(tzInfo.Bias + tzInfo.DaylightBias);
+                    immutable utcDateTime = DateTime(utcTime.wYear,
+                                                     utcTime.wMonth,
+                                                     utcTime.wDay,
+                                                     utcTime.wHour,
+                                                     utcTime.wMinute,
+                                                     utcTime.wSecond);
+
+                    immutable diff = localDateTime - utcDateTime;
+                    immutable minutes = -tzInfo.Bias - diff.total!"minutes";
+
+                    if (minutes == tzInfo.DaylightBias)
+                        return true;
+
+                    assert(minutes == tzInfo.StandardBias);
+
+                    return false;
                 }
-                catch (Exception e)
-                    assert(0, "SysTime's constructor threw.");
+
+                auto localDateTime = cast(DateTime)SysTime(adjTime, UTC());
+                auto localDateTimeBefore = localDateTime - dur!"hours"(1);
+                auto localDateTimeAfter = localDateTime + dur!"hours"(1);
+
+                auto dstInEffectNow = dstInEffectForLocalDateTime(localDateTime);
+                auto dstInEffectBefore = dstInEffectForLocalDateTime(localDateTimeBefore);
+                auto dstInEffectAfter = dstInEffectForLocalDateTime(localDateTimeAfter);
+
+                bool isDST;
+
+                if (dstInEffectBefore && dstInEffectNow && dstInEffectAfter)
+                    isDST = true;
+                else if (!dstInEffectBefore && !dstInEffectNow && !dstInEffectAfter)
+                    isDST = false;
+                else if (!dstInEffectBefore && dstInEffectAfter)
+                    isDST = false;
+                else if (dstInEffectBefore && !dstInEffectAfter)
+                    isDST = dstInEffectNow;
+                else
+                    assert(0, "Bad Logic.");
+
+                if (isDST)
+                    return adjTime + convert!("minutes", "hnsecs")(tzInfo.Bias + tzInfo.DaylightBias);
             }
 
             return adjTime + convert!("minutes", "hnsecs")(tzInfo.Bias + tzInfo.StandardBias);
@@ -2967,26 +2938,20 @@ else version(Posix)
         import std.internal.cstring : tempCString;
         import std.path : buildNormalizedPath;
 
-        try
-        {
-            immutable value = buildNormalizedPath(PosixTimeZone.defaultTZDatabaseDir, tzDatabaseName);
-            setenv("TZ", value.tempCString(), 1);
-            tzset();
-        }
-        catch (Exception e)
-            assert(0, "The impossible happened. setenv or tzset threw.");
+        scope(failure) assert(0, "The impossible happened. setenv or tzset threw.");
+
+        immutable value = buildNormalizedPath(PosixTimeZone.defaultTZDatabaseDir, tzDatabaseName);
+        setenv("TZ", value.tempCString(), 1);
+        tzset();
     }
 
 
     void clearTZEnvVar() @trusted nothrow
     {
-        try
-        {
-            unsetenv("TZ");
-            tzset();
-        }
-        catch (Exception e)
-            assert(0, "The impossible happened. unsetenv or tzset threw.");
+        scope(failure) assert(0, "The impossible happened. unsetenv or tzset threw.");
+
+        unsetenv("TZ");
+        tzset();
     }
 }
 

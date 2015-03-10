@@ -3,10 +3,10 @@
 /++
     Module containing Date/Time functionality.
 
-    Copyright: Copyright 2010 - 2011
+    Copyright: Copyright 2010 - 2015
     License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-    Authors:   Jonathan M Davis and Kato Shoichi
-    Source:    $(PHOBOSSRC std/_datetime.d)
+    Authors:   Jonathan M Davis, Kato Shoichi, and Kenji Hara
+    Source:    $(PHOBOSSRC std/datetime/_interval.d)
     Macros:
         LREF2=<a href="#$1">$(D $2)</a>
 +/
@@ -1522,10 +1522,9 @@ private:
       +/
     string _toStringImpl() const nothrow
     {
-        try
-            return format("[%s - %s)", _begin, _end);
-        catch (Exception e)
-            assert(0, "format() threw.");
+        scope(failure) assert(0, "format() threw.");
+
+        return format("[%s - %s)", _begin, _end);
     }
 
 
@@ -3902,10 +3901,9 @@ private:
       +/
     string _toStringImpl() const nothrow
     {
-        try
-            return format("[%s - ∞)", _begin);
-        catch (Exception e)
-            assert(0, "format() threw.");
+        scope(failure) assert(0, "format() threw.");
+
+        return format("[%s - ∞)", _begin);
     }
 
 
@@ -6027,10 +6025,9 @@ private:
       +/
     string _toStringImpl() const nothrow
     {
-        try
-            return format("[-∞ - %s)", _end);
-        catch (Exception e)
-            assert(0, "format() threw.");
+        scope(failure) assert(0, "format() threw.");
+
+        return format("[-∞ - %s)", _end);
     }
 
 

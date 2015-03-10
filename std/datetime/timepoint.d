@@ -3,10 +3,10 @@
 /++
     Module containing Date/Time functionality.
 
-    Copyright: Copyright 2010 - 2011
+    Copyright: Copyright 2010 - 2015
     License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-    Authors:   Jonathan M Davis and Kato Shoichi
-    Source:    $(PHOBOSSRC std/_datetime.d)
+    Authors:   Jonathan M Davis, Kato Shoichi, and Kenji Hara
+    Source:    $(PHOBOSSRC std/datetime/_timepoint.d)
     Macros:
         LREF2=<a href="#$1">$(D $2)</a>
 +/
@@ -17,9 +17,6 @@ import std.datetime.conv;
 import std.datetime.timezone;
 
 import core.stdc.time;
-
-import std.range.primitives;
-import std.traits;
 
 version(Windows)
 {
@@ -32,6 +29,9 @@ else version(Posix)
     import core.sys.posix.stdlib;
     import core.sys.posix.sys.time;
 }
+
+import std.range.primitives;
+import std.traits;
 
 version(unittest)
 {
@@ -103,10 +103,9 @@ public:
       +/
     this(in DateTime dateTime, immutable TimeZone tz = null) @safe nothrow
     {
-        try
-            this(dateTime, Duration.zero, tz);
-        catch (Exception e)
-            assert(0, "SysTime's constructor threw when it shouldn't have.");
+        scope(failure) assert(0, "SysTime's constructor threw when it shouldn't have.");
+
+        this(dateTime, Duration.zero, tz);
     }
 
     unittest
@@ -210,18 +209,15 @@ public:
         enforce(fracHNSecs >= 0, new DateTimeException("A SysTime cannot have negative fractional seconds."));
         _timezone = tz is null ? LocalTime() : tz;
 
-        try
-        {
-            immutable dateDiff = (dateTime.date - Date(1, 1, 1)).total!"hnsecs";
-            immutable todDiff = (dateTime.timeOfDay - TimeOfDay(0, 0, 0)).total!"hnsecs";
+        scope(failure) assert(0, "Date, TimeOfDay, or DateTime's constructor threw when it shouldn't have.");
 
-            immutable adjustedTime = dateDiff + todDiff + fracHNSecs;
-            immutable standardTime = _timezone.tzToUTC(adjustedTime);
+        immutable dateDiff = (dateTime.date - Date(1, 1, 1)).total!"hnsecs";
+        immutable todDiff = (dateTime.timeOfDay - TimeOfDay(0, 0, 0)).total!"hnsecs";
 
-            this(standardTime, _timezone);
-        }
-        catch (Exception e)
-            assert(0, "Date, TimeOfDay, or DateTime's constructor threw when it shouldn't have.");
+        immutable adjustedTime = dateDiff + todDiff + fracHNSecs;
+        immutable standardTime = _timezone.tzToUTC(adjustedTime);
+
+        this(standardTime, _timezone);
     }
 
     /+deprecated+/ unittest
@@ -263,17 +259,14 @@ public:
       +/
     this(in Date date, immutable TimeZone tz = null) @safe nothrow
     {
+        scope(failure) assert(0, "Date's constructor through when it shouldn't have.");
+
         _timezone = tz is null ? LocalTime() : tz;
 
-        try
-        {
-            immutable adjustedTime = (date - Date(1, 1, 1)).total!"hnsecs";
-            immutable standardTime = _timezone.tzToUTC(adjustedTime);
+        immutable adjustedTime = (date - Date(1, 1, 1)).total!"hnsecs";
+        immutable standardTime = _timezone.tzToUTC(adjustedTime);
 
-            this(standardTime, _timezone);
-        }
-        catch (Exception e)
-            assert(0, "Date's constructor through when it shouldn't have.");
+        this(standardTime, _timezone);
     }
 
     unittest
@@ -1619,19 +1612,16 @@ public:
     //deprecated("Please use fracSecs (with an s) rather than fracSec (without an s). It returns a Duration instead of a FracSec, as FracSec is being deprecated.")
     @property FracSec fracSec() @safe const nothrow
     {
-        try
-        {
-            auto hnsecs = removeUnitsFromHNSecs!"days"(adjTime);
+        scope(failure) assert(0, "FracSec.from!\"hnsecs\"() threw.");
 
-            if (hnsecs < 0)
-                hnsecs += convert!("hours", "hnsecs")(24);
+        auto hnsecs = removeUnitsFromHNSecs!"days"(adjTime);
 
-            hnsecs = removeUnitsFromHNSecs!"seconds"(hnsecs);
+        if (hnsecs < 0)
+            hnsecs += convert!("hours", "hnsecs")(24);
 
-            return FracSec.from!"hnsecs"(cast(int)hnsecs);
-        }
-        catch (Exception e)
-            assert(0, "FracSec.from!\"hnsecs\"() threw.");
+        hnsecs = removeUnitsFromHNSecs!"seconds"(hnsecs);
+
+        return FracSec.from!"hnsecs"(cast(int)hnsecs);
     }
 
     /+deprecated+/ unittest
@@ -4486,41 +4476,38 @@ public:
            units == "minutes" ||
            units == "seconds")
     {
-        try
+        scope(failure) assert(0, "Either DateTime's constructor or TimeOfDay's constructor threw.");
+
+        auto hnsecs = adjTime;
+        auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
+
+        if (hnsecs < 0)
         {
-            auto hnsecs = adjTime;
-            auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
-
-            if (hnsecs < 0)
-            {
-                hnsecs += convert!("hours", "hnsecs")(24);
-                --days;
-            }
-
-            immutable hour = splitUnitsFromHNSecs!"hours"(hnsecs);
-            immutable minute = splitUnitsFromHNSecs!"minutes"(hnsecs);
-            immutable second = splitUnitsFromHNSecs!"seconds"(hnsecs);
-
-            auto dateTime = DateTime(Date(cast(int)days), TimeOfDay(cast(int)hour, cast(int)minute, cast(int)second));
-            dateTime.roll!units(value);
+            hnsecs += convert!("hours", "hnsecs")(24);
             --days;
-
-            hnsecs += convert!("hours", "hnsecs")(dateTime.hour);
-            hnsecs += convert!("minutes", "hnsecs")(dateTime.minute);
-            hnsecs += convert!("seconds", "hnsecs")(dateTime.second);
-
-            if (days < 0)
-            {
-                hnsecs -= convert!("hours", "hnsecs")(24);
-                ++days;
-            }
-
-            immutable newDaysHNSecs = convert!("days", "hnsecs")(days);
-            adjTime = newDaysHNSecs + hnsecs;
-            return this;
         }
-        catch (Exception e)
-            assert(0, "Either DateTime's constructor or TimeOfDay's constructor threw.");
+
+        immutable hour = splitUnitsFromHNSecs!"hours"(hnsecs);
+        immutable minute = splitUnitsFromHNSecs!"minutes"(hnsecs);
+        immutable second = splitUnitsFromHNSecs!"seconds"(hnsecs);
+
+        auto dateTime = DateTime(Date(cast(int)days), TimeOfDay(cast(int)hour, cast(int)minute, cast(int)second));
+        dateTime.roll!units(value);
+        --days;
+
+        hnsecs += convert!("hours", "hnsecs")(dateTime.hour);
+        hnsecs += convert!("minutes", "hnsecs")(dateTime.minute);
+        hnsecs += convert!("seconds", "hnsecs")(dateTime.second);
+
+        if (days < 0)
+        {
+            hnsecs -= convert!("hours", "hnsecs")(24);
+            ++days;
+        }
+
+        immutable newDaysHNSecs = convert!("days", "hnsecs")(days);
+        adjTime = newDaysHNSecs + hnsecs;
+        return this;
     }
 
     //Test roll!"hours"().
@@ -7199,25 +7186,22 @@ public:
     DateTime opCast(T)() @safe const nothrow
         if (is(Unqual!T == DateTime))
     {
-        try
+        scope(failure) assert(0, "Either DateTime's constructor or TimeOfDay's constructor threw.");
+
+        auto hnsecs = adjTime;
+        auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
+
+        if (hnsecs < 0)
         {
-            auto hnsecs = adjTime;
-            auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
-
-            if (hnsecs < 0)
-            {
-                hnsecs += convert!("hours", "hnsecs")(24);
-                --days;
-            }
-
-            immutable hour = splitUnitsFromHNSecs!"hours"(hnsecs);
-            immutable minute = splitUnitsFromHNSecs!"minutes"(hnsecs);
-            immutable second = getUnitsFromHNSecs!"seconds"(hnsecs);
-
-            return DateTime(Date(cast(int)days), TimeOfDay(cast(int)hour, cast(int)minute, cast(int)second));
+            hnsecs += convert!("hours", "hnsecs")(24);
+            --days;
         }
-        catch (Exception e)
-            assert(0, "Either DateTime's constructor or TimeOfDay's constructor threw.");
+
+        immutable hour = splitUnitsFromHNSecs!"hours"(hnsecs);
+        immutable minute = splitUnitsFromHNSecs!"minutes"(hnsecs);
+        immutable second = getUnitsFromHNSecs!"seconds"(hnsecs);
+
+        return DateTime(Date(cast(int)days), TimeOfDay(cast(int)hour, cast(int)minute, cast(int)second));
     }
 
     unittest
@@ -7258,22 +7242,19 @@ public:
     TimeOfDay opCast(T)() @safe const nothrow
         if (is(Unqual!T == TimeOfDay))
     {
-        try
-        {
-            auto hnsecs = adjTime;
-            hnsecs = removeUnitsFromHNSecs!"days"(hnsecs);
+        scope(failure) assert(0, "TimeOfDay's constructor threw.");
 
-            if (hnsecs < 0)
-                hnsecs += convert!("hours", "hnsecs")(24);
+        auto hnsecs = adjTime;
+        hnsecs = removeUnitsFromHNSecs!"days"(hnsecs);
 
-            immutable hour = splitUnitsFromHNSecs!"hours"(hnsecs);
-            immutable minute = splitUnitsFromHNSecs!"minutes"(hnsecs);
-            immutable second = getUnitsFromHNSecs!"seconds"(hnsecs);
+        if (hnsecs < 0)
+            hnsecs += convert!("hours", "hnsecs")(24);
 
-            return TimeOfDay(cast(int)hour, cast(int)minute, cast(int)second);
-        }
-        catch (Exception e)
-            assert(0, "TimeOfDay's constructor threw.");
+        immutable hour = splitUnitsFromHNSecs!"hours"(hnsecs);
+        immutable minute = splitUnitsFromHNSecs!"minutes"(hnsecs);
+        immutable second = getUnitsFromHNSecs!"seconds"(hnsecs);
+
+        return TimeOfDay(cast(int)hour, cast(int)minute, cast(int)second);
     }
 
     unittest
@@ -7334,41 +7315,39 @@ public:
     string toISOString() @safe const nothrow
     {
         import std.format : format;
-        try
+
+        scope(failure) assert(0, "format() threw.");
+
+        immutable adjustedTime = adjTime;
+        long hnsecs = adjustedTime;
+
+        auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
+
+        if (hnsecs < 0)
         {
-            immutable adjustedTime = adjTime;
-            long hnsecs = adjustedTime;
-
-            auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
-
-            if (hnsecs < 0)
-            {
-                hnsecs += convert!("hours", "hnsecs")(24);
-                --days;
-            }
-
-            auto hour = splitUnitsFromHNSecs!"hours"(hnsecs);
-            auto minute = splitUnitsFromHNSecs!"minutes"(hnsecs);
-            auto second = splitUnitsFromHNSecs!"seconds"(hnsecs);
-
-            auto dateTime = DateTime(Date(cast(int)days), TimeOfDay(cast(int)hour, cast(int)minute, cast(int)second));
-            auto fracSecStr = fracSecsToISOString(cast(int)hnsecs);
-
-            if (_timezone is LocalTime())
-                return dateTime.toISOString() ~ fracSecsToISOString(cast(int)hnsecs);
-
-            if (_timezone is UTC())
-                return dateTime.toISOString() ~ fracSecsToISOString(cast(int)hnsecs) ~ "Z";
-
-            immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
-
-            return format("%s%s%s",
-                          dateTime.toISOString(),
-                          fracSecsToISOString(cast(int)hnsecs),
-                          SimpleTimeZone.toISOString(utcOffset));
+            hnsecs += convert!("hours", "hnsecs")(24);
+            --days;
         }
-        catch (Exception e)
-            assert(0, "format() threw.");
+
+        auto hour = splitUnitsFromHNSecs!"hours"(hnsecs);
+        auto minute = splitUnitsFromHNSecs!"minutes"(hnsecs);
+        auto second = splitUnitsFromHNSecs!"seconds"(hnsecs);
+
+        auto dateTime = DateTime(Date(cast(int)days), TimeOfDay(cast(int)hour, cast(int)minute, cast(int)second));
+        auto fracSecStr = fracSecsToISOString(cast(int)hnsecs);
+
+        if (_timezone is LocalTime())
+            return dateTime.toISOString() ~ fracSecsToISOString(cast(int)hnsecs);
+
+        if (_timezone is UTC())
+            return dateTime.toISOString() ~ fracSecsToISOString(cast(int)hnsecs) ~ "Z";
+
+        immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
+
+        return format("%s%s%s",
+                      dateTime.toISOString(),
+                      fracSecsToISOString(cast(int)hnsecs),
+                      SimpleTimeZone.toISOString(utcOffset));
     }
 
     ///
@@ -7464,41 +7443,39 @@ public:
     string toISOExtString() @safe const nothrow
     {
         import std.format : format;
-        try
+
+        scope(failure) assert(0, "format() threw.");
+
+        immutable adjustedTime = adjTime;
+        long hnsecs = adjustedTime;
+
+        auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
+
+        if (hnsecs < 0)
         {
-            immutable adjustedTime = adjTime;
-            long hnsecs = adjustedTime;
-
-            auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
-
-            if (hnsecs < 0)
-            {
-                hnsecs += convert!("hours", "hnsecs")(24);
-                --days;
-            }
-
-            auto hour = splitUnitsFromHNSecs!"hours"(hnsecs);
-            auto minute = splitUnitsFromHNSecs!"minutes"(hnsecs);
-            auto second = splitUnitsFromHNSecs!"seconds"(hnsecs);
-
-            auto dateTime = DateTime(Date(cast(int)days), TimeOfDay(cast(int)hour, cast(int)minute, cast(int)second));
-            auto fracSecStr = fracSecsToISOString(cast(int)hnsecs);
-
-            if (_timezone is LocalTime())
-                return dateTime.toISOExtString() ~ fracSecsToISOString(cast(int)hnsecs);
-
-            if (_timezone is UTC())
-                return dateTime.toISOExtString() ~ fracSecsToISOString(cast(int)hnsecs) ~ "Z";
-
-            immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
-
-            return format("%s%s%s",
-                          dateTime.toISOExtString(),
-                          fracSecsToISOString(cast(int)hnsecs),
-                          SimpleTimeZone.toISOString(utcOffset));
+            hnsecs += convert!("hours", "hnsecs")(24);
+            --days;
         }
-        catch (Exception e)
-            assert(0, "format() threw.");
+
+        auto hour = splitUnitsFromHNSecs!"hours"(hnsecs);
+        auto minute = splitUnitsFromHNSecs!"minutes"(hnsecs);
+        auto second = splitUnitsFromHNSecs!"seconds"(hnsecs);
+
+        auto dateTime = DateTime(Date(cast(int)days), TimeOfDay(cast(int)hour, cast(int)minute, cast(int)second));
+        auto fracSecStr = fracSecsToISOString(cast(int)hnsecs);
+
+        if (_timezone is LocalTime())
+            return dateTime.toISOExtString() ~ fracSecsToISOString(cast(int)hnsecs);
+
+        if (_timezone is UTC())
+            return dateTime.toISOExtString() ~ fracSecsToISOString(cast(int)hnsecs) ~ "Z";
+
+        immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
+
+        return format("%s%s%s",
+                      dateTime.toISOExtString(),
+                      fracSecsToISOString(cast(int)hnsecs),
+                      SimpleTimeZone.toISOString(utcOffset));
     }
 
     ///
@@ -7598,41 +7575,39 @@ public:
     string toSimpleString() @safe const nothrow
     {
         import std.format : format;
-        try
+
+        scope(failure) assert(0, "format() threw.");
+
+        immutable adjustedTime = adjTime;
+        long hnsecs = adjustedTime;
+
+        auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
+
+        if (hnsecs < 0)
         {
-            immutable adjustedTime = adjTime;
-            long hnsecs = adjustedTime;
-
-            auto days = splitUnitsFromHNSecs!"days"(hnsecs) + 1;
-
-            if (hnsecs < 0)
-            {
-                hnsecs += convert!("hours", "hnsecs")(24);
-                --days;
-            }
-
-            auto hour = splitUnitsFromHNSecs!"hours"(hnsecs);
-            auto minute = splitUnitsFromHNSecs!"minutes"(hnsecs);
-            auto second = splitUnitsFromHNSecs!"seconds"(hnsecs);
-
-            auto dateTime = DateTime(Date(cast(int)days), TimeOfDay(cast(int)hour, cast(int)minute, cast(int)second));
-            auto fracSecStr = fracSecsToISOString(cast(int)hnsecs);
-
-            if (_timezone is LocalTime())
-                return dateTime.toSimpleString() ~ fracSecsToISOString(cast(int)hnsecs);
-
-            if (_timezone is UTC())
-                return dateTime.toSimpleString() ~ fracSecsToISOString(cast(int)hnsecs) ~ "Z";
-
-            immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
-
-            return format("%s%s%s",
-                          dateTime.toSimpleString(),
-                          fracSecsToISOString(cast(int)hnsecs),
-                          SimpleTimeZone.toISOString(utcOffset));
+            hnsecs += convert!("hours", "hnsecs")(24);
+            --days;
         }
-        catch (Exception e)
-            assert(0, "format() threw.");
+
+        auto hour = splitUnitsFromHNSecs!"hours"(hnsecs);
+        auto minute = splitUnitsFromHNSecs!"minutes"(hnsecs);
+        auto second = splitUnitsFromHNSecs!"seconds"(hnsecs);
+
+        auto dateTime = DateTime(Date(cast(int)days), TimeOfDay(cast(int)hour, cast(int)minute, cast(int)second));
+        auto fracSecStr = fracSecsToISOString(cast(int)hnsecs);
+
+        if (_timezone is LocalTime())
+            return dateTime.toSimpleString() ~ fracSecsToISOString(cast(int)hnsecs);
+
+        if (_timezone is UTC())
+            return dateTime.toSimpleString() ~ fracSecsToISOString(cast(int)hnsecs) ~ "Z";
+
+        immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
+
+        return format("%s%s%s",
+                      dateTime.toSimpleString(),
+                      fracSecsToISOString(cast(int)hnsecs),
+                      SimpleTimeZone.toISOString(utcOffset));
     }
 
     ///
@@ -8494,6 +8469,7 @@ private:
 struct Date
 {
     import std.exception : enforce;
+    import std.format : format;
 
 public:
 
@@ -8534,43 +8510,43 @@ public:
         testDate(Date(1999, 7 , 6), 1999, Month.jul, 6);
 
         //Test A.D.
-        assertThrown!DateTimeException(Date(1, 0, 1));
-        assertThrown!DateTimeException(Date(1, 1, 0));
-        assertThrown!DateTimeException(Date(1999, 13, 1));
-        assertThrown!DateTimeException(Date(1999, 1, 32));
-        assertThrown!DateTimeException(Date(1999, 2, 29));
-        assertThrown!DateTimeException(Date(2000, 2, 30));
-        assertThrown!DateTimeException(Date(1999, 3, 32));
-        assertThrown!DateTimeException(Date(1999, 4, 31));
-        assertThrown!DateTimeException(Date(1999, 5, 32));
-        assertThrown!DateTimeException(Date(1999, 6, 31));
-        assertThrown!DateTimeException(Date(1999, 7, 32));
-        assertThrown!DateTimeException(Date(1999, 8, 32));
-        assertThrown!DateTimeException(Date(1999, 9, 31));
+        assertThrown!DateTimeException(Date(   1,  0,  1));
+        assertThrown!DateTimeException(Date(   1,  1,  0));
+        assertThrown!DateTimeException(Date(1999, 13,  1));
+        assertThrown!DateTimeException(Date(1999,  1, 32));
+        assertThrown!DateTimeException(Date(1999,  2, 29));
+        assertThrown!DateTimeException(Date(2000,  2, 30));
+        assertThrown!DateTimeException(Date(1999,  3, 32));
+        assertThrown!DateTimeException(Date(1999,  4, 31));
+        assertThrown!DateTimeException(Date(1999,  5, 32));
+        assertThrown!DateTimeException(Date(1999,  6, 31));
+        assertThrown!DateTimeException(Date(1999,  7, 32));
+        assertThrown!DateTimeException(Date(1999,  8, 32));
+        assertThrown!DateTimeException(Date(1999,  9, 31));
         assertThrown!DateTimeException(Date(1999, 10, 32));
         assertThrown!DateTimeException(Date(1999, 11, 31));
         assertThrown!DateTimeException(Date(1999, 12, 32));
 
-        assertNotThrown!DateTimeException(Date(1999, 1, 31));
-        assertNotThrown!DateTimeException(Date(1999, 2, 28));
-        assertNotThrown!DateTimeException(Date(2000, 2, 29));
-        assertNotThrown!DateTimeException(Date(1999, 3, 31));
-        assertNotThrown!DateTimeException(Date(1999, 4, 30));
-        assertNotThrown!DateTimeException(Date(1999, 5, 31));
-        assertNotThrown!DateTimeException(Date(1999, 6, 30));
-        assertNotThrown!DateTimeException(Date(1999, 7, 31));
-        assertNotThrown!DateTimeException(Date(1999, 8, 31));
-        assertNotThrown!DateTimeException(Date(1999, 9, 30));
+        assertNotThrown!DateTimeException(Date(1999,  1, 31));
+        assertNotThrown!DateTimeException(Date(1999,  2, 28));
+        assertNotThrown!DateTimeException(Date(2000,  2, 29));
+        assertNotThrown!DateTimeException(Date(1999,  3, 31));
+        assertNotThrown!DateTimeException(Date(1999,  4, 30));
+        assertNotThrown!DateTimeException(Date(1999,  5, 31));
+        assertNotThrown!DateTimeException(Date(1999,  6, 30));
+        assertNotThrown!DateTimeException(Date(1999,  7, 31));
+        assertNotThrown!DateTimeException(Date(1999,  8, 31));
+        assertNotThrown!DateTimeException(Date(1999,  9, 30));
         assertNotThrown!DateTimeException(Date(1999, 10, 31));
         assertNotThrown!DateTimeException(Date(1999, 11, 30));
         assertNotThrown!DateTimeException(Date(1999, 12, 31));
 
         //Test B.C.
-        assertNotThrown!DateTimeException(Date(0, 1, 1));
-        assertNotThrown!DateTimeException(Date(-1, 1, 1));
+        assertNotThrown!DateTimeException(Date( 0,  1,  1));
+        assertNotThrown!DateTimeException(Date(-1,  1,  1));
         assertNotThrown!DateTimeException(Date(-1, 12, 31));
-        assertNotThrown!DateTimeException(Date(-1, 2, 28));
-        assertNotThrown!DateTimeException(Date(-4, 2, 29));
+        assertNotThrown!DateTimeException(Date(-1,  2, 28));
+        assertNotThrown!DateTimeException(Date(-4,  2, 29));
 
         assertThrown!DateTimeException(Date(-1, 2, 29));
         assertThrown!DateTimeException(Date(-2, 2, 29));
@@ -8633,20 +8609,16 @@ public:
             {
                 _year = cast(short)years;
 
-                try
-                    dayOfYear = day;
-                catch (Exception e)
-                    assert(0, "dayOfYear assignment threw.");
+                scope(failure) assert(0, "dayOfYear assignment threw.");
+                dayOfYear = day;
             }
         }
         else if (day <= 0 && -day < daysInLeapYear)
         {
             _year = 0;
 
-            try
-                dayOfYear = (daysInLeapYear + day);
-            catch (Exception e)
-                assert(0, "dayOfYear assignment threw.");
+            scope(failure) assert(0, "dayOfYear assignment threw.");
+            dayOfYear = (daysInLeapYear + day);
         }
         else
         {
@@ -8698,10 +8670,8 @@ public:
                 _year = cast(short)years;
                 immutable newDoY = (yearIsLeapYear(_year) ? daysInLeapYear : daysInYear) + day + 1;
 
-                try
-                    dayOfYear = newDoY;
-                catch (Exception e)
-                    assert(0, "dayOfYear assignment threw.");
+                scope(failure) assert(0, "dayOfYear assignment threw.");
+                dayOfYear = newDoY;
             }
         }
     }
@@ -8728,20 +8698,14 @@ public:
      +/
     int opCmp(in Date rhs) @safe const pure nothrow
     {
-        if (_year < rhs._year)
-            return -1;
-        if (_year > rhs._year)
-            return 1;
+        if (_year < rhs._year) return -1;
+        if (_year > rhs._year) return +1;
 
-        if (_month < rhs._month)
-            return -1;
-        if (_month > rhs._month)
-            return 1;
+        if (_month < rhs._month) return -1;
+        if (_month > rhs._month) return +1;
 
-        if (_day < rhs._day)
-            return -1;
-        if (_day > rhs._day)
-            return 1;
+        if (_day < rhs._day) return -1;
+        if (_day > rhs._day) return +1;
 
         return 0;
     }
@@ -8775,7 +8739,7 @@ public:
         assert(Date(1999, 8, 6).opCmp(Date(1999, 7, 7)) > 0);
 
         //Test B.C.
-        assert(Date(0, 1, 1).opCmp(Date(0, 1, 1)) == 0);
+        assert(Date( 0, 1, 1).opCmp(Date( 0, 1, 1)) == 0);
         assert(Date(-1, 1, 1).opCmp(Date(-1, 1, 1)) == 0);
         assert(Date(-1, 7, 1).opCmp(Date(-1, 7, 1)) == 0);
         assert(Date(-1, 1, 6).opCmp(Date(-1, 1, 6)) == 0);
@@ -8800,31 +8764,31 @@ public:
         assert(Date(-1999, 8, 6).opCmp(Date(-1999, 7, 7)) > 0);
 
         //Test Both
-        assert(Date(-1999, 7, 6).opCmp(Date(1999, 7, 6)) < 0);
-        assert(Date(1999, 7, 6).opCmp(Date(-1999, 7, 6)) > 0);
+        assert(Date(-1999, 7, 6).opCmp(Date( 1999, 7, 6)) < 0);
+        assert(Date( 1999, 7, 6).opCmp(Date(-1999, 7, 6)) > 0);
 
-        assert(Date(-1999, 8, 6).opCmp(Date(1999, 7, 6)) < 0);
-        assert(Date(1999, 7, 6).opCmp(Date(-1999, 8, 6)) > 0);
+        assert(Date(-1999, 8, 6).opCmp(Date( 1999, 7, 6)) < 0);
+        assert(Date( 1999, 7, 6).opCmp(Date(-1999, 8, 6)) > 0);
 
-        assert(Date(-1999, 7, 7).opCmp(Date(1999, 7, 6)) < 0);
-        assert(Date(1999, 7, 6).opCmp(Date(-1999, 7, 7)) > 0);
+        assert(Date(-1999, 7, 7).opCmp(Date( 1999, 7, 6)) < 0);
+        assert(Date( 1999, 7, 6).opCmp(Date(-1999, 7, 7)) > 0);
 
-        assert(Date(-1999, 8, 7).opCmp(Date(1999, 7, 6)) < 0);
-        assert(Date(1999, 7, 6).opCmp(Date(-1999, 8, 7)) > 0);
+        assert(Date(-1999, 8, 7).opCmp(Date( 1999, 7, 6)) < 0);
+        assert(Date( 1999, 7, 6).opCmp(Date(-1999, 8, 7)) > 0);
 
-        assert(Date(-1999, 8, 6).opCmp(Date(1999, 6, 6)) < 0);
-        assert(Date(1999, 6, 8).opCmp(Date(-1999, 7, 6)) > 0);
+        assert(Date(-1999, 8, 6).opCmp(Date( 1999, 6, 6)) < 0);
+        assert(Date( 1999, 6, 8).opCmp(Date(-1999, 7, 6)) > 0);
 
-        auto date = Date(1999, 7, 6);
-        const cdate = Date(1999, 7, 6);
+             auto mdate = Date(1999, 7, 6);
+            const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
-        static assert(__traits(compiles, date.opCmp(date)));
-        static assert(__traits(compiles, date.opCmp(cdate)));
-        static assert(__traits(compiles, date.opCmp(idate)));
-        static assert(__traits(compiles, cdate.opCmp(date)));
+        static assert(__traits(compiles, mdate.opCmp(mdate)));
+        static assert(__traits(compiles, mdate.opCmp(cdate)));
+        static assert(__traits(compiles, mdate.opCmp(idate)));
+        static assert(__traits(compiles, cdate.opCmp(mdate)));
         static assert(__traits(compiles, cdate.opCmp(cdate)));
         static assert(__traits(compiles, cdate.opCmp(idate)));
-        static assert(__traits(compiles, idate.opCmp(date)));
+        static assert(__traits(compiles, idate.opCmp(mdate)));
         static assert(__traits(compiles, idate.opCmp(cdate)));
         static assert(__traits(compiles, idate.opCmp(idate)));
     }
@@ -8842,18 +8806,18 @@ public:
     ///
     unittest
     {
-        assert(Date(1999, 7, 6).year == 1999);
+        assert(Date(1999,  7, 6).year == 1999);
         assert(Date(2010, 10, 4).year == 2010);
-        assert(Date(-7, 4, 5).year == -7);
+        assert(Date(  -7,  4, 5).year == -7);
     }
 
     unittest
     {
         assert(Date.init.year == 1);
-        assert(Date(1999, 7, 6).year == 1999);
+        assert(Date( 1999, 7, 6).year ==  1999);
         assert(Date(-1999, 7, 6).year == -1999);
 
-        const cdate = Date(1999, 7, 6);
+            const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
         static assert(__traits(compiles, cdate.year == 1999));
         static assert(__traits(compiles, idate.year == 1999));
@@ -8879,9 +8843,9 @@ public:
     ///
     unittest
     {
-        assert(Date(1999, 7, 6).year == 1999);
+        assert(Date(1999,  7, 6).year == 1999);
         assert(Date(2010, 10, 4).year == 2010);
-        assert(Date(-7, 4, 5).year == -7);
+        assert(Date(  -7,  4, 5).year == -7);
     }
 
     unittest
@@ -8899,11 +8863,11 @@ public:
 
         assertThrown!DateTimeException(testDateInvalid(Date(4, 2, 29), 1));
 
-        testDate(Date(1, 1, 1), 1999, Date(1999, 1, 1));
-        testDate(Date(1, 1, 1), 0, Date(0, 1, 1));
+        testDate(Date(1, 1, 1),  1999, Date( 1999, 1, 1));
+        testDate(Date(1, 1, 1),     0, Date(    0, 1, 1));
         testDate(Date(1, 1, 1), -1999, Date(-1999, 1, 1));
 
-        const cdate = Date(1999, 7, 6);
+            const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
         static assert(!__traits(compiles, cdate.year = 1999));
         static assert(!__traits(compiles, idate.year = 1999));
@@ -8918,8 +8882,6 @@ public:
      +/
     @property ushort yearBC() @safe const pure
     {
-        import std.format : format;
-
         if (isAD)
             throw new DateTimeException(format("Year %s is A.D.", _year));
         return cast(ushort)((_year * -1) + 1);
@@ -8928,19 +8890,19 @@ public:
     ///
     unittest
     {
-        assert(Date(0, 1, 1).yearBC == 1);
-        assert(Date(-1, 1, 1).yearBC == 2);
+        assert(Date(   0, 1, 1).yearBC == 1);
+        assert(Date(  -1, 1, 1).yearBC == 2);
         assert(Date(-100, 1, 1).yearBC == 101);
     }
 
     unittest
     {
-        assertThrown!DateTimeException((in Date date){date.yearBC;}(Date(1, 1, 1)));
+        assertThrown!DateTimeException((in Date date){ date.yearBC; }(Date(1, 1, 1)));
 
-        auto date = Date(0, 7, 6);
-        const cdate = Date(0, 7, 6);
+             auto mdate = Date(0, 7, 6);
+            const cdate = Date(0, 7, 6);
         immutable idate = Date(0, 7, 6);
-        static assert(__traits(compiles, date.yearBC));
+        static assert(__traits(compiles, mdate.yearBC));
         static assert(__traits(compiles, cdate.yearBC));
         static assert(__traits(compiles, idate.yearBC));
     }
@@ -8957,9 +8919,8 @@ public:
      +/
     @property void yearBC(int year) @safe pure
     {
-        if (year <= 0)
-            throw new DateTimeException("The given year is not a year B.C.");
-
+        enforce(0 < year,
+                new DateTimeException("The given year is not a year B.C."));
         _year = cast(short)((year - 1) * -1);
     }
 
@@ -8978,10 +8939,10 @@ public:
     {
         assertThrown!DateTimeException((Date date){date.yearBC = -1;}(Date(1, 1, 1)));
 
-        auto date = Date(0, 7, 6);
-        const cdate = Date(0, 7, 6);
+             auto mdate = Date(0, 7, 6);
+            const cdate = Date(0, 7, 6);
         immutable idate = Date(0, 7, 6);
-        static assert(__traits(compiles, date.yearBC = 7));
+        static assert( __traits(compiles, mdate.yearBC = 7));
         static assert(!__traits(compiles, cdate.yearBC = 7));
         static assert(!__traits(compiles, idate.yearBC = 7));
     }
@@ -8998,18 +8959,18 @@ public:
     ///
     unittest
     {
-        assert(Date(1999, 7, 6).month == 7);
+        assert(Date(1999,  7, 6).month ==  7);
         assert(Date(2010, 10, 4).month == 10);
-        assert(Date(-7, 4, 5).month == 4);
+        assert(Date(  -7,  4, 5).month ==  4);
     }
 
     unittest
     {
         assert(Date.init.month == 1);
-        assert(Date(1999, 7, 6).month == 7);
+        assert(Date( 1999, 7, 6).month == 7);
         assert(Date(-1999, 7, 6).month == 7);
 
-        const cdate = Date(1999, 7, 6);
+            const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
         static assert(__traits(compiles, cdate.month == 7));
         static assert(__traits(compiles, idate.month == 7));
@@ -9041,15 +9002,15 @@ public:
             assert(date == expected);
         }
 
-        assertThrown!DateTimeException(testDate(Date(1, 1, 1), cast(Month)0));
-        assertThrown!DateTimeException(testDate(Date(1, 1, 1), cast(Month)13));
-        assertThrown!DateTimeException(testDate(Date(1, 1, 29), cast(Month)2));
-        assertThrown!DateTimeException(testDate(Date(0, 1, 30), cast(Month)2));
+        assertThrown!DateTimeException(testDate(Date(1, 1,  1), cast(Month) 0));
+        assertThrown!DateTimeException(testDate(Date(1, 1,  1), cast(Month)13));
+        assertThrown!DateTimeException(testDate(Date(1, 1, 29), cast(Month) 2));
+        assertThrown!DateTimeException(testDate(Date(0, 1, 30), cast(Month) 2));
 
-        testDate(Date(1, 1, 1), cast(Month)7, Date(1, 7, 1));
+        testDate(Date( 1, 1, 1), cast(Month)7, Date( 1, 7, 1));
         testDate(Date(-1, 1, 1), cast(Month)7, Date(-1, 7, 1));
 
-        const cdate = Date(1999, 7, 6);
+            const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
         static assert(!__traits(compiles, cdate.month = 7));
         static assert(!__traits(compiles, idate.month = 7));
@@ -9067,20 +9028,18 @@ public:
     ///
     unittest
     {
-        assert(Date(1999, 7, 6).day == 6);
+        assert(Date(1999,  7, 6).day == 6);
         assert(Date(2010, 10, 4).day == 4);
-        assert(Date(-7, 4, 5).day == 5);
+        assert(Date(  -7,  4, 5).day == 5);
     }
 
     unittest
     {
         import std.range;
-        import std.format : format;
 
         static void test(Date date, int expected)
         {
-            assert(date.day == expected,
-                             format("Value given: %s", date));
+            assert(date.day == expected, format("Value given: %s", date));
         }
 
         foreach (year; chain(testYearsBC, testYearsAD))
@@ -9089,7 +9048,7 @@ public:
                 test(Date(year, md.month, md.day), md.day);
         }
 
-        const cdate = Date(1999, 7, 6);
+            const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
         static assert(__traits(compiles, cdate.day == 6));
         static assert(__traits(compiles, idate.day == 6));
@@ -9119,31 +9078,31 @@ public:
         }
 
         //Test A.D.
-        assertThrown!DateTimeException(testDate(Date(1, 1, 1), 0));
-        assertThrown!DateTimeException(testDate(Date(1, 1, 1), 32));
-        assertThrown!DateTimeException(testDate(Date(1, 2, 1), 29));
-        assertThrown!DateTimeException(testDate(Date(4, 2, 1), 30));
-        assertThrown!DateTimeException(testDate(Date(1, 3, 1), 32));
-        assertThrown!DateTimeException(testDate(Date(1, 4, 1), 31));
-        assertThrown!DateTimeException(testDate(Date(1, 5, 1), 32));
-        assertThrown!DateTimeException(testDate(Date(1, 6, 1), 31));
-        assertThrown!DateTimeException(testDate(Date(1, 7, 1), 32));
-        assertThrown!DateTimeException(testDate(Date(1, 8, 1), 32));
-        assertThrown!DateTimeException(testDate(Date(1, 9, 1), 31));
+        assertThrown!DateTimeException(testDate(Date(1,  1, 1), 0));
+        assertThrown!DateTimeException(testDate(Date(1,  1, 1), 32));
+        assertThrown!DateTimeException(testDate(Date(1,  2, 1), 29));
+        assertThrown!DateTimeException(testDate(Date(4,  2, 1), 30));
+        assertThrown!DateTimeException(testDate(Date(1,  3, 1), 32));
+        assertThrown!DateTimeException(testDate(Date(1,  4, 1), 31));
+        assertThrown!DateTimeException(testDate(Date(1,  5, 1), 32));
+        assertThrown!DateTimeException(testDate(Date(1,  6, 1), 31));
+        assertThrown!DateTimeException(testDate(Date(1,  7, 1), 32));
+        assertThrown!DateTimeException(testDate(Date(1,  8, 1), 32));
+        assertThrown!DateTimeException(testDate(Date(1,  9, 1), 31));
         assertThrown!DateTimeException(testDate(Date(1, 10, 1), 32));
         assertThrown!DateTimeException(testDate(Date(1, 11, 1), 31));
         assertThrown!DateTimeException(testDate(Date(1, 12, 1), 32));
 
-        assertNotThrown!DateTimeException(testDate(Date(1, 1, 1), 31));
-        assertNotThrown!DateTimeException(testDate(Date(1, 2, 1), 28));
-        assertNotThrown!DateTimeException(testDate(Date(4, 2, 1), 29));
-        assertNotThrown!DateTimeException(testDate(Date(1, 3, 1), 31));
-        assertNotThrown!DateTimeException(testDate(Date(1, 4, 1), 30));
-        assertNotThrown!DateTimeException(testDate(Date(1, 5, 1), 31));
-        assertNotThrown!DateTimeException(testDate(Date(1, 6, 1), 30));
-        assertNotThrown!DateTimeException(testDate(Date(1, 7, 1), 31));
-        assertNotThrown!DateTimeException(testDate(Date(1, 8, 1), 31));
-        assertNotThrown!DateTimeException(testDate(Date(1, 9, 1), 30));
+        assertNotThrown!DateTimeException(testDate(Date(1,  1, 1), 31));
+        assertNotThrown!DateTimeException(testDate(Date(1,  2, 1), 28));
+        assertNotThrown!DateTimeException(testDate(Date(4,  2, 1), 29));
+        assertNotThrown!DateTimeException(testDate(Date(1,  3, 1), 31));
+        assertNotThrown!DateTimeException(testDate(Date(1,  4, 1), 30));
+        assertNotThrown!DateTimeException(testDate(Date(1,  5, 1), 31));
+        assertNotThrown!DateTimeException(testDate(Date(1,  6, 1), 30));
+        assertNotThrown!DateTimeException(testDate(Date(1,  7, 1), 31));
+        assertNotThrown!DateTimeException(testDate(Date(1,  8, 1), 31));
+        assertNotThrown!DateTimeException(testDate(Date(1,  9, 1), 30));
         assertNotThrown!DateTimeException(testDate(Date(1, 10, 1), 31));
         assertNotThrown!DateTimeException(testDate(Date(1, 11, 1), 30));
         assertNotThrown!DateTimeException(testDate(Date(1, 12, 1), 31));
@@ -9155,31 +9114,31 @@ public:
         }
 
         //Test B.C.
-        assertThrown!DateTimeException(testDate(Date(-1, 1, 1), 0));
-        assertThrown!DateTimeException(testDate(Date(-1, 1, 1), 32));
-        assertThrown!DateTimeException(testDate(Date(-1, 2, 1), 29));
-        assertThrown!DateTimeException(testDate(Date(0, 2, 1), 30));
-        assertThrown!DateTimeException(testDate(Date(-1, 3, 1), 32));
-        assertThrown!DateTimeException(testDate(Date(-1, 4, 1), 31));
-        assertThrown!DateTimeException(testDate(Date(-1, 5, 1), 32));
-        assertThrown!DateTimeException(testDate(Date(-1, 6, 1), 31));
-        assertThrown!DateTimeException(testDate(Date(-1, 7, 1), 32));
-        assertThrown!DateTimeException(testDate(Date(-1, 8, 1), 32));
-        assertThrown!DateTimeException(testDate(Date(-1, 9, 1), 31));
+        assertThrown!DateTimeException(testDate(Date(-1,  1, 1),  0));
+        assertThrown!DateTimeException(testDate(Date(-1,  1, 1), 32));
+        assertThrown!DateTimeException(testDate(Date(-1,  2, 1), 29));
+        assertThrown!DateTimeException(testDate(Date( 0,  2, 1), 30));
+        assertThrown!DateTimeException(testDate(Date(-1,  3, 1), 32));
+        assertThrown!DateTimeException(testDate(Date(-1,  4, 1), 31));
+        assertThrown!DateTimeException(testDate(Date(-1,  5, 1), 32));
+        assertThrown!DateTimeException(testDate(Date(-1,  6, 1), 31));
+        assertThrown!DateTimeException(testDate(Date(-1,  7, 1), 32));
+        assertThrown!DateTimeException(testDate(Date(-1,  8, 1), 32));
+        assertThrown!DateTimeException(testDate(Date(-1,  9, 1), 31));
         assertThrown!DateTimeException(testDate(Date(-1, 10, 1), 32));
         assertThrown!DateTimeException(testDate(Date(-1, 11, 1), 31));
         assertThrown!DateTimeException(testDate(Date(-1, 12, 1), 32));
 
-        assertNotThrown!DateTimeException(testDate(Date(-1, 1, 1), 31));
-        assertNotThrown!DateTimeException(testDate(Date(-1, 2, 1), 28));
-        assertNotThrown!DateTimeException(testDate(Date(0, 2, 1), 29));
-        assertNotThrown!DateTimeException(testDate(Date(-1, 3, 1), 31));
-        assertNotThrown!DateTimeException(testDate(Date(-1, 4, 1), 30));
-        assertNotThrown!DateTimeException(testDate(Date(-1, 5, 1), 31));
-        assertNotThrown!DateTimeException(testDate(Date(-1, 6, 1), 30));
-        assertNotThrown!DateTimeException(testDate(Date(-1, 7, 1), 31));
-        assertNotThrown!DateTimeException(testDate(Date(-1, 8, 1), 31));
-        assertNotThrown!DateTimeException(testDate(Date(-1, 9, 1), 30));
+        assertNotThrown!DateTimeException(testDate(Date(-1,  1, 1), 31));
+        assertNotThrown!DateTimeException(testDate(Date(-1,  2, 1), 28));
+        assertNotThrown!DateTimeException(testDate(Date( 0,  2, 1), 29));
+        assertNotThrown!DateTimeException(testDate(Date(-1,  3, 1), 31));
+        assertNotThrown!DateTimeException(testDate(Date(-1,  4, 1), 30));
+        assertNotThrown!DateTimeException(testDate(Date(-1,  5, 1), 31));
+        assertNotThrown!DateTimeException(testDate(Date(-1,  6, 1), 30));
+        assertNotThrown!DateTimeException(testDate(Date(-1,  7, 1), 31));
+        assertNotThrown!DateTimeException(testDate(Date(-1,  8, 1), 31));
+        assertNotThrown!DateTimeException(testDate(Date(-1,  9, 1), 30));
         assertNotThrown!DateTimeException(testDate(Date(-1, 10, 1), 31));
         assertNotThrown!DateTimeException(testDate(Date(-1, 11, 1), 30));
         assertNotThrown!DateTimeException(testDate(Date(-1, 12, 1), 31));
@@ -9190,7 +9149,7 @@ public:
             assert(date == Date(-1, 1, 6));
         }
 
-        const cdate = Date(1999, 7, 6);
+            const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
         static assert(!__traits(compiles, cdate.day = 6));
         static assert(!__traits(compiles, idate.day = 6));
@@ -10878,8 +10837,6 @@ public:
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
     {
-        import std.format : format;
-
         Date retval = this;
 
         static if (is(Unqual!D == Duration))
@@ -10978,8 +10935,6 @@ public:
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
     {
-        import std.format : format;
-
         static if (is(Unqual!D == Duration))
             immutable days = duration.total!"days";
         else static if (is(Unqual!D == TickDuration))
@@ -11065,12 +11020,12 @@ public:
     {
         auto date = Date(1999, 7, 6);
 
-        assert(Date(1999, 7, 6) - Date(1998, 7, 6) == dur!"days"(365));
-        assert(Date(1998, 7, 6) - Date(1999, 7, 6) == dur!"days"(-365));
-        assert(Date(1999, 6, 6) - Date(1999, 5, 6) == dur!"days"(31));
-        assert(Date(1999, 5, 6) - Date(1999, 6, 6) == dur!"days"(-31));
-        assert(Date(1999, 1, 1) - Date(1998, 12, 31) == dur!"days"(1));
-        assert(Date(1998, 12, 31) - Date(1999, 1, 1) == dur!"days"(-1));
+        assert(Date(1999,  7,  6) - Date(1998,  7,  6) == dur!"days"( 365));
+        assert(Date(1998,  7,  6) - Date(1999,  7,  6) == dur!"days"(-365));
+        assert(Date(1999,  6,  6) - Date(1999,  5,  6) == dur!"days"( 31));
+        assert(Date(1999,  5,  6) - Date(1999,  6,  6) == dur!"days"(-31));
+        assert(Date(1999,  1,  1) - Date(1998, 12, 31) == dur!"days"( 1));
+        assert(Date(1998, 12, 31) - Date(1999,  1,  1) == dur!"days"(-1));
 
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
@@ -11131,214 +11086,215 @@ public:
         auto date = Date(1999, 7, 6);
 
         //Test A.D.
-        assert(date.diffMonths(Date(1998, 6, 5)) == 13);
-        assert(date.diffMonths(Date(1998, 7, 5)) == 12);
-        assert(date.diffMonths(Date(1998, 8, 5)) == 11);
-        assert(date.diffMonths(Date(1998, 9, 5)) == 10);
-        assert(date.diffMonths(Date(1998, 10, 5)) == 9);
-        assert(date.diffMonths(Date(1998, 11, 5)) == 8);
-        assert(date.diffMonths(Date(1998, 12, 5)) == 7);
-        assert(date.diffMonths(Date(1999, 1, 5)) == 6);
-        assert(date.diffMonths(Date(1999, 2, 6)) == 5);
-        assert(date.diffMonths(Date(1999, 3, 6)) == 4);
-        assert(date.diffMonths(Date(1999, 4, 6)) == 3);
-        assert(date.diffMonths(Date(1999, 5, 6)) == 2);
-        assert(date.diffMonths(Date(1999, 6, 6)) == 1);
+        assert(date.diffMonths(Date(1998,  6, 5)) == 13);
+        assert(date.diffMonths(Date(1998,  7, 5)) == 12);
+        assert(date.diffMonths(Date(1998,  8, 5)) == 11);
+        assert(date.diffMonths(Date(1998,  9, 5)) == 10);
+        assert(date.diffMonths(Date(1998, 10, 5)) ==  9);
+        assert(date.diffMonths(Date(1998, 11, 5)) ==  8);
+        assert(date.diffMonths(Date(1998, 12, 5)) ==  7);
+        assert(date.diffMonths(Date(1999,  1, 5)) ==  6);
+        assert(date.diffMonths(Date(1999,  2, 6)) ==  5);
+        assert(date.diffMonths(Date(1999,  3, 6)) ==  4);
+        assert(date.diffMonths(Date(1999,  4, 6)) ==  3);
+        assert(date.diffMonths(Date(1999,  5, 6)) ==  2);
+        assert(date.diffMonths(Date(1999,  6, 6)) ==  1);
         assert(date.diffMonths(date) == 0);
-        assert(date.diffMonths(Date(1999, 8, 6)) == -1);
-        assert(date.diffMonths(Date(1999, 9, 6)) == -2);
-        assert(date.diffMonths(Date(1999, 10, 6)) == -3);
-        assert(date.diffMonths(Date(1999, 11, 6)) == -4);
-        assert(date.diffMonths(Date(1999, 12, 6)) == -5);
-        assert(date.diffMonths(Date(2000, 1, 6)) == -6);
-        assert(date.diffMonths(Date(2000, 2, 6)) == -7);
-        assert(date.diffMonths(Date(2000, 3, 6)) == -8);
-        assert(date.diffMonths(Date(2000, 4, 6)) == -9);
-        assert(date.diffMonths(Date(2000, 5, 6)) == -10);
-        assert(date.diffMonths(Date(2000, 6, 6)) == -11);
-        assert(date.diffMonths(Date(2000, 7, 6)) == -12);
-        assert(date.diffMonths(Date(2000, 8, 6)) == -13);
+        assert(date.diffMonths(Date(1999,  8, 6)) ==  -1);
+        assert(date.diffMonths(Date(1999,  9, 6)) ==  -2);
+        assert(date.diffMonths(Date(1999, 10, 6)) ==  -3);
+        assert(date.diffMonths(Date(1999, 11, 6)) ==  -4);
+        assert(date.diffMonths(Date(1999, 12, 6)) ==  -5);
+        assert(date.diffMonths(Date(2000,  1, 6)) ==  -6);
+        assert(date.diffMonths(Date(2000,  2, 6)) ==  -7);
+        assert(date.diffMonths(Date(2000,  3, 6)) ==  -8);
+        assert(date.diffMonths(Date(2000,  4, 6)) ==  -9);
+        assert(date.diffMonths(Date(2000,  5, 6)) == -10);
+        assert(date.diffMonths(Date(2000,  6, 6)) == -11);
+        assert(date.diffMonths(Date(2000,  7, 6)) == -12);
+        assert(date.diffMonths(Date(2000,  8, 6)) == -13);
 
-        assert(Date(1998, 6, 5).diffMonths(date) == -13);
-        assert(Date(1998, 7, 5).diffMonths(date) == -12);
-        assert(Date(1998, 8, 5).diffMonths(date) == -11);
-        assert(Date(1998, 9, 5).diffMonths(date) == -10);
-        assert(Date(1998, 10, 5).diffMonths(date) == -9);
-        assert(Date(1998, 11, 5).diffMonths(date) == -8);
-        assert(Date(1998, 12, 5).diffMonths(date) == -7);
-        assert(Date(1999, 1, 5).diffMonths(date) == -6);
-        assert(Date(1999, 2, 6).diffMonths(date) == -5);
-        assert(Date(1999, 3, 6).diffMonths(date) == -4);
-        assert(Date(1999, 4, 6).diffMonths(date) == -3);
-        assert(Date(1999, 5, 6).diffMonths(date) == -2);
-        assert(Date(1999, 6, 6).diffMonths(date) == -1);
-        assert(Date(1999, 8, 6).diffMonths(date) == 1);
-        assert(Date(1999, 9, 6).diffMonths(date) == 2);
-        assert(Date(1999, 10, 6).diffMonths(date) == 3);
-        assert(Date(1999, 11, 6).diffMonths(date) == 4);
-        assert(Date(1999, 12, 6).diffMonths(date) == 5);
-        assert(Date(2000, 1, 6).diffMonths(date) == 6);
-        assert(Date(2000, 2, 6).diffMonths(date) == 7);
-        assert(Date(2000, 3, 6).diffMonths(date) == 8);
-        assert(Date(2000, 4, 6).diffMonths(date) == 9);
-        assert(Date(2000, 5, 6).diffMonths(date) == 10);
-        assert(Date(2000, 6, 6).diffMonths(date) == 11);
-        assert(Date(2000, 7, 6).diffMonths(date) == 12);
-        assert(Date(2000, 8, 6).diffMonths(date) == 13);
+        assert(Date(1998,  6, 5).diffMonths(date) == -13);
+        assert(Date(1998,  7, 5).diffMonths(date) == -12);
+        assert(Date(1998,  8, 5).diffMonths(date) == -11);
+        assert(Date(1998,  9, 5).diffMonths(date) == -10);
+        assert(Date(1998, 10, 5).diffMonths(date) ==  -9);
+        assert(Date(1998, 11, 5).diffMonths(date) ==  -8);
+        assert(Date(1998, 12, 5).diffMonths(date) ==  -7);
+        assert(Date(1999,  1, 5).diffMonths(date) ==  -6);
+        assert(Date(1999,  2, 6).diffMonths(date) ==  -5);
+        assert(Date(1999,  3, 6).diffMonths(date) ==  -4);
+        assert(Date(1999,  4, 6).diffMonths(date) ==  -3);
+        assert(Date(1999,  5, 6).diffMonths(date) ==  -2);
+        assert(Date(1999,  6, 6).diffMonths(date) ==  -1);
+        assert(Date(1999,  8, 6).diffMonths(date) ==   1);
+        assert(Date(1999,  9, 6).diffMonths(date) ==   2);
+        assert(Date(1999, 10, 6).diffMonths(date) ==   3);
+        assert(Date(1999, 11, 6).diffMonths(date) ==   4);
+        assert(Date(1999, 12, 6).diffMonths(date) ==   5);
+        assert(Date(2000,  1, 6).diffMonths(date) ==   6);
+        assert(Date(2000,  2, 6).diffMonths(date) ==   7);
+        assert(Date(2000,  3, 6).diffMonths(date) ==   8);
+        assert(Date(2000,  4, 6).diffMonths(date) ==   9);
+        assert(Date(2000,  5, 6).diffMonths(date) ==  10);
+        assert(Date(2000,  6, 6).diffMonths(date) ==  11);
+        assert(Date(2000,  7, 6).diffMonths(date) ==  12);
+        assert(Date(2000,  8, 6).diffMonths(date) ==  13);
 
-        assert(date.diffMonths(Date(1999, 6, 30)) == 1);
-        assert(date.diffMonths(Date(1999, 7, 1)) == 0);
-        assert(date.diffMonths(Date(1999, 7, 6)) == 0);
-        assert(date.diffMonths(Date(1999, 7, 11)) == 0);
-        assert(date.diffMonths(Date(1999, 7, 16)) == 0);
-        assert(date.diffMonths(Date(1999, 7, 21)) == 0);
-        assert(date.diffMonths(Date(1999, 7, 26)) == 0);
-        assert(date.diffMonths(Date(1999, 7, 31)) == 0);
-        assert(date.diffMonths(Date(1999, 8, 1)) == -1);
+        assert(date.diffMonths(Date(1999, 6, 30)) ==  1);
+        assert(date.diffMonths(Date(1999, 7,  1)) ==  0);
+        assert(date.diffMonths(Date(1999, 7,  6)) ==  0);
+        assert(date.diffMonths(Date(1999, 7, 11)) ==  0);
+        assert(date.diffMonths(Date(1999, 7, 16)) ==  0);
+        assert(date.diffMonths(Date(1999, 7, 21)) ==  0);
+        assert(date.diffMonths(Date(1999, 7, 26)) ==  0);
+        assert(date.diffMonths(Date(1999, 7, 31)) ==  0);
+        assert(date.diffMonths(Date(1999, 8,  1)) == -1);
 
         assert(date.diffMonths(Date(1990, 6, 30)) == 109);
-        assert(date.diffMonths(Date(1990, 7, 1)) == 108);
-        assert(date.diffMonths(Date(1990, 7, 6)) == 108);
+        assert(date.diffMonths(Date(1990, 7,  1)) == 108);
+        assert(date.diffMonths(Date(1990, 7,  6)) == 108);
         assert(date.diffMonths(Date(1990, 7, 11)) == 108);
         assert(date.diffMonths(Date(1990, 7, 16)) == 108);
         assert(date.diffMonths(Date(1990, 7, 21)) == 108);
         assert(date.diffMonths(Date(1990, 7, 26)) == 108);
         assert(date.diffMonths(Date(1990, 7, 31)) == 108);
-        assert(date.diffMonths(Date(1990, 8, 1)) == 107);
+        assert(date.diffMonths(Date(1990, 8,  1)) == 107);
 
         assert(Date(1999, 6, 30).diffMonths(date) == -1);
-        assert(Date(1999, 7, 1).diffMonths(date) == 0);
-        assert(Date(1999, 7, 6).diffMonths(date) == 0);
-        assert(Date(1999, 7, 11).diffMonths(date) == 0);
-        assert(Date(1999, 7, 16).diffMonths(date) == 0);
-        assert(Date(1999, 7, 21).diffMonths(date) == 0);
-        assert(Date(1999, 7, 26).diffMonths(date) == 0);
-        assert(Date(1999, 7, 31).diffMonths(date) == 0);
-        assert(Date(1999, 8, 1).diffMonths(date) == 1);
+        assert(Date(1999, 7,  1).diffMonths(date) ==  0);
+        assert(Date(1999, 7,  6).diffMonths(date) ==  0);
+        assert(Date(1999, 7, 11).diffMonths(date) ==  0);
+        assert(Date(1999, 7, 16).diffMonths(date) ==  0);
+        assert(Date(1999, 7, 21).diffMonths(date) ==  0);
+        assert(Date(1999, 7, 26).diffMonths(date) ==  0);
+        assert(Date(1999, 7, 31).diffMonths(date) ==  0);
+        assert(Date(1999, 8,  1).diffMonths(date) ==  1);
 
         assert(Date(1990, 6, 30).diffMonths(date) == -109);
-        assert(Date(1990, 7, 1).diffMonths(date) == -108);
-        assert(Date(1990, 7, 6).diffMonths(date) == -108);
+        assert(Date(1990, 7,  1).diffMonths(date) == -108);
+        assert(Date(1990, 7,  6).diffMonths(date) == -108);
         assert(Date(1990, 7, 11).diffMonths(date) == -108);
         assert(Date(1990, 7, 16).diffMonths(date) == -108);
         assert(Date(1990, 7, 21).diffMonths(date) == -108);
         assert(Date(1990, 7, 26).diffMonths(date) == -108);
         assert(Date(1990, 7, 31).diffMonths(date) == -108);
-        assert(Date(1990, 8, 1).diffMonths(date) == -107);
+        assert(Date(1990, 8,  1).diffMonths(date) == -107);
 
         //Test B.C.
         auto dateBC = Date(-1999, 7, 6);
 
-        assert(dateBC.diffMonths(Date(-2000, 6, 5)) == 13);
-        assert(dateBC.diffMonths(Date(-2000, 7, 5)) == 12);
-        assert(dateBC.diffMonths(Date(-2000, 8, 5)) == 11);
-        assert(dateBC.diffMonths(Date(-2000, 9, 5)) == 10);
-        assert(dateBC.diffMonths(Date(-2000, 10, 5)) == 9);
-        assert(dateBC.diffMonths(Date(-2000, 11, 5)) == 8);
-        assert(dateBC.diffMonths(Date(-2000, 12, 5)) == 7);
-        assert(dateBC.diffMonths(Date(-1999, 1, 5)) == 6);
-        assert(dateBC.diffMonths(Date(-1999, 2, 6)) == 5);
-        assert(dateBC.diffMonths(Date(-1999, 3, 6)) == 4);
-        assert(dateBC.diffMonths(Date(-1999, 4, 6)) == 3);
-        assert(dateBC.diffMonths(Date(-1999, 5, 6)) == 2);
-        assert(dateBC.diffMonths(Date(-1999, 6, 6)) == 1);
+        assert(dateBC.diffMonths(Date(-2000,  6, 5)) ==  13);
+        assert(dateBC.diffMonths(Date(-2000,  7, 5)) ==  12);
+        assert(dateBC.diffMonths(Date(-2000,  8, 5)) ==  11);
+        assert(dateBC.diffMonths(Date(-2000,  9, 5)) ==  10);
+        assert(dateBC.diffMonths(Date(-2000, 10, 5)) ==   9);
+        assert(dateBC.diffMonths(Date(-2000, 11, 5)) ==   8);
+        assert(dateBC.diffMonths(Date(-2000, 12, 5)) ==   7);
+        assert(dateBC.diffMonths(Date(-1999,  1, 5)) ==   6);
+        assert(dateBC.diffMonths(Date(-1999,  2, 6)) ==   5);
+        assert(dateBC.diffMonths(Date(-1999,  3, 6)) ==   4);
+        assert(dateBC.diffMonths(Date(-1999,  4, 6)) ==   3);
+        assert(dateBC.diffMonths(Date(-1999,  5, 6)) ==   2);
+        assert(dateBC.diffMonths(Date(-1999,  6, 6)) ==   1);
         assert(dateBC.diffMonths(dateBC) == 0);
-        assert(dateBC.diffMonths(Date(-1999, 8, 6)) == -1);
-        assert(dateBC.diffMonths(Date(-1999, 9, 6)) == -2);
-        assert(dateBC.diffMonths(Date(-1999, 10, 6)) == -3);
-        assert(dateBC.diffMonths(Date(-1999, 11, 6)) == -4);
-        assert(dateBC.diffMonths(Date(-1999, 12, 6)) == -5);
-        assert(dateBC.diffMonths(Date(-1998, 1, 6)) == -6);
-        assert(dateBC.diffMonths(Date(-1998, 2, 6)) == -7);
-        assert(dateBC.diffMonths(Date(-1998, 3, 6)) == -8);
-        assert(dateBC.diffMonths(Date(-1998, 4, 6)) == -9);
-        assert(dateBC.diffMonths(Date(-1998, 5, 6)) == -10);
-        assert(dateBC.diffMonths(Date(-1998, 6, 6)) == -11);
-        assert(dateBC.diffMonths(Date(-1998, 7, 6)) == -12);
-        assert(dateBC.diffMonths(Date(-1998, 8, 6)) == -13);
+        assert(dateBC.diffMonths(Date(-1999,  8, 6)) ==  -1);
+        assert(dateBC.diffMonths(Date(-1999,  9, 6)) ==  -2);
+        assert(dateBC.diffMonths(Date(-1999, 10, 6)) ==  -3);
+        assert(dateBC.diffMonths(Date(-1999, 11, 6)) ==  -4);
+        assert(dateBC.diffMonths(Date(-1999, 12, 6)) ==  -5);
+        assert(dateBC.diffMonths(Date(-1998,  1, 6)) ==  -6);
+        assert(dateBC.diffMonths(Date(-1998,  2, 6)) ==  -7);
+        assert(dateBC.diffMonths(Date(-1998,  3, 6)) ==  -8);
+        assert(dateBC.diffMonths(Date(-1998,  4, 6)) ==  -9);
+        assert(dateBC.diffMonths(Date(-1998,  5, 6)) == -10);
+        assert(dateBC.diffMonths(Date(-1998,  6, 6)) == -11);
+        assert(dateBC.diffMonths(Date(-1998,  7, 6)) == -12);
+        assert(dateBC.diffMonths(Date(-1998,  8, 6)) == -13);
 
-        assert(Date(-2000, 6, 5).diffMonths(dateBC) == -13);
-        assert(Date(-2000, 7, 5).diffMonths(dateBC) == -12);
-        assert(Date(-2000, 8, 5).diffMonths(dateBC) == -11);
-        assert(Date(-2000, 9, 5).diffMonths(dateBC) == -10);
-        assert(Date(-2000, 10, 5).diffMonths(dateBC) == -9);
-        assert(Date(-2000, 11, 5).diffMonths(dateBC) == -8);
-        assert(Date(-2000, 12, 5).diffMonths(dateBC) == -7);
-        assert(Date(-1999, 1, 5).diffMonths(dateBC) == -6);
-        assert(Date(-1999, 2, 6).diffMonths(dateBC) == -5);
-        assert(Date(-1999, 3, 6).diffMonths(dateBC) == -4);
-        assert(Date(-1999, 4, 6).diffMonths(dateBC) == -3);
-        assert(Date(-1999, 5, 6).diffMonths(dateBC) == -2);
-        assert(Date(-1999, 6, 6).diffMonths(dateBC) == -1);
-        assert(Date(-1999, 8, 6).diffMonths(dateBC) == 1);
-        assert(Date(-1999, 9, 6).diffMonths(dateBC) == 2);
-        assert(Date(-1999, 10, 6).diffMonths(dateBC) == 3);
-        assert(Date(-1999, 11, 6).diffMonths(dateBC) == 4);
-        assert(Date(-1999, 12, 6).diffMonths(dateBC) == 5);
-        assert(Date(-1998, 1, 6).diffMonths(dateBC) == 6);
-        assert(Date(-1998, 2, 6).diffMonths(dateBC) == 7);
-        assert(Date(-1998, 3, 6).diffMonths(dateBC) == 8);
-        assert(Date(-1998, 4, 6).diffMonths(dateBC) == 9);
-        assert(Date(-1998, 5, 6).diffMonths(dateBC) == 10);
-        assert(Date(-1998, 6, 6).diffMonths(dateBC) == 11);
-        assert(Date(-1998, 7, 6).diffMonths(dateBC) == 12);
-        assert(Date(-1998, 8, 6).diffMonths(dateBC) == 13);
+        assert(Date(-2000,  6, 5).diffMonths(dateBC) == -13);
+        assert(Date(-2000,  7, 5).diffMonths(dateBC) == -12);
+        assert(Date(-2000,  8, 5).diffMonths(dateBC) == -11);
+        assert(Date(-2000,  9, 5).diffMonths(dateBC) == -10);
+        assert(Date(-2000, 10, 5).diffMonths(dateBC) ==  -9);
+        assert(Date(-2000, 11, 5).diffMonths(dateBC) ==  -8);
+        assert(Date(-2000, 12, 5).diffMonths(dateBC) ==  -7);
+        assert(Date(-1999,  1, 5).diffMonths(dateBC) ==  -6);
+        assert(Date(-1999,  2, 6).diffMonths(dateBC) ==  -5);
+        assert(Date(-1999,  3, 6).diffMonths(dateBC) ==  -4);
+        assert(Date(-1999,  4, 6).diffMonths(dateBC) ==  -3);
+        assert(Date(-1999,  5, 6).diffMonths(dateBC) ==  -2);
+        assert(Date(-1999,  6, 6).diffMonths(dateBC) ==  -1);
+        assert(Date(-1999,  8, 6).diffMonths(dateBC) ==   1);
+        assert(Date(-1999,  9, 6).diffMonths(dateBC) ==   2);
+        assert(Date(-1999, 10, 6).diffMonths(dateBC) ==   3);
+        assert(Date(-1999, 11, 6).diffMonths(dateBC) ==   4);
+        assert(Date(-1999, 12, 6).diffMonths(dateBC) ==   5);
+        assert(Date(-1998,  1, 6).diffMonths(dateBC) ==   6);
+        assert(Date(-1998,  2, 6).diffMonths(dateBC) ==   7);
+        assert(Date(-1998,  3, 6).diffMonths(dateBC) ==   8);
+        assert(Date(-1998,  4, 6).diffMonths(dateBC) ==   9);
+        assert(Date(-1998,  5, 6).diffMonths(dateBC) ==  10);
+        assert(Date(-1998,  6, 6).diffMonths(dateBC) ==  11);
+        assert(Date(-1998,  7, 6).diffMonths(dateBC) ==  12);
+        assert(Date(-1998,  8, 6).diffMonths(dateBC) ==  13);
 
-        assert(dateBC.diffMonths(Date(-1999, 6, 30)) == 1);
-        assert(dateBC.diffMonths(Date(-1999, 7, 1)) == 0);
-        assert(dateBC.diffMonths(Date(-1999, 7, 6)) == 0);
-        assert(dateBC.diffMonths(Date(-1999, 7, 11)) == 0);
-        assert(dateBC.diffMonths(Date(-1999, 7, 16)) == 0);
-        assert(dateBC.diffMonths(Date(-1999, 7, 21)) == 0);
-        assert(dateBC.diffMonths(Date(-1999, 7, 26)) == 0);
-        assert(dateBC.diffMonths(Date(-1999, 7, 31)) == 0);
-        assert(dateBC.diffMonths(Date(-1999, 8, 1)) == -1);
+        assert(dateBC.diffMonths(Date(-1999, 6, 30)) ==  1);
+        assert(dateBC.diffMonths(Date(-1999, 7,  1)) ==  0);
+        assert(dateBC.diffMonths(Date(-1999, 7,  6)) ==  0);
+        assert(dateBC.diffMonths(Date(-1999, 7, 11)) ==  0);
+        assert(dateBC.diffMonths(Date(-1999, 7, 16)) ==  0);
+        assert(dateBC.diffMonths(Date(-1999, 7, 21)) ==  0);
+        assert(dateBC.diffMonths(Date(-1999, 7, 26)) ==  0);
+        assert(dateBC.diffMonths(Date(-1999, 7, 31)) ==  0);
+        assert(dateBC.diffMonths(Date(-1999, 8,  1)) == -1);
 
         assert(dateBC.diffMonths(Date(-2008, 6, 30)) == 109);
-        assert(dateBC.diffMonths(Date(-2008, 7, 1)) == 108);
-        assert(dateBC.diffMonths(Date(-2008, 7, 6)) == 108);
+        assert(dateBC.diffMonths(Date(-2008, 7,  1)) == 108);
+        assert(dateBC.diffMonths(Date(-2008, 7,  6)) == 108);
         assert(dateBC.diffMonths(Date(-2008, 7, 11)) == 108);
         assert(dateBC.diffMonths(Date(-2008, 7, 16)) == 108);
         assert(dateBC.diffMonths(Date(-2008, 7, 21)) == 108);
         assert(dateBC.diffMonths(Date(-2008, 7, 26)) == 108);
         assert(dateBC.diffMonths(Date(-2008, 7, 31)) == 108);
-        assert(dateBC.diffMonths(Date(-2008, 8, 1)) == 107);
+        assert(dateBC.diffMonths(Date(-2008, 8,  1)) == 107);
 
         assert(Date(-1999, 6, 30).diffMonths(dateBC) == -1);
-        assert(Date(-1999, 7, 1).diffMonths(dateBC) == 0);
-        assert(Date(-1999, 7, 6).diffMonths(dateBC) == 0);
-        assert(Date(-1999, 7, 11).diffMonths(dateBC) == 0);
-        assert(Date(-1999, 7, 16).diffMonths(dateBC) == 0);
-        assert(Date(-1999, 7, 21).diffMonths(dateBC) == 0);
-        assert(Date(-1999, 7, 26).diffMonths(dateBC) == 0);
-        assert(Date(-1999, 7, 31).diffMonths(dateBC) == 0);
-        assert(Date(-1999, 8, 1).diffMonths(dateBC) == 1);
+        assert(Date(-1999, 7,  1).diffMonths(dateBC) ==  0);
+        assert(Date(-1999, 7,  6).diffMonths(dateBC) ==  0);
+        assert(Date(-1999, 7, 11).diffMonths(dateBC) ==  0);
+        assert(Date(-1999, 7, 16).diffMonths(dateBC) ==  0);
+        assert(Date(-1999, 7, 21).diffMonths(dateBC) ==  0);
+        assert(Date(-1999, 7, 26).diffMonths(dateBC) ==  0);
+        assert(Date(-1999, 7, 31).diffMonths(dateBC) ==  0);
+        assert(Date(-1999, 8,  1).diffMonths(dateBC) ==  1);
 
         assert(Date(-2008, 6, 30).diffMonths(dateBC) == -109);
-        assert(Date(-2008, 7, 1).diffMonths(dateBC) == -108);
-        assert(Date(-2008, 7, 6).diffMonths(dateBC) == -108);
+        assert(Date(-2008, 7,  1).diffMonths(dateBC) == -108);
+        assert(Date(-2008, 7,  6).diffMonths(dateBC) == -108);
         assert(Date(-2008, 7, 11).diffMonths(dateBC) == -108);
         assert(Date(-2008, 7, 16).diffMonths(dateBC) == -108);
         assert(Date(-2008, 7, 21).diffMonths(dateBC) == -108);
         assert(Date(-2008, 7, 26).diffMonths(dateBC) == -108);
         assert(Date(-2008, 7, 31).diffMonths(dateBC) == -108);
-        assert(Date(-2008, 8, 1).diffMonths(dateBC) == -107);
+        assert(Date(-2008, 8,  1).diffMonths(dateBC) == -107);
 
         //Test Both
-        assert(Date(3, 3, 3).diffMonths(Date(-5, 5, 5)) == 94);
-        assert(Date(-5, 5, 5).diffMonths(Date(3, 3, 3)) == -94);
+        assert(Date( 3, 3, 3).diffMonths(Date(-5, 5, 5)) ==  94);
+        assert(Date(-5, 5, 5).diffMonths(Date( 3, 3, 3)) == -94);
 
-        const cdate = Date(1999, 7, 6);
+            alias mdate = date;
+            const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
-        static assert(__traits(compiles, date.diffMonths(date)));
-        static assert(__traits(compiles, cdate.diffMonths(date)));
-        static assert(__traits(compiles, idate.diffMonths(date)));
+        static assert(__traits(compiles, mdate.diffMonths(mdate)));
+        static assert(__traits(compiles, cdate.diffMonths(mdate)));
+        static assert(__traits(compiles, idate.diffMonths(mdate)));
 
-        static assert(__traits(compiles, date.diffMonths(cdate)));
+        static assert(__traits(compiles, mdate.diffMonths(cdate)));
         static assert(__traits(compiles, cdate.diffMonths(cdate)));
         static assert(__traits(compiles, idate.diffMonths(cdate)));
 
-        static assert(__traits(compiles, date.diffMonths(idate)));
+        static assert(__traits(compiles, mdate.diffMonths(idate)));
         static assert(__traits(compiles, cdate.diffMonths(idate)));
         static assert(__traits(compiles, idate.diffMonths(idate)));
     }
@@ -11354,10 +11310,10 @@ public:
 
     unittest
     {
-        auto date = Date(1999, 7, 6);
-        const cdate = Date(1999, 7, 6);
+             auto mdate = Date(1999, 7, 6);
+            const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
-        static assert(!__traits(compiles, date.isLeapYear = true));
+        static assert(!__traits(compiles, mdate.isLeapYear = true));
         static assert(!__traits(compiles, cdate.isLeapYear = true));
         static assert(!__traits(compiles, idate.isLeapYear = true));
     }
@@ -11373,11 +11329,11 @@ public:
 
     unittest
     {
-        const cdate = Date(1999, 7, 6);
+            const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
-        static assert(__traits(compiles, cdate.dayOfWeek == DayOfWeek.sun));
+        static assert( __traits(compiles, cdate.dayOfWeek == DayOfWeek.sun));
+        static assert( __traits(compiles, idate.dayOfWeek == DayOfWeek.sun));
         static assert(!__traits(compiles, cdate.dayOfWeek = DayOfWeek.sun));
-        static assert(__traits(compiles, idate.dayOfWeek == DayOfWeek.sun));
         static assert(!__traits(compiles, idate.dayOfWeek = DayOfWeek.sun));
     }
 
@@ -11400,7 +11356,7 @@ public:
     ///
     unittest
     {
-        assert(Date(1999, 1, 1).dayOfYear == 1);
+        assert(Date(1999,  1,  1).dayOfYear ==   1);
         assert(Date(1999, 12, 31).dayOfYear == 365);
         assert(Date(2000, 12, 31).dayOfYear == 366);
     }
@@ -11409,8 +11365,7 @@ public:
     {
         import std.range;
 
-        foreach (year; filter!((a){return !yearIsLeapYear(a);})
-                             (chain(testYearsBC, testYearsAD)))
+        foreach (year; filter!(a => !yearIsLeapYear(a))(chain(testYearsBC, testYearsAD)))
         {
             foreach (doy; testDaysOfYear)
             {
@@ -11419,8 +11374,7 @@ public:
             }
         }
 
-        foreach (year; filter!((a){return yearIsLeapYear(a);})
-                             (chain(testYearsBC, testYearsAD)))
+        foreach (year; filter!(a => yearIsLeapYear(a))(chain(testYearsBC, testYearsAD)))
         {
             foreach (doy; testDaysOfLeapYear)
             {
@@ -11429,7 +11383,7 @@ public:
             }
         }
 
-        const cdate = Date(1999, 7, 6);
+            const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
         static assert(__traits(compiles, cdate.dayOfYear == 187));
         static assert(__traits(compiles, idate.dayOfYear == 187));
@@ -11450,8 +11404,8 @@ public:
     {
         immutable int[] lastDay = isLeapYear ? lastDayLeap : lastDayNonLeap;
 
-        if (day <= 0 || day > (isLeapYear ? daysInLeapYear : daysInYear) )
-            throw new DateTimeException("Invalid day of the year.");
+        enforce(0 < day && day <= (isLeapYear ? daysInLeapYear : daysInYear),
+                new DateTimeException("Invalid day of the year.");
 
         foreach (i; 1..lastDay.length)
         {
@@ -11471,22 +11425,22 @@ public:
         {
             date.dayOfYear = day;
             assert(date.month == expected.month);
-            assert(date.day == expected.day);
+            assert(date.day   == expected.day);
         }
 
         foreach (doy; testDaysOfYear)
         {
             test(Date(1999, 1, 1), doy.day, doy.md);
-            test(Date(-1, 1, 1), doy.day, doy.md);
+            test(Date(  -1, 1, 1), doy.day, doy.md);
         }
 
         foreach (doy; testDaysOfLeapYear)
         {
             test(Date(2000, 1, 1), doy.day, doy.md);
-            test(Date(-4, 1, 1), doy.day, doy.md);
+            test(Date(  -4, 1, 1), doy.day, doy.md);
         }
 
-        const cdate = Date(1999, 7, 6);
+            const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
         static assert(!__traits(compiles, cdate.dayOfYear = 187));
         static assert(!__traits(compiles, idate.dayOfYear = 187));
@@ -11520,7 +11474,9 @@ public:
             return days;
         }
         else if (_year == 0)
+        {
             return dayOfYear - daysInLeapYear;
+        }
         else
         {
             int years = _year;
@@ -11552,15 +11508,15 @@ public:
     ///
     unittest
     {
-        assert(Date(1, 1, 1).dayOfGregorianCal == 1);
+        assert(Date(1,  1,  1).dayOfGregorianCal ==   1);
         assert(Date(1, 12, 31).dayOfGregorianCal == 365);
-        assert(Date(2, 1, 1).dayOfGregorianCal == 366);
+        assert(Date(2,  1,  1).dayOfGregorianCal == 366);
 
-        assert(Date(0, 12, 31).dayOfGregorianCal == 0);
-        assert(Date(0, 1, 1).dayOfGregorianCal == -365);
+        assert(Date( 0, 12, 31).dayOfGregorianCal ==    0);
+        assert(Date( 0,  1,  1).dayOfGregorianCal == -365);
         assert(Date(-1, 12, 31).dayOfGregorianCal == -366);
 
-        assert(Date(2000, 1, 1).dayOfGregorianCal == 730_120);
+        assert(Date(2000,  1,  1).dayOfGregorianCal == 730_120);
         assert(Date(2010, 12, 31).dayOfGregorianCal == 734_137);
     }
 
@@ -11571,10 +11527,10 @@ public:
         foreach (gd; chain(testGregDaysBC, testGregDaysAD))
             assert(gd.date.dayOfGregorianCal == gd.day);
 
-        auto date = Date(1999, 7, 6);
-        const cdate = Date(1999, 7, 6);
+             auto mdate = Date(1999, 7, 6);
+            const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
-        static assert(__traits(compiles, date.dayOfGregorianCal));
+        static assert(__traits(compiles, mdate.dayOfGregorianCal));
         static assert(__traits(compiles, cdate.dayOfGregorianCal));
         static assert(__traits(compiles, idate.dayOfGregorianCal));
     }
@@ -11642,32 +11598,29 @@ public:
         immutable adjustedWeekday = weekday == DayOfWeek.sun ? 7 : weekday;
         immutable week = (dayOfYear - adjustedWeekday + 10) / 7;
 
-        try
+        scope(failure) assert(0, "Date's constructor threw.");
+
+        if (week == 53)
         {
-            if (week == 53)
+            switch (Date(_year + 1, 1, 1).dayOfWeek)
             {
-                switch (Date(_year + 1, 1, 1).dayOfWeek)
-                {
-                    case DayOfWeek.mon:
-                    case DayOfWeek.tue:
-                    case DayOfWeek.wed:
-                    case DayOfWeek.thu:
-                        return 1;
-                    case DayOfWeek.fri:
-                    case DayOfWeek.sat:
-                    case DayOfWeek.sun:
-                        return 53;
-                    default:
-                        assert(0, "Invalid ISO Week");
-                }
+                case DayOfWeek.mon:
+                case DayOfWeek.tue:
+                case DayOfWeek.wed:
+                case DayOfWeek.thu:
+                    return 1;
+                case DayOfWeek.fri:
+                case DayOfWeek.sat:
+                case DayOfWeek.sun:
+                    return 53;
+                default:
+                    assert(0, "Invalid ISO Week");
             }
-            else if (week > 0)
-                return cast(ubyte)week;
-            else
-                return Date(_year - 1, 12, 31).isoWeek;
         }
-        catch (Exception e)
-            assert(0, "Date's constructor threw.");
+        else if (week > 0)
+            return cast(ubyte)week;
+        else
+            return Date(_year - 1, 12, 31).isoWeek;
     }
 
     unittest
@@ -11737,10 +11690,8 @@ public:
       +/
     @property Date endOfMonth() @safe const pure nothrow
     {
-        try
-            return Date(_year, _month, maxDay(_year, _month));
-        catch (Exception e)
-            assert(0, "Date's constructor threw.");
+        scope(failure) assert(0, "Date's constructor threw.");
+        return Date(_year, _month, maxDay(_year, _month));
     }
 
     ///
@@ -11932,23 +11883,19 @@ public:
       +/
     string toISOString() @safe const pure nothrow
     {
-        import std.format : format;
-        try
+        scope(failure) assert(0, "format() threw.");
+
+        if (_year >= 0)
         {
-            if (_year >= 0)
-            {
-                if (_year < 10_000)
-                    return format("%04d%02d%02d", _year, _month, _day);
-                else
-                    return format("+%05d%02d%02d", _year, _month, _day);
-            }
-            else if (_year > -10_000)
-                return format("%05d%02d%02d", _year, _month, _day);
+            if (_year < 10_000)
+                return format("%04d%02d%02d", _year, _month, _day);
             else
-                return format("%06d%02d%02d", _year, _month, _day);
+                return format("+%05d%02d%02d", _year, _month, _day);
         }
-        catch (Exception e)
-            assert(0, "format() threw.");
+        else if (_year > -10_000)
+            return format("%05d%02d%02d", _year, _month, _day);
+        else
+            return format("%06d%02d%02d", _year, _month, _day);
     }
 
     ///
@@ -11988,23 +11935,19 @@ public:
       +/
     string toISOExtString() @safe const pure nothrow
     {
-        import std.format : format;
-        try
+        scope(failure) assert(0, "format() threw.");
+
+        if (_year >= 0)
         {
-            if (_year >= 0)
-            {
-                if (_year < 10_000)
-                    return format("%04d-%02d-%02d", _year, _month, _day);
-                else
-                    return format("+%05d-%02d-%02d", _year, _month, _day);
-            }
-            else if (_year > -10_000)
-                return format("%05d-%02d-%02d", _year, _month, _day);
+            if (_year < 10_000)
+                return format("%04d-%02d-%02d", _year, _month, _day);
             else
-                return format("%06d-%02d-%02d", _year, _month, _day);
+                return format("+%05d-%02d-%02d", _year, _month, _day);
         }
-        catch (Exception e)
-            assert(0, "format() threw.");
+        else if (_year > -10_000)
+            return format("%05d-%02d-%02d", _year, _month, _day);
+        else
+            return format("%06d-%02d-%02d", _year, _month, _day);
     }
 
     ///
@@ -12044,23 +11987,19 @@ public:
       +/
     string toSimpleString() @safe const pure nothrow
     {
-        import std.format : format;
-        try
+        scope(failure) assert(0, "format() threw.");
+
+        if (_year >= 0)
         {
-            if (_year >= 0)
-            {
-                if (_year < 10_000)
-                    return format("%04d-%s-%02d", _year, monthToString(_month), _day);
-                else
-                    return format("+%05d-%s-%02d", _year, monthToString(_month), _day);
-            }
-            else if (_year > -10_000)
-                return format("%05d-%s-%02d", _year, monthToString(_month), _day);
+            if (_year < 10_000)
+                return format("%04d-%s-%02d", _year, monthToString(_month), _day);
             else
-                return format("%06d-%s-%02d", _year, monthToString(_month), _day);
+                return format("+%05d-%s-%02d", _year, monthToString(_month), _day);
         }
-        catch (Exception e)
-            assert(0, "format() threw.");
+        else if (_year > -10_000)
+            return format("%05d-%s-%02d", _year, monthToString(_month), _day);
+        else
+            return format("%06d-%s-%02d", _year, monthToString(_month), _day);
     }
 
     ///
@@ -12133,7 +12072,6 @@ public:
         import std.string : strip;
         import std.conv : to;
         import std.algorithm : all, startsWith;
-        import std.format : format;
 
         auto dstr = to!dstring(strip(isoString));
 
@@ -12255,7 +12193,6 @@ public:
         import std.string : strip;
         import std.conv : to;
         import std.algorithm : all, startsWith;
-        import std.format : format;
 
         auto dstr = to!dstring(strip(isoExtString));
 
@@ -12382,7 +12319,6 @@ public:
         import std.string : strip;
         import std.conv : to;
         import std.algorithm : all, startsWith;
-        import std.format : format;
 
         auto dstr = to!dstring(strip(simpleString));
 
@@ -12730,7 +12666,6 @@ private:
 
     @safe pure invariant()
     {
-        import std.format : format;
         assert(valid!"months"(_month),
                format("Invariant Failure: year [%s] month [%s] day [%s]", _year, _month, _day));
         assert(valid!"days"(_year, _month, _day),
@@ -12751,6 +12686,7 @@ private:
 struct TimeOfDay
 {
     import std.exception : enforce;
+    import std.format : format;
 
 public:
 
@@ -13094,8 +13030,6 @@ public:
         if (units == "minutes" ||
            units == "seconds")
     {
-        import std.format : format;
-
         enum memberVarStr = units[0 .. $ - 1];
         value %= 60;
         mixin(format("auto newVal = cast(ubyte)(_%s) + value;", memberVarStr));
@@ -13290,8 +13224,6 @@ public:
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
     {
-        import std.format : format;
-
         TimeOfDay retval = this;
 
         static if (is(Unqual!D == Duration))
@@ -13384,7 +13316,6 @@ public:
            (is(Unqual!D == Duration) ||
             is(Unqual!D == TickDuration)))
     {
-        import std.format : format;
         static if (is(Unqual!D == Duration))
             immutable hnsecs = duration.total!"hnsecs";
         else static if (is(Unqual!D == TickDuration))
@@ -13493,11 +13424,8 @@ public:
       +/
     string toISOString() @safe const pure nothrow
     {
-        import std.format : format;
-        try
-            return format("%02d%02d%02d", _hour, _minute, _second);
-        catch (Exception e)
-            assert(0, "format() threw.");
+        scope(failure) assert(0, "format() threw.");
+        return format("%02d%02d%02d", _hour, _minute, _second);
     }
 
     ///
@@ -13523,11 +13451,8 @@ public:
       +/
     string toISOExtString() @safe const pure nothrow
     {
-        import std.format : format;
-        try
-            return format("%02d:%02d:%02d", _hour, _minute, _second);
-        catch (Exception e)
-            assert(0, "format() threw.");
+        scope(failure) assert(0, "format() threw.");
+        return format("%02d:%02d:%02d", _hour, _minute, _second);
     }
 
     ///
@@ -13585,7 +13510,6 @@ public:
         import std.string : strip;
         import std.conv : to;
         import std.algorithm : all;
-        import std.format : format;
 
         auto dstr = to!dstring(strip(isoString));
 
@@ -13693,7 +13617,6 @@ public:
         import std.string : strip;
         import std.conv : to;
         import std.algorithm : all;
-        import std.format : format;
 
         auto dstr = to!dstring(strip(isoExtString));
 
@@ -13949,7 +13872,6 @@ package:
 
     @safe pure invariant()
     {
-        import std.format : format;
         assert(_valid(_hour, _minute, _second),
                format("Invariant Failure: hour [%s] minute [%s] second [%s]", _hour, _minute, _second));
     }
@@ -16009,10 +15931,8 @@ public:
       +/
     @property DateTime endOfMonth() @safe const pure nothrow
     {
-        try
-            return DateTime(_date.endOfMonth, TimeOfDay(23, 59, 59));
-        catch (Exception e)
-            assert(0, "DateTime constructor threw.");
+        scope(failure) assert(0, "DateTime constructor threw.");
+        return DateTime(_date.endOfMonth, TimeOfDay(23, 59, 59));
     }
 
     ///
@@ -16200,10 +16120,9 @@ public:
     string toISOString() @safe const pure nothrow
     {
         import std.format : format;
-        try
-            return format("%sT%s", _date.toISOString(), _tod.toISOString());
-        catch (Exception e)
-            assert(0, "format() threw.");
+
+        scope(failure) assert(0, "format() threw.");
+        return format("%sT%s", _date.toISOString(), _tod.toISOString());
     }
 
     ///
@@ -16253,10 +16172,9 @@ public:
     string toISOExtString() @safe const pure nothrow
     {
         import std.format : format;
-        try
-            return format("%sT%s", _date.toISOExtString(), _tod.toISOExtString());
-        catch (Exception e)
-            assert(0, "format() threw.");
+
+        scope(failure) assert(0, "format() threw.");
+        return format("%sT%s", _date.toISOExtString(), _tod.toISOExtString());
     }
 
     ///
@@ -16305,10 +16223,9 @@ public:
     string toSimpleString() @safe const pure nothrow
     {
         import std.format : format;
-        try
-            return format("%s %s", _date.toSimpleString(), _tod.toString());
-        catch (Exception e)
-            assert(0, "format() threw.");
+
+        scope(failure) assert(0, "format() threw.");
+        return format("%s %s", _date.toSimpleString(), _tod.toString());
     }
 
     ///

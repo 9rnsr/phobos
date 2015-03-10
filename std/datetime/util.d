@@ -3,10 +3,10 @@
 /++
     Module containing Date/Time functionality.
 
-    Copyright: Copyright 2010 - 2011
+    Copyright: Copyright 2010 - 2015
     License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
-    Authors:   Jonathan M Davis and Kato Shoichi
-    Source:    $(PHOBOSSRC std/_datetime.d)
+    Authors:   Jonathan M Davis, Kato Shoichi, and Kenji Hara
+    Source:    $(PHOBOSSRC std/datetime/_util.d)
     Macros:
         LREF2=<a href="#$1">$(D $2)</a>
 +/
@@ -247,7 +247,7 @@ private:
 ///
 @safe unittest
 {
-    void writeln(S...)(S args){}
+    void writeln(S...)(S args) {}
     static void bar() {}
 
     StopWatch sw;
@@ -405,7 +405,7 @@ unittest
     auto mt = measureTime!(func)();
 
     /+
-    with (measureTime!((a){assert(a.seconds);}))
+    with (measureTime!((a){ assert(a.seconds); }))
     {
         // doSomething();
         // @@@BUG@@@ doesn't work yet.
@@ -413,15 +413,15 @@ unittest
     +/
 }
 
-//Bug# 8450
+// Bug# 8450
 unittest
 {
-    @safe    void safeFunc() {}
+    @safe    void  safeFunc() {}
     @trusted void trustFunc() {}
-    @system  void sysFunc() {}
-    auto safeResult  = measureTime!((a){safeFunc();})();
-    auto trustResult = measureTime!((a){trustFunc();})();
-    auto sysResult   = measureTime!((a){sysFunc();})();
+    @system  void   sysFunc() {}
+    auto  safeResult = measureTime!((a){  safeFunc(); })();
+    auto trustResult = measureTime!((a){ trustFunc(); })();
+    auto   sysResult = measureTime!((a){   sysFunc(); })();
 }
 
 
@@ -467,6 +467,7 @@ TickDuration[fun.length] benchmark(fun...)(uint n)
 unittest
 {
     import std.conv : to;
+
     int a;
     void f0() {}
     void f1() {auto b = a;}
@@ -482,7 +483,7 @@ unittest
     int a;
     void f0() {}
     //void f1() {auto b = to!(string)(a);}
-    void f2() {auto b = (a);}
+    void f2() { auto b = (a); }
     auto r = benchmark!(f0, f2)(100);
 }
 
@@ -582,16 +583,16 @@ unittest
     auto b2 = comparingBenchmark!(f1x, f2x, 1)(); // OK
 }
 
-//Bug# 8450
+// Bug# 8450
 unittest
 {
-    @safe    void safeFunc() {}
+    @safe    void  safeFunc() {}
     @trusted void trustFunc() {}
-    @system  void sysFunc() {}
-    auto   safeResult = comparingBenchmark!((){ safeFunc();  }, (){ safeFunc();  })();
+    @system  void   sysFunc() {}
+    auto   safeResult = comparingBenchmark!((){  safeFunc(); }, (){  safeFunc(); })();
     auto  trustResult = comparingBenchmark!((){ trustFunc(); }, (){ trustFunc(); })();
-    auto    sysResult = comparingBenchmark!((){ sysFunc();   }, (){ sysFunc();   })();
-    auto mixedResult1 = comparingBenchmark!((){ safeFunc();  }, (){ trustFunc(); })();
-    auto mixedResult2 = comparingBenchmark!((){ trustFunc(); }, (){ sysFunc();   })();
-    auto mixedResult3 = comparingBenchmark!((){ safeFunc();  }, (){ sysFunc();   })();
+    auto    sysResult = comparingBenchmark!((){   sysFunc(); }, (){   sysFunc(); })();
+    auto mixedResult1 = comparingBenchmark!((){  safeFunc(); }, (){ trustFunc(); })();
+    auto mixedResult2 = comparingBenchmark!((){ trustFunc(); }, (){   sysFunc(); })();
+    auto mixedResult3 = comparingBenchmark!((){  safeFunc(); }, (){   sysFunc(); })();
 }
