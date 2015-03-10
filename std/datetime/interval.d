@@ -12,30 +12,27 @@
 +/
 module std.datetime.interval;
 
-import std.datetime;
-import std.datetime.timezone;
-
 public import core.time;
 
-//import core.exception;
-import core.stdc.time;
-
-import std.exception;
-import std.range.primitives;
+import std.datetime;
 import std.traits;
-// FIXME
-import std.functional; //: unaryFun;
 
-version(Windows)
+version(unittest)
 {
-    import core.sys.windows.windows;
-    import core.sys.windows.winsock2;
-    import std.windows.registry;
+    import std.exception : assertThrown;
+    import std.range.primitives;
 }
-else version(Posix)
+
+/++
+    Indicates a direction in time. One example of its use is $(LREF2 .Interval, Interval)'s
+    $(LREF expand, expand) function which uses it to indicate whether the interval should
+    be expanded backwards (into the past), forwards (into the future), or both.
+  +/
+enum Direction
 {
-    import core.sys.posix.stdlib;
-    import core.sys.posix.sys.time;
+    bwd,    /// Backward.
+    fwd,    /// Forward.
+    both    /// Both backward and forward.
 }
 
 
@@ -58,6 +55,9 @@ else version(Posix)
   +/
 struct Interval(TP)
 {
+    import std.exception : enforce;
+    import std.format : format;
+
 public:
 
     /++
@@ -677,8 +677,6 @@ public:
       +/
     Interval intersection(in Interval interval) const
     {
-        import std.format : format;
-
         enforce(this.intersects(interval), new DateTimeException(format("%s and %s do not intersect.", this, interval)));
 
         auto begin = _begin > interval._begin ? _begin : interval._begin;
@@ -711,8 +709,6 @@ public:
       +/
     Interval intersection(in PosInfInterval!TP interval) const
     {
-        import std.format : format;
-
         enforce(this.intersects(interval), new DateTimeException(format("%s and %s do not intersect.", this, interval)));
 
         return Interval(_begin > interval._begin ? _begin : interval._begin, _end);
@@ -742,9 +738,8 @@ public:
       +/
     Interval intersection(in NegInfInterval!TP interval) const
     {
-        import std.format : format;
-
-        enforce(this.intersects(interval), new DateTimeException(format("%s and %s do not intersect.", this, interval)));
+        enforce(this.intersects(interval),
+                new DateTimeException(format("%s and %s do not intersect.", this, interval)));
 
         return Interval(_begin, _end < interval._end ? _end : interval._end);
     }
@@ -858,8 +853,6 @@ public:
       +/
     Interval merge(in Interval interval) const
     {
-        import std.format : format;
-
         enforce(this.isAdjacent(interval) || this.intersects(interval),
                 new DateTimeException(format("%s and %s are not adjacent and do not intersect.", this, interval)));
 
@@ -893,8 +886,6 @@ public:
       +/
     PosInfInterval!TP merge(in PosInfInterval!TP interval) const
     {
-        import std.format : format;
-
         enforce(this.isAdjacent(interval) || this.intersects(interval),
                 new DateTimeException(format("%s and %s are not adjacent and do not intersect.", this, interval)));
 
@@ -925,8 +916,6 @@ public:
       +/
     NegInfInterval!TP merge(in NegInfInterval!TP interval) const
     {
-        import std.format : format;
-
         enforce(this.isAdjacent(interval) || this.intersects(interval),
                 new DateTimeException(format("%s and %s are not adjacent and do not intersect.", this, interval)));
 
@@ -1500,7 +1489,6 @@ private:
       +/
     string _toStringImpl() const nothrow
     {
-        import std.format : format;
         try
             return format("[%s - %s)", _begin, _end);
         catch (Exception e)
@@ -2136,57 +2124,33 @@ unittest
     assertThrown!DateTimeException(interval.intersection(NegInfInterval!Date(Date(2010, 7, 4))));
 
     assert(interval.intersection(interval) == interval);
-    assert(interval.intersection(Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
-    assert(interval.intersection(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2010, 7, 5)));
-    assert(interval.intersection(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
-    assert(interval.intersection(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
-    assert(interval.intersection(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6))) ==
-                Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6)));
-    assert(interval.intersection(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7))) ==
-                Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7)));
-    assert(interval.intersection(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7))) ==
-                Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7)));
-    assert(interval.intersection(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8))) ==
-                Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7)));
+    assert(interval.intersection(Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3))) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
+    assert(interval.intersection(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5))) == Interval!Date(Date(2010, 7, 4), Date(2010, 7, 5)));
+    assert(interval.intersection(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7))) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
+    assert(interval.intersection(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8))) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
+    assert(interval.intersection(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6))) == Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6)));
+    assert(interval.intersection(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7))) == Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7)));
+    assert(interval.intersection(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7))) == Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7)));
+    assert(interval.intersection(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8))) == Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7)));
 
-    assert(Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3)).intersection(interval) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
-    assert(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5)).intersection(interval) ==
-                Interval!Date(Date(2010, 7, 4), Date(2010, 7, 5)));
-    assert(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)).intersection(interval) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
-    assert(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8)).intersection(interval) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
-    assert(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6)).intersection(interval) ==
-                Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6)));
-    assert(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7)).intersection(interval) ==
-                Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7)));
-    assert(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7)).intersection(interval) ==
-                Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7)));
-    assert(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8)).intersection(interval) ==
-                Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7)));
+    assert(Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3)).intersection(interval) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
+    assert(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5)).intersection(interval) == Interval!Date(Date(2010, 7, 4), Date(2010, 7, 5)));
+    assert(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)).intersection(interval) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
+    assert(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8)).intersection(interval) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
+    assert(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6)).intersection(interval) == Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6)));
+    assert(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7)).intersection(interval) == Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7)));
+    assert(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7)).intersection(interval) == Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7)));
+    assert(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8)).intersection(interval) == Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7)));
 
-    assert(interval.intersection(PosInfInterval!Date(Date(2010, 7, 3))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
-    assert(interval.intersection(PosInfInterval!Date(Date(2010, 7, 4))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
-    assert(interval.intersection(PosInfInterval!Date(Date(2010, 7, 5))) ==
-                Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7)));
-    assert(interval.intersection(PosInfInterval!Date(Date(2012, 1, 6))) ==
-                Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7)));
+    assert(interval.intersection(PosInfInterval!Date(Date(2010, 7, 3))) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
+    assert(interval.intersection(PosInfInterval!Date(Date(2010, 7, 4))) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
+    assert(interval.intersection(PosInfInterval!Date(Date(2010, 7, 5))) == Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7)));
+    assert(interval.intersection(PosInfInterval!Date(Date(2012, 1, 6))) == Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7)));
 
-    assert(interval.intersection(NegInfInterval!Date(Date(2010, 7, 5))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2010, 7, 5)));
-    assert(interval.intersection(NegInfInterval!Date(Date(2012, 1, 6))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 6)));
-    assert(interval.intersection(NegInfInterval!Date(Date(2012, 1, 7))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
-    assert(interval.intersection(NegInfInterval!Date(Date(2012, 1, 8))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
+    assert(interval.intersection(NegInfInterval!Date(Date(2010, 7, 5))) == Interval!Date(Date(2010, 7, 4), Date(2010, 7, 5)));
+    assert(interval.intersection(NegInfInterval!Date(Date(2012, 1, 6))) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 6)));
+    assert(interval.intersection(NegInfInterval!Date(Date(2012, 1, 7))) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
+    assert(interval.intersection(NegInfInterval!Date(Date(2012, 1, 8))) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
 
     const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
@@ -2363,69 +2327,39 @@ unittest
     assertThrown!DateTimeException(testInterval(interval, NegInfInterval!Date(Date(2010, 7, 3))));
 
     assert(interval.merge(interval) == interval);
-    assert(interval.merge(Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3))) ==
-                Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3)));
-    assert(interval.merge(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 4))) ==
-                Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
-    assert(interval.merge(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5))) ==
-                Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
-    assert(interval.merge(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7))) ==
-                Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
-    assert(interval.merge(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8))) ==
-                Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8)));
-    assert(interval.merge(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
-    assert(interval.merge(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
-    assert(interval.merge(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
-    assert(interval.merge(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 8)));
-    assert(interval.merge(Interval!Date(Date(2012, 1, 7), Date(2012, 1, 8))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 8)));
+    assert(interval.merge(Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3))) == Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3)));
+    assert(interval.merge(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 4))) == Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
+    assert(interval.merge(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5))) == Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
+    assert(interval.merge(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7))) == Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
+    assert(interval.merge(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8))) == Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8)));
+    assert(interval.merge(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6))) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
+    assert(interval.merge(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7))) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
+    assert(interval.merge(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7))) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
+    assert(interval.merge(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8))) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 8)));
+    assert(interval.merge(Interval!Date(Date(2012, 1, 7), Date(2012, 1, 8))) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 8)));
 
-    assert(Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3)).merge(interval) ==
-                Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3)));
-    assert(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 4)).merge(interval) ==
-                Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
-    assert(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5)).merge(interval) ==
-                Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
-    assert(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)).merge(interval) ==
-                Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
-    assert(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8)).merge(interval) ==
-                Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8)));
-    assert(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6)).merge(interval) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
-    assert(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7)).merge(interval) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
-    assert(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7)).merge(interval) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
-    assert(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8)).merge(interval) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 8)));
-    assert(Interval!Date(Date(2012, 1, 7), Date(2012, 1, 8)).merge(interval) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 8)));
+    assert(Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3)).merge(interval) == Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3)));
+    assert(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 4)).merge(interval) == Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
+    assert(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5)).merge(interval) == Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
+    assert(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)).merge(interval) == Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
+    assert(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8)).merge(interval) == Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8)));
+    assert(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6)).merge(interval) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
+    assert(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7)).merge(interval) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
+    assert(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7)).merge(interval) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
+    assert(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8)).merge(interval) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 8)));
+    assert(Interval!Date(Date(2012, 1, 7), Date(2012, 1, 8)).merge(interval) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 8)));
 
-    assert(interval.merge(PosInfInterval!Date(Date(2010, 7, 3))) ==
-                PosInfInterval!Date(Date(2010, 7, 3)));
-    assert(interval.merge(PosInfInterval!Date(Date(2010, 7, 4))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(interval.merge(PosInfInterval!Date(Date(2010, 7, 5))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(interval.merge(PosInfInterval!Date(Date(2012, 1, 6))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(interval.merge(PosInfInterval!Date(Date(2012, 1, 7))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(interval.merge(PosInfInterval!Date(Date(2010, 7, 3))) == PosInfInterval!Date(Date(2010, 7, 3)));
+    assert(interval.merge(PosInfInterval!Date(Date(2010, 7, 4))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(interval.merge(PosInfInterval!Date(Date(2010, 7, 5))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(interval.merge(PosInfInterval!Date(Date(2012, 1, 6))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(interval.merge(PosInfInterval!Date(Date(2012, 1, 7))) == PosInfInterval!Date(Date(2010, 7, 4)));
 
-    assert(interval.merge(NegInfInterval!Date(Date(2010, 7, 4))) ==
-                NegInfInterval!Date(Date(2012, 1, 7)));
-    assert(interval.merge(NegInfInterval!Date(Date(2010, 7, 5))) ==
-                NegInfInterval!Date(Date(2012, 1, 7)));
-    assert(interval.merge(NegInfInterval!Date(Date(2012, 1, 6))) ==
-                NegInfInterval!Date(Date(2012, 1, 7)));
-    assert(interval.merge(NegInfInterval!Date(Date(2012, 1, 7))) ==
-                NegInfInterval!Date(Date(2012, 1, 7)));
-    assert(interval.merge(NegInfInterval!Date(Date(2012, 1, 8))) ==
-                NegInfInterval!Date(Date(2012, 1, 8)));
+    assert(interval.merge(NegInfInterval!Date(Date(2010, 7, 4))) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(interval.merge(NegInfInterval!Date(Date(2010, 7, 5))) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(interval.merge(NegInfInterval!Date(Date(2012, 1, 6))) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(interval.merge(NegInfInterval!Date(Date(2012, 1, 7))) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(interval.merge(NegInfInterval!Date(Date(2012, 1, 8))) == NegInfInterval!Date(Date(2012, 1, 8)));
 
     const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
@@ -2489,81 +2423,45 @@ unittest
     assertThrown!DateTimeException(testInterval(Interval!Date(Date(2010, 7, 4), dur!"days"(0)), Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
 
     assert(interval.span(interval) == interval);
-    assert(interval.span(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))) ==
-                Interval!Date(Date(2010, 7, 1), Date(2012, 1, 7)));
-    assert(interval.span(Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3))) ==
-                Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3)));
-    assert(interval.span(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 4))) ==
-                Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
-    assert(interval.span(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5))) ==
-                Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
-    assert(interval.span(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7))) ==
-                Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
-    assert(interval.span(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8))) ==
-                Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8)));
-    assert(interval.span(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
-    assert(interval.span(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
-    assert(interval.span(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
-    assert(interval.span(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 8)));
-    assert(interval.span(Interval!Date(Date(2012, 1, 7), Date(2012, 1, 8))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 8)));
-    assert(interval.span(Interval!Date(Date(2012, 1, 8), Date(2012, 1, 9))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 9)));
+    assert(interval.span(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))) == Interval!Date(Date(2010, 7, 1), Date(2012, 1, 7)));
+    assert(interval.span(Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3))) == Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3)));
+    assert(interval.span(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 4))) == Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
+    assert(interval.span(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5))) == Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
+    assert(interval.span(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7))) == Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
+    assert(interval.span(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8))) == Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8)));
+    assert(interval.span(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6))) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
+    assert(interval.span(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7))) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
+    assert(interval.span(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7))) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
+    assert(interval.span(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8))) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 8)));
+    assert(interval.span(Interval!Date(Date(2012, 1, 7), Date(2012, 1, 8))) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 8)));
+    assert(interval.span(Interval!Date(Date(2012, 1, 8), Date(2012, 1, 9))) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 9)));
 
-    assert(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3)).span(interval) ==
-                Interval!Date(Date(2010, 7, 1), Date(2012, 1, 7)));
-    assert(Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3)).span(interval) ==
-                Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3)));
-    assert(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 4)).span(interval) ==
-                Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
-    assert(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5)).span(interval) ==
-                Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
-    assert(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)).span(interval) ==
-                Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
-    assert(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8)).span(interval) ==
-                Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8)));
-    assert(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6)).span(interval) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
-    assert(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7)).span(interval) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
-    assert(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7)).span(interval) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
-    assert(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8)).span(interval) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 8)));
-    assert(Interval!Date(Date(2012, 1, 7), Date(2012, 1, 8)).span(interval) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 8)));
-    assert(Interval!Date(Date(2012, 1, 8), Date(2012, 1, 9)).span(interval) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 9)));
+    assert(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3)).span(interval) == Interval!Date(Date(2010, 7, 1), Date(2012, 1, 7)));
+    assert(Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3)).span(interval) == Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3)));
+    assert(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 4)).span(interval) == Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
+    assert(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5)).span(interval) == Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
+    assert(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)).span(interval) == Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
+    assert(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8)).span(interval) == Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8)));
+    assert(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6)).span(interval) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
+    assert(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7)).span(interval) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
+    assert(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7)).span(interval) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
+    assert(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8)).span(interval) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 8)));
+    assert(Interval!Date(Date(2012, 1, 7), Date(2012, 1, 8)).span(interval) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 8)));
+    assert(Interval!Date(Date(2012, 1, 8), Date(2012, 1, 9)).span(interval) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 9)));
 
-    assert(interval.span(PosInfInterval!Date(Date(2010, 7, 3))) ==
-                PosInfInterval!Date(Date(2010, 7, 3)));
-    assert(interval.span(PosInfInterval!Date(Date(2010, 7, 4))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(interval.span(PosInfInterval!Date(Date(2010, 7, 5))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(interval.span(PosInfInterval!Date(Date(2012, 1, 6))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(interval.span(PosInfInterval!Date(Date(2012, 1, 7))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(interval.span(PosInfInterval!Date(Date(2012, 1, 8))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(interval.span(PosInfInterval!Date(Date(2010, 7, 3))) == PosInfInterval!Date(Date(2010, 7, 3)));
+    assert(interval.span(PosInfInterval!Date(Date(2010, 7, 4))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(interval.span(PosInfInterval!Date(Date(2010, 7, 5))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(interval.span(PosInfInterval!Date(Date(2012, 1, 6))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(interval.span(PosInfInterval!Date(Date(2012, 1, 7))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(interval.span(PosInfInterval!Date(Date(2012, 1, 8))) == PosInfInterval!Date(Date(2010, 7, 4)));
 
-    assert(interval.span(NegInfInterval!Date(Date(2010, 7, 3))) ==
-                NegInfInterval!Date(Date(2012, 1, 7)));
-    assert(interval.span(NegInfInterval!Date(Date(2010, 7, 4))) ==
-                NegInfInterval!Date(Date(2012, 1, 7)));
-    assert(interval.span(NegInfInterval!Date(Date(2010, 7, 5))) ==
-                NegInfInterval!Date(Date(2012, 1, 7)));
-    assert(interval.span(NegInfInterval!Date(Date(2012, 1, 6))) ==
-                NegInfInterval!Date(Date(2012, 1, 7)));
-    assert(interval.span(NegInfInterval!Date(Date(2012, 1, 7))) ==
-                NegInfInterval!Date(Date(2012, 1, 7)));
-    assert(interval.span(NegInfInterval!Date(Date(2012, 1, 8))) ==
-                NegInfInterval!Date(Date(2012, 1, 8)));
+    assert(interval.span(NegInfInterval!Date(Date(2010, 7, 3))) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(interval.span(NegInfInterval!Date(Date(2010, 7, 4))) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(interval.span(NegInfInterval!Date(Date(2010, 7, 5))) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(interval.span(NegInfInterval!Date(Date(2012, 1, 6))) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(interval.span(NegInfInterval!Date(Date(2012, 1, 7))) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(interval.span(NegInfInterval!Date(Date(2012, 1, 8))) == NegInfInterval!Date(Date(2012, 1, 8)));
 
     const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
@@ -2668,20 +2566,20 @@ unittest
             assert(interval == expected);
         }
 
-        testInterval(interval, 5, 0, AllowDayOverflow.yes, Interval!Date(Date(2015, 7, 4), Date(2017, 1, 7)));
+        testInterval(interval,  5, 0, AllowDayOverflow.yes, Interval!Date(Date(2015, 7, 4), Date(2017, 1, 7)));
         testInterval(interval, -5, 0, AllowDayOverflow.yes, Interval!Date(Date(2005, 7, 4), Date(2007, 1, 7)));
 
         auto interval2 = Interval!Date(Date(2000, 1, 29), Date(2010, 5, 31));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.yes, Interval!Date(Date(2001, 3, 1), Date(2011, 7, 1)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.yes, Interval!Date(Date(2000, 12, 29), Date(2011, 5, 1)));
+        testInterval(interval2,  1,  1, AllowDayOverflow.yes, Interval!Date(Date(2001,  3,  1), Date(2011, 7, 1)));
+        testInterval(interval2,  1, -1, AllowDayOverflow.yes, Interval!Date(Date(2000, 12, 29), Date(2011, 5, 1)));
         testInterval(interval2, -1, -1, AllowDayOverflow.yes, Interval!Date(Date(1998, 12, 29), Date(2009, 5, 1)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.yes, Interval!Date(Date(1999, 3, 1), Date(2009, 7, 1)));
+        testInterval(interval2, -1,  1, AllowDayOverflow.yes, Interval!Date(Date(1999,  3,  1), Date(2009, 7, 1)));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.no, Interval!Date(Date(2001, 2, 28), Date(2011, 6, 30)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.no, Interval!Date(Date(2000, 12, 29), Date(2011, 4, 30)));
+        testInterval(interval2,  1,  1, AllowDayOverflow.no, Interval!Date(Date(2001,  2, 28), Date(2011, 6, 30)));
+        testInterval(interval2,  1, -1, AllowDayOverflow.no, Interval!Date(Date(2000, 12, 29), Date(2011, 4, 30)));
         testInterval(interval2, -1, -1, AllowDayOverflow.no, Interval!Date(Date(1998, 12, 29), Date(2009, 4, 30)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.no, Interval!Date(Date(1999, 2, 28), Date(2009, 6, 30)));
+        testInterval(interval2, -1,  1, AllowDayOverflow.no, Interval!Date(Date(1999,  2, 28), Date(2009, 6, 30)));
     }
 
     const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
@@ -2769,35 +2667,35 @@ unittest
 
         auto interval2 = Interval!Date(Date(2000, 1, 29), Date(2010, 5, 31));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.yes, Direction.both, Interval!Date(Date(1998, 12, 29), Date(2011, 7, 1)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.yes, Direction.both, Interval!Date(Date(1999, 3, 1), Date(2011, 5, 1)));
-        testInterval(interval2, -1, -1, AllowDayOverflow.yes, Direction.both, Interval!Date(Date(2001, 3, 1), Date(2009, 5, 1)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.yes, Direction.both, Interval!Date(Date(2000, 12, 29), Date(2009, 7, 1)));
+        testInterval(interval2,  1,  1, AllowDayOverflow.yes, Direction.both, Interval!Date(Date(1998, 12, 29), Date(2011, 7, 1)));
+        testInterval(interval2,  1, -1, AllowDayOverflow.yes, Direction.both, Interval!Date(Date(1999,  3,  1), Date(2011, 5, 1)));
+        testInterval(interval2, -1, -1, AllowDayOverflow.yes, Direction.both, Interval!Date(Date(2001,  3,  1), Date(2009, 5, 1)));
+        testInterval(interval2, -1,  1, AllowDayOverflow.yes, Direction.both, Interval!Date(Date(2000, 12, 29), Date(2009, 7, 1)));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.no, Direction.both, Interval!Date(Date(1998, 12, 29), Date(2011, 6, 30)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.no, Direction.both, Interval!Date(Date(1999, 2, 28), Date(2011, 4, 30)));
-        testInterval(interval2, -1, -1, AllowDayOverflow.no, Direction.both, Interval!Date(Date(2001, 2, 28), Date(2009, 4, 30)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.no, Direction.both, Interval!Date(Date(2000, 12, 29), Date(2009, 6, 30)));
+        testInterval(interval2,  1,  1, AllowDayOverflow.no, Direction.both, Interval!Date(Date(1998, 12, 29), Date(2011, 6, 30)));
+        testInterval(interval2,  1, -1, AllowDayOverflow.no, Direction.both, Interval!Date(Date(1999,  2, 28), Date(2011, 4, 30)));
+        testInterval(interval2, -1, -1, AllowDayOverflow.no, Direction.both, Interval!Date(Date(2001,  2, 28), Date(2009, 4, 30)));
+        testInterval(interval2, -1,  1, AllowDayOverflow.no, Direction.both, Interval!Date(Date(2000, 12, 29), Date(2009, 6, 30)));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.yes, Direction.fwd, Interval!Date(Date(2000, 1, 29), Date(2011, 7, 1)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.yes, Direction.fwd, Interval!Date(Date(2000, 1, 29), Date(2011, 5, 1)));
+        testInterval(interval2,  1,  1, AllowDayOverflow.yes, Direction.fwd, Interval!Date(Date(2000, 1, 29), Date(2011, 7, 1)));
+        testInterval(interval2,  1, -1, AllowDayOverflow.yes, Direction.fwd, Interval!Date(Date(2000, 1, 29), Date(2011, 5, 1)));
         testInterval(interval2, -1, -1, AllowDayOverflow.yes, Direction.fwd, Interval!Date(Date(2000, 1, 29), Date(2009, 5, 1)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.yes, Direction.fwd, Interval!Date(Date(2000, 1, 29), Date(2009, 7, 1)));
+        testInterval(interval2, -1,  1, AllowDayOverflow.yes, Direction.fwd, Interval!Date(Date(2000, 1, 29), Date(2009, 7, 1)));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.no, Direction.fwd, Interval!Date(Date(2000, 1, 29), Date(2011, 6, 30)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.no, Direction.fwd, Interval!Date(Date(2000, 1, 29), Date(2011, 4, 30)));
+        testInterval(interval2,  1,  1, AllowDayOverflow.no, Direction.fwd, Interval!Date(Date(2000, 1, 29), Date(2011, 6, 30)));
+        testInterval(interval2,  1, -1, AllowDayOverflow.no, Direction.fwd, Interval!Date(Date(2000, 1, 29), Date(2011, 4, 30)));
         testInterval(interval2, -1, -1, AllowDayOverflow.no, Direction.fwd, Interval!Date(Date(2000, 1, 29), Date(2009, 4, 30)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.no, Direction.fwd, Interval!Date(Date(2000, 1, 29), Date(2009, 6, 30)));
+        testInterval(interval2, -1,  1, AllowDayOverflow.no, Direction.fwd, Interval!Date(Date(2000, 1, 29), Date(2009, 6, 30)));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.yes, Direction.bwd, Interval!Date(Date(1998, 12, 29), Date(2010, 5, 31)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.yes, Direction.bwd, Interval!Date(Date(1999, 3, 1), Date(2010, 5, 31)));
-        testInterval(interval2, -1, -1, AllowDayOverflow.yes, Direction.bwd, Interval!Date(Date(2001, 3, 1), Date(2010, 5, 31)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.yes, Direction.bwd, Interval!Date(Date(2000, 12, 29), Date(2010, 5, 31)));
+        testInterval(interval2,  1,  1, AllowDayOverflow.yes, Direction.bwd, Interval!Date(Date(1998, 12, 29), Date(2010, 5, 31)));
+        testInterval(interval2,  1, -1, AllowDayOverflow.yes, Direction.bwd, Interval!Date(Date(1999,  3,  1), Date(2010, 5, 31)));
+        testInterval(interval2, -1, -1, AllowDayOverflow.yes, Direction.bwd, Interval!Date(Date(2001,  3,  1), Date(2010, 5, 31)));
+        testInterval(interval2, -1,  1, AllowDayOverflow.yes, Direction.bwd, Interval!Date(Date(2000, 12, 29), Date(2010, 5, 31)));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.no, Direction.bwd, Interval!Date(Date(1998, 12, 29), Date(2010, 5, 31)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.no, Direction.bwd, Interval!Date(Date(1999, 2, 28), Date(2010, 5, 31)));
-        testInterval(interval2, -1, -1, AllowDayOverflow.no, Direction.bwd, Interval!Date(Date(2001, 2, 28), Date(2010, 5, 31)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.no, Direction.bwd, Interval!Date(Date(2000, 12, 29), Date(2010, 5, 31)));
+        testInterval(interval2,  1,  1, AllowDayOverflow.no, Direction.bwd, Interval!Date(Date(1998, 12, 29), Date(2010, 5, 31)));
+        testInterval(interval2,  1, -1, AllowDayOverflow.no, Direction.bwd, Interval!Date(Date(1999,  2, 28), Date(2010, 5, 31)));
+        testInterval(interval2, -1, -1, AllowDayOverflow.no, Direction.bwd, Interval!Date(Date(2001,  2, 28), Date(2010, 5, 31)));
+        testInterval(interval2, -1,  1, AllowDayOverflow.no, Direction.bwd, Interval!Date(Date(2000, 12, 29), Date(2010, 5, 31)));
     }
 
     const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
@@ -2969,6 +2867,9 @@ unittest
   +/
 struct PosInfInterval(TP)
 {
+    import std.exception : enforce;
+    import std.format : format;
+
 public:
 
     /++
@@ -3432,8 +3333,6 @@ public:
       +/
     Interval!TP intersection(in Interval!TP interval) const
     {
-        import std.format : format;
-
         enforce(this.intersects(interval), new DateTimeException(format("%s and %s do not intersect.", this, interval)));
 
         auto begin = _begin > interval._begin ? _begin : interval._begin;
@@ -3487,8 +3386,6 @@ public:
       +/
     Interval!TP intersection(in NegInfInterval!TP interval) const
     {
-        import std.format : format;
-
         enforce(this.intersects(interval), new DateTimeException(format("%s and %s do not intersect.", this, interval)));
 
         return Interval!TP(_begin, interval._end);
@@ -3598,8 +3495,6 @@ public:
       +/
     PosInfInterval merge(in Interval!TP interval) const
     {
-        import std.format : format;
-
         enforce(this.isAdjacent(interval) || this.intersects(interval),
                 new DateTimeException(format("%s and %s are not adjacent and do not intersect.", this, interval)));
 
@@ -3902,35 +3797,35 @@ public:
             so it's only relevant for custom delegates.
 
         Examples:
---------------------
-auto interval = PosInfInterval!Date(Date(2010, 9, 1));
-auto func = (in Date date) //For iterating over even-numbered days.
-            {
-                if ((date.day & 1) == 0)
-                    return date + dur!"days"(2);
+            --------------------
+            auto interval = PosInfInterval!Date(Date(2010, 9, 1));
+            auto func = (in Date date) //For iterating over even-numbered days.
+                        {
+                            if ((date.day & 1) == 0)
+                                return date + dur!"days"(2);
 
-                return date + dur!"days"(1);
-            };
-auto range = interval.fwdRange(func);
+                            return date + dur!"days"(1);
+                        };
+            auto range = interval.fwdRange(func);
 
-//An odd day. Using PopFirst.yes would have made this Date(2010, 9, 2).
-assert(range.front == Date(2010, 9, 1));
+            //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 2).
+            assert(range.front == Date(2010, 9, 1));
 
-range.popFront();
-assert(range.front == Date(2010, 9, 2));
+            range.popFront();
+            assert(range.front == Date(2010, 9, 2));
 
-range.popFront();
-assert(range.front == Date(2010, 9, 4));
+            range.popFront();
+            assert(range.front == Date(2010, 9, 4));
 
-range.popFront();
-assert(range.front == Date(2010, 9, 6));
+            range.popFront();
+            assert(range.front == Date(2010, 9, 6));
 
-range.popFront();
-assert(range.front == Date(2010, 9, 8));
+            range.popFront();
+            assert(range.front == Date(2010, 9, 8));
 
-range.popFront();
-assert(!range.empty);
---------------------
+            range.popFront();
+            assert(!range.empty);
+            --------------------
       +/
     PosInfIntervalRange!(TP) fwdRange(TP delegate(in TP) func, PopFirst popFirst = PopFirst.no) const
     {
@@ -3974,7 +3869,6 @@ private:
       +/
     string _toStringImpl() const nothrow
     {
-        import std.format : format;
         try
             return format("[%s - ∞)", _begin);
         catch (Exception e)
@@ -4506,63 +4400,36 @@ unittest
     assertThrown!DateTimeException(testInterval(posInfInterval, NegInfInterval!Date(Date(2010, 7, 3))));
     assertThrown!DateTimeException(testInterval(posInfInterval, NegInfInterval!Date(Date(2010, 7, 4))));
 
-    assert(posInfInterval.intersection(posInfInterval) ==
-                posInfInterval);
-    assert(posInfInterval.intersection(Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2013, 7, 3)));
-    assert(posInfInterval.intersection(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2010, 7, 5)));
-    assert(posInfInterval.intersection(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
-    assert(posInfInterval.intersection(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 8)));
-    assert(posInfInterval.intersection(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6))) ==
-                Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6)));
-    assert(posInfInterval.intersection(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7))) ==
-                Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7)));
-    assert(posInfInterval.intersection(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7))) ==
-                Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7)));
-    assert(posInfInterval.intersection(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8))) ==
-                Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8)));
-    assert(posInfInterval.intersection(Interval!Date(Date(2012, 1, 7), Date(2012, 1, 8))) ==
-                Interval!Date(Date(2012, 1, 7), Date(2012, 1, 8)));
-    assert(posInfInterval.intersection(Interval!Date(Date(2012, 1, 8), Date(2012, 1, 9))) ==
-                Interval!Date(Date(2012, 1, 8), Date(2012, 1, 9)));
+    assert(posInfInterval.intersection(posInfInterval) == posInfInterval);
+    assert(posInfInterval.intersection(Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3))) == Interval!Date(Date(2010, 7, 4), Date(2013, 7, 3)));
+    assert(posInfInterval.intersection(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5))) == Interval!Date(Date(2010, 7, 4), Date(2010, 7, 5)));
+    assert(posInfInterval.intersection(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7))) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
+    assert(posInfInterval.intersection(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8))) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 8)));
+    assert(posInfInterval.intersection(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6))) == Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6)));
+    assert(posInfInterval.intersection(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7))) == Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7)));
+    assert(posInfInterval.intersection(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7))) == Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7)));
+    assert(posInfInterval.intersection(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8))) == Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8)));
+    assert(posInfInterval.intersection(Interval!Date(Date(2012, 1, 7), Date(2012, 1, 8))) == Interval!Date(Date(2012, 1, 7), Date(2012, 1, 8)));
+    assert(posInfInterval.intersection(Interval!Date(Date(2012, 1, 8), Date(2012, 1, 9))) == Interval!Date(Date(2012, 1, 8), Date(2012, 1, 9)));
 
-    assert(posInfInterval.intersection(PosInfInterval!Date(Date(2010, 7, 3))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(posInfInterval.intersection(PosInfInterval!Date(Date(2010, 7, 4))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(posInfInterval.intersection(PosInfInterval!Date(Date(2010, 7, 5))) ==
-                PosInfInterval!Date(Date(2010, 7, 5)));
-    assert(posInfInterval.intersection(PosInfInterval!Date(Date(2012, 1, 6))) ==
-                PosInfInterval!Date(Date(2012, 1, 6)));
-    assert(posInfInterval.intersection(PosInfInterval!Date(Date(2012, 1, 7))) ==
-                PosInfInterval!Date(Date(2012, 1, 7)));
-    assert(posInfInterval.intersection(PosInfInterval!Date(Date(2012, 1, 8))) ==
-                PosInfInterval!Date(Date(2012, 1, 8)));
+    assert(posInfInterval.intersection(PosInfInterval!Date(Date(2010, 7, 3))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(posInfInterval.intersection(PosInfInterval!Date(Date(2010, 7, 4))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(posInfInterval.intersection(PosInfInterval!Date(Date(2010, 7, 5))) == PosInfInterval!Date(Date(2010, 7, 5)));
+    assert(posInfInterval.intersection(PosInfInterval!Date(Date(2012, 1, 6))) == PosInfInterval!Date(Date(2012, 1, 6)));
+    assert(posInfInterval.intersection(PosInfInterval!Date(Date(2012, 1, 7))) == PosInfInterval!Date(Date(2012, 1, 7)));
+    assert(posInfInterval.intersection(PosInfInterval!Date(Date(2012, 1, 8))) == PosInfInterval!Date(Date(2012, 1, 8)));
 
-    assert(PosInfInterval!Date(Date(2010, 7, 3)).intersection(posInfInterval) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(PosInfInterval!Date(Date(2010, 7, 4)).intersection(posInfInterval) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(PosInfInterval!Date(Date(2010, 7, 5)).intersection(posInfInterval) ==
-                PosInfInterval!Date(Date(2010, 7, 5)));
-    assert(PosInfInterval!Date(Date(2012, 1, 6)).intersection(posInfInterval) ==
-                PosInfInterval!Date(Date(2012, 1, 6)));
-    assert(PosInfInterval!Date(Date(2012, 1, 7)).intersection(posInfInterval) ==
-                PosInfInterval!Date(Date(2012, 1, 7)));
-    assert(PosInfInterval!Date(Date(2012, 1, 8)).intersection(posInfInterval) ==
-                PosInfInterval!Date(Date(2012, 1, 8)));
+    assert(PosInfInterval!Date(Date(2010, 7, 3)).intersection(posInfInterval) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(PosInfInterval!Date(Date(2010, 7, 4)).intersection(posInfInterval) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(PosInfInterval!Date(Date(2010, 7, 5)).intersection(posInfInterval) == PosInfInterval!Date(Date(2010, 7, 5)));
+    assert(PosInfInterval!Date(Date(2012, 1, 6)).intersection(posInfInterval) == PosInfInterval!Date(Date(2012, 1, 6)));
+    assert(PosInfInterval!Date(Date(2012, 1, 7)).intersection(posInfInterval) == PosInfInterval!Date(Date(2012, 1, 7)));
+    assert(PosInfInterval!Date(Date(2012, 1, 8)).intersection(posInfInterval) == PosInfInterval!Date(Date(2012, 1, 8)));
 
-    assert(posInfInterval.intersection(NegInfInterval!Date(Date(2010, 7, 5))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2010, 7, 5)));
-    assert(posInfInterval.intersection(NegInfInterval!Date(Date(2012, 1, 6))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 6)));
-    assert(posInfInterval.intersection(NegInfInterval!Date(Date(2012, 1, 7))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
-    assert(posInfInterval.intersection(NegInfInterval!Date(Date(2012, 1, 8))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1, 8)));
+    assert(posInfInterval.intersection(NegInfInterval!Date(Date(2010, 7, 5))) == Interval!Date(Date(2010, 7, 4), Date(2010, 7, 5)));
+    assert(posInfInterval.intersection(NegInfInterval!Date(Date(2012, 1, 6))) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 6)));
+    assert(posInfInterval.intersection(NegInfInterval!Date(Date(2012, 1, 7))) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)));
+    assert(posInfInterval.intersection(NegInfInterval!Date(Date(2012, 1, 8))) == Interval!Date(Date(2010, 7, 4), Date(2012, 1, 8)));
 
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
@@ -4719,56 +4586,32 @@ unittest
 
     assertThrown!DateTimeException(testInterval(posInfInterval, Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
 
-    assert(posInfInterval.merge(posInfInterval) ==
-                posInfInterval);
-    assert(posInfInterval.merge(Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3))) ==
-                PosInfInterval!Date(Date(2010, 7, 1)));
-    assert(posInfInterval.merge(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 4))) ==
-                PosInfInterval!Date(Date(2010, 7, 3)));
-    assert(posInfInterval.merge(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5))) ==
-                PosInfInterval!Date(Date(2010, 7, 3)));
-    assert(posInfInterval.merge(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7))) ==
-                PosInfInterval!Date(Date(2010, 7, 3)));
-    assert(posInfInterval.merge(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8))) ==
-                PosInfInterval!Date(Date(2010, 7, 3)));
-    assert(posInfInterval.merge(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(posInfInterval.merge(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(posInfInterval.merge(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(posInfInterval.merge(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(posInfInterval.merge(Interval!Date(Date(2012, 1, 7), Date(2012, 1, 8))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(posInfInterval.merge(Interval!Date(Date(2012, 1, 8), Date(2012, 1, 9))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(posInfInterval.merge(posInfInterval) == posInfInterval);
+    assert(posInfInterval.merge(Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3))) == PosInfInterval!Date(Date(2010, 7, 1)));
+    assert(posInfInterval.merge(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 4))) == PosInfInterval!Date(Date(2010, 7, 3)));
+    assert(posInfInterval.merge(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5))) == PosInfInterval!Date(Date(2010, 7, 3)));
+    assert(posInfInterval.merge(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7))) == PosInfInterval!Date(Date(2010, 7, 3)));
+    assert(posInfInterval.merge(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8))) == PosInfInterval!Date(Date(2010, 7, 3)));
+    assert(posInfInterval.merge(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(posInfInterval.merge(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(posInfInterval.merge(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(posInfInterval.merge(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(posInfInterval.merge(Interval!Date(Date(2012, 1, 7), Date(2012, 1, 8))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(posInfInterval.merge(Interval!Date(Date(2012, 1, 8), Date(2012, 1, 9))) == PosInfInterval!Date(Date(2010, 7, 4)));
 
-    assert(posInfInterval.merge(PosInfInterval!Date(Date(2010, 7, 3))) ==
-                PosInfInterval!Date(Date(2010, 7, 3)));
-    assert(posInfInterval.merge(PosInfInterval!Date(Date(2010, 7, 4))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(posInfInterval.merge(PosInfInterval!Date(Date(2010, 7, 5))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(posInfInterval.merge(PosInfInterval!Date(Date(2012, 1, 6))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(posInfInterval.merge(PosInfInterval!Date(Date(2012, 1, 7))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(posInfInterval.merge(PosInfInterval!Date(Date(2012, 1, 8))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(posInfInterval.merge(PosInfInterval!Date(Date(2010, 7, 3))) == PosInfInterval!Date(Date(2010, 7, 3)));
+    assert(posInfInterval.merge(PosInfInterval!Date(Date(2010, 7, 4))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(posInfInterval.merge(PosInfInterval!Date(Date(2010, 7, 5))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(posInfInterval.merge(PosInfInterval!Date(Date(2012, 1, 6))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(posInfInterval.merge(PosInfInterval!Date(Date(2012, 1, 7))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(posInfInterval.merge(PosInfInterval!Date(Date(2012, 1, 8))) == PosInfInterval!Date(Date(2010, 7, 4)));
 
-    assert(PosInfInterval!Date(Date(2010, 7, 3)).merge(posInfInterval) ==
-                PosInfInterval!Date(Date(2010, 7, 3)));
-    assert(PosInfInterval!Date(Date(2010, 7, 4)).merge(posInfInterval) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(PosInfInterval!Date(Date(2010, 7, 5)).merge(posInfInterval) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(PosInfInterval!Date(Date(2012, 1, 6)).merge(posInfInterval) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(PosInfInterval!Date(Date(2012, 1, 7)).merge(posInfInterval) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(PosInfInterval!Date(Date(2012, 1, 8)).merge(posInfInterval) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(PosInfInterval!Date(Date(2010, 7, 3)).merge(posInfInterval) == PosInfInterval!Date(Date(2010, 7, 3)));
+    assert(PosInfInterval!Date(Date(2010, 7, 4)).merge(posInfInterval) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(PosInfInterval!Date(Date(2010, 7, 5)).merge(posInfInterval) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(PosInfInterval!Date(Date(2012, 1, 6)).merge(posInfInterval) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(PosInfInterval!Date(Date(2012, 1, 7)).merge(posInfInterval) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(PosInfInterval!Date(Date(2012, 1, 8)).merge(posInfInterval) == PosInfInterval!Date(Date(2010, 7, 4)));
 
     static assert(!__traits(compiles, posInfInterval.merge(NegInfInterval!Date(Date(2010, 7, 3)))));
     static assert(!__traits(compiles, posInfInterval.merge(NegInfInterval!Date(Date(2010, 7, 4)))));
@@ -4833,58 +4676,33 @@ unittest
 
     assertThrown!DateTimeException(testInterval(posInfInterval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
 
-    assert(posInfInterval.span(posInfInterval) ==
-                posInfInterval);
-    assert(posInfInterval.span(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))) ==
-                PosInfInterval!Date(Date(2010, 7, 1)));
-    assert(posInfInterval.span(Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3))) ==
-                PosInfInterval!Date(Date(2010, 7, 1)));
-    assert(posInfInterval.span(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 4))) ==
-                PosInfInterval!Date(Date(2010, 7, 3)));
-    assert(posInfInterval.span(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5))) ==
-                PosInfInterval!Date(Date(2010, 7, 3)));
-    assert(posInfInterval.span(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7))) ==
-                PosInfInterval!Date(Date(2010, 7, 3)));
-    assert(posInfInterval.span(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8))) ==
-                PosInfInterval!Date(Date(2010, 7, 3)));
-    assert(posInfInterval.span(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(posInfInterval.span(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(posInfInterval.span(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(posInfInterval.span(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(posInfInterval.span(Interval!Date(Date(2012, 1, 7), Date(2012, 1, 8))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(posInfInterval.span(Interval!Date(Date(2012, 1, 8), Date(2012, 1, 9))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(posInfInterval.span(posInfInterval) == posInfInterval);
+    assert(posInfInterval.span(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))) == PosInfInterval!Date(Date(2010, 7, 1)));
+    assert(posInfInterval.span(Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3))) == PosInfInterval!Date(Date(2010, 7, 1)));
+    assert(posInfInterval.span(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 4))) == PosInfInterval!Date(Date(2010, 7, 3)));
+    assert(posInfInterval.span(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5))) == PosInfInterval!Date(Date(2010, 7, 3)));
+    assert(posInfInterval.span(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7))) == PosInfInterval!Date(Date(2010, 7, 3)));
+    assert(posInfInterval.span(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8))) == PosInfInterval!Date(Date(2010, 7, 3)));
+    assert(posInfInterval.span(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(posInfInterval.span(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(posInfInterval.span(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(posInfInterval.span(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(posInfInterval.span(Interval!Date(Date(2012, 1, 7), Date(2012, 1, 8))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(posInfInterval.span(Interval!Date(Date(2012, 1, 8), Date(2012, 1, 9))) == PosInfInterval!Date(Date(2010, 7, 4)));
 
-    assert(posInfInterval.span(PosInfInterval!Date(Date(2010, 7, 3))) ==
-                PosInfInterval!Date(Date(2010, 7, 3)));
-    assert(posInfInterval.span(PosInfInterval!Date(Date(2010, 7, 4))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(posInfInterval.span(PosInfInterval!Date(Date(2010, 7, 5))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(posInfInterval.span(PosInfInterval!Date(Date(2012, 1, 6))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(posInfInterval.span(PosInfInterval!Date(Date(2012, 1, 7))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(posInfInterval.span(PosInfInterval!Date(Date(2012, 1, 8))) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(posInfInterval.span(PosInfInterval!Date(Date(2010, 7, 3))) == PosInfInterval!Date(Date(2010, 7, 3)));
+    assert(posInfInterval.span(PosInfInterval!Date(Date(2010, 7, 4))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(posInfInterval.span(PosInfInterval!Date(Date(2010, 7, 5))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(posInfInterval.span(PosInfInterval!Date(Date(2012, 1, 6))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(posInfInterval.span(PosInfInterval!Date(Date(2012, 1, 7))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(posInfInterval.span(PosInfInterval!Date(Date(2012, 1, 8))) == PosInfInterval!Date(Date(2010, 7, 4)));
 
-    assert(PosInfInterval!Date(Date(2010, 7, 3)).span(posInfInterval) ==
-                PosInfInterval!Date(Date(2010, 7, 3)));
-    assert(PosInfInterval!Date(Date(2010, 7, 4)).span(posInfInterval) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(PosInfInterval!Date(Date(2010, 7, 5)).span(posInfInterval) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(PosInfInterval!Date(Date(2012, 1, 6)).span(posInfInterval) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(PosInfInterval!Date(Date(2012, 1, 7)).span(posInfInterval) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(PosInfInterval!Date(Date(2012, 1, 8)).span(posInfInterval) ==
-                PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(PosInfInterval!Date(Date(2010, 7, 3)).span(posInfInterval) == PosInfInterval!Date(Date(2010, 7, 3)));
+    assert(PosInfInterval!Date(Date(2010, 7, 4)).span(posInfInterval) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(PosInfInterval!Date(Date(2010, 7, 5)).span(posInfInterval) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(PosInfInterval!Date(Date(2012, 1, 6)).span(posInfInterval) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(PosInfInterval!Date(Date(2012, 1, 7)).span(posInfInterval) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(PosInfInterval!Date(Date(2012, 1, 8)).span(posInfInterval) == PosInfInterval!Date(Date(2010, 7, 4)));
 
     static assert(!__traits(compiles, posInfInterval.span(NegInfInterval!Date(Date(2010, 7, 3)))));
     static assert(!__traits(compiles, posInfInterval.span(NegInfInterval!Date(Date(2010, 7, 4)))));
@@ -5161,6 +4979,9 @@ unittest
   +/
 struct NegInfInterval(TP)
 {
+    import std.exception : enforce;
+    import std.format : format;
+
 public:
 
     /++
@@ -5633,8 +5454,6 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
       +/
     Interval!TP intersection(in Interval!TP interval) const
     {
-        import std.format : format;
-
         enforce(this.intersects(interval), new DateTimeException(format("%s and %s do not intersect.", this, interval)));
 
         auto end = _end < interval._end ? _end : interval._end;
@@ -5665,8 +5484,6 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
       +/
     Interval!TP intersection(in PosInfInterval!TP interval) const
     {
-        import std.format : format;
-
         enforce(this.intersects(interval), new DateTimeException(format("%s and %s do not intersect.", this, interval)));
 
         return Interval!TP(interval._begin, _end);
@@ -5805,8 +5622,6 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
       +/
     NegInfInterval merge(in Interval!TP interval) const
     {
-        import std.format : format;
-
         enforce(this.isAdjacent(interval) || this.intersects(interval),
                 new DateTimeException(format("%s and %s are not adjacent and do not intersect.", this, interval)));
 
@@ -6179,7 +5994,6 @@ private:
       +/
     string _toStringImpl() const nothrow
     {
-        import std.format : format;
         try
             return format("[-∞ - %s)", _end);
         catch (Exception e)
@@ -6712,63 +6526,36 @@ unittest
     assertThrown!DateTimeException(testInterval(negInfInterval, PosInfInterval!Date(Date(2012, 1, 7))));
     assertThrown!DateTimeException(testInterval(negInfInterval, PosInfInterval!Date(Date(2012, 1, 8))));
 
-    assert(negInfInterval.intersection(negInfInterval) ==
-                negInfInterval);
-    assert(negInfInterval.intersection(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))) ==
-                Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3)));
-    assert(negInfInterval.intersection(Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3))) ==
-                Interval!Date(Date(2010, 7, 1), Date(2012, 1, 7)));
-    assert(negInfInterval.intersection(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 4))) ==
-                Interval!Date(Date(2010, 7, 3), Date(2010, 7, 4)));
-    assert(negInfInterval.intersection(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5))) ==
-                Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5)));
-    assert(negInfInterval.intersection(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7))) ==
-                Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
-    assert(negInfInterval.intersection(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8))) ==
-                Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
-    assert(negInfInterval.intersection(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6))) ==
-                Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6)));
-    assert(negInfInterval.intersection(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7))) ==
-                Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7)));
-    assert(negInfInterval.intersection(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7))) ==
-                Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7)));
-    assert(negInfInterval.intersection(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8))) ==
-                Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7)));
+    assert(negInfInterval.intersection(negInfInterval) == negInfInterval);
+    assert(negInfInterval.intersection(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))) == Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3)));
+    assert(negInfInterval.intersection(Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3))) == Interval!Date(Date(2010, 7, 1), Date(2012, 1, 7)));
+    assert(negInfInterval.intersection(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 4))) == Interval!Date(Date(2010, 7, 3), Date(2010, 7, 4)));
+    assert(negInfInterval.intersection(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5))) == Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5)));
+    assert(negInfInterval.intersection(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7))) == Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
+    assert(negInfInterval.intersection(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8))) == Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
+    assert(negInfInterval.intersection(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6))) == Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6)));
+    assert(negInfInterval.intersection(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7))) == Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7)));
+    assert(negInfInterval.intersection(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7))) == Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7)));
+    assert(negInfInterval.intersection(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8))) == Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7)));
 
-    assert(negInfInterval.intersection(NegInfInterval!Date(Date(2010, 7, 3))) ==
-                NegInfInterval!Date(Date(2010, 7, 3)));
-    assert(negInfInterval.intersection(NegInfInterval!Date(Date(2010, 7, 4))) ==
-                NegInfInterval!Date(Date(2010, 7, 4)));
-    assert(negInfInterval.intersection(NegInfInterval!Date(Date(2010, 7, 5))) ==
-                NegInfInterval!Date(Date(2010, 7, 5)));
-    assert(negInfInterval.intersection(NegInfInterval!Date(Date(2012, 1, 6))) ==
-                NegInfInterval!Date(Date(2012, 1, 6)));
-    assert(negInfInterval.intersection(NegInfInterval!Date(Date(2012, 1, 7))) ==
-                NegInfInterval!Date(Date(2012, 1, 7)));
-    assert(negInfInterval.intersection(NegInfInterval!Date(Date(2012, 1, 8))) ==
-                NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(negInfInterval.intersection(NegInfInterval!Date(Date(2010, 7, 3))) == NegInfInterval!Date(Date(2010, 7, 3)));
+    assert(negInfInterval.intersection(NegInfInterval!Date(Date(2010, 7, 4))) == NegInfInterval!Date(Date(2010, 7, 4)));
+    assert(negInfInterval.intersection(NegInfInterval!Date(Date(2010, 7, 5))) == NegInfInterval!Date(Date(2010, 7, 5)));
+    assert(negInfInterval.intersection(NegInfInterval!Date(Date(2012, 1, 6))) == NegInfInterval!Date(Date(2012, 1, 6)));
+    assert(negInfInterval.intersection(NegInfInterval!Date(Date(2012, 1, 7))) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(negInfInterval.intersection(NegInfInterval!Date(Date(2012, 1, 8))) == NegInfInterval!Date(Date(2012, 1, 7)));
 
-    assert(NegInfInterval!Date(Date(2010, 7, 3)).intersection(negInfInterval) ==
-                NegInfInterval!Date(Date(2010, 7, 3)));
-    assert(NegInfInterval!Date(Date(2010, 7, 4)).intersection(negInfInterval) ==
-                NegInfInterval!Date(Date(2010, 7, 4)));
-    assert(NegInfInterval!Date(Date(2010, 7, 5)).intersection(negInfInterval) ==
-                NegInfInterval!Date(Date(2010, 7, 5)));
-    assert(NegInfInterval!Date(Date(2012, 1, 6)).intersection(negInfInterval) ==
-                NegInfInterval!Date(Date(2012, 1, 6)));
-    assert(NegInfInterval!Date(Date(2012, 1, 7)).intersection(negInfInterval) ==
-                NegInfInterval!Date(Date(2012, 1, 7)));
-    assert(NegInfInterval!Date(Date(2012, 1, 8)).intersection(negInfInterval) ==
-                NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(NegInfInterval!Date(Date(2010, 7, 3)).intersection(negInfInterval) == NegInfInterval!Date(Date(2010, 7, 3)));
+    assert(NegInfInterval!Date(Date(2010, 7, 4)).intersection(negInfInterval) == NegInfInterval!Date(Date(2010, 7, 4)));
+    assert(NegInfInterval!Date(Date(2010, 7, 5)).intersection(negInfInterval) == NegInfInterval!Date(Date(2010, 7, 5)));
+    assert(NegInfInterval!Date(Date(2012, 1, 6)).intersection(negInfInterval) == NegInfInterval!Date(Date(2012, 1, 6)));
+    assert(NegInfInterval!Date(Date(2012, 1, 7)).intersection(negInfInterval) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(NegInfInterval!Date(Date(2012, 1, 8)).intersection(negInfInterval) == NegInfInterval!Date(Date(2012, 1, 7)));
 
-    assert(negInfInterval.intersection(PosInfInterval!Date(Date(2010, 7, 3))) ==
-                Interval!Date(Date(2010, 7, 3), Date(2012, 1 ,7)));
-    assert(negInfInterval.intersection(PosInfInterval!Date(Date(2010, 7, 4))) ==
-                Interval!Date(Date(2010, 7, 4), Date(2012, 1 ,7)));
-    assert(negInfInterval.intersection(PosInfInterval!Date(Date(2010, 7, 5))) ==
-                Interval!Date(Date(2010, 7, 5), Date(2012, 1 ,7)));
-    assert(negInfInterval.intersection(PosInfInterval!Date(Date(2012, 1, 6))) ==
-                Interval!Date(Date(2012, 1, 6), Date(2012, 1 ,7)));
+    assert(negInfInterval.intersection(PosInfInterval!Date(Date(2010, 7, 3))) == Interval!Date(Date(2010, 7, 3), Date(2012, 1 ,7)));
+    assert(negInfInterval.intersection(PosInfInterval!Date(Date(2010, 7, 4))) == Interval!Date(Date(2010, 7, 4), Date(2012, 1 ,7)));
+    assert(negInfInterval.intersection(PosInfInterval!Date(Date(2010, 7, 5))) == Interval!Date(Date(2010, 7, 5), Date(2012, 1 ,7)));
+    assert(negInfInterval.intersection(PosInfInterval!Date(Date(2012, 1, 6))) == Interval!Date(Date(2012, 1, 6), Date(2012, 1 ,7)));
 
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
@@ -8030,6 +7817,7 @@ private:
     void _enforceCorrectDirection(in TP newTP, size_t line = __LINE__) const
     {
         import std.format : format;
+        import std.exception : enforce;
 
         static if (dir == Direction.fwd)
         {
@@ -8471,6 +8259,7 @@ private:
     void _enforceCorrectDirection(in TP newTP, size_t line = __LINE__) const
     {
         import std.format : format;
+        import std.exception : enforce;
 
         enforce(newTP > _interval._begin,
                 new DateTimeException(format("Generated time point is before previous begin: prev [%s] new [%s]",
@@ -8572,6 +8361,7 @@ unittest
 unittest
 {
     import std.range;
+
     auto range = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
     auto expected = range.front;
 
@@ -8759,6 +8549,7 @@ private:
     void _enforceCorrectDirection(in TP newTP, size_t line = __LINE__) const
     {
         import std.format : format;
+        import std.exception : enforce;
 
         enforce(newTP < _interval._end,
                 new DateTimeException(format("Generated time point is before previous end: prev [%s] new [%s]",

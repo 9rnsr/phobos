@@ -12,8 +12,23 @@
 +/
 module std.datetime.util;
 
+public import core.time;
 
-import std.datetime;
+import std.datetime : Clock;
+import std.traits;
+// FIXME
+import std.functional; //: unaryFun;
+
+
+/++
+   Used by StopWatch to indicate whether it should start immediately upon
+   construction.
+  +/
+enum AutoStart
+{
+    no,     /// No, don't start the StopWatch when it is constructed.
+    yes     /// Yes, do start the StopWatch when it is constructed.
+}
 
 
 /++
@@ -217,9 +232,6 @@ public:
         assert(sw2.running);
     }
 
-
-
-
 private:
 
     // true if observing.
@@ -261,6 +273,155 @@ private:
     foreach (t; times)
        sum += t.hnsecs;
     writeln("Average time: ", sum/n, " hnsecs");
+}
+
+
+version(StdDdoc)
+{
+    /++
+        Function for starting to a stop watch time when the function is called
+        and stopping it when its return value goes out of scope and is destroyed.
+
+        When the value that is returned by this function is destroyed,
+        $(D func) will run. $(D func) is a unary function that takes a
+        $(CXREF time, TickDuration).
+
+        Examples:
+            --------------------
+            {
+                auto mt = measureTime!((TickDuration a)
+                    { /+ do something when the scope is exited +/ });
+                // do something that needs to be timed
+            }
+            --------------------
+
+        which is functionally equivalent to
+
+            --------------------
+            {
+                auto sw = StopWatch(AutoStart.yes);
+                scope(exit)
+                {
+                    TickDuration a = sw.peek();
+                    /+ do something when the scope is exited +/
+                }
+                // do something that needs to be timed
+            }
+            --------------------
+
+        See_Also:
+            $(LREF benchmark)
+      +/
+    auto measureTime(alias func)();
+}
+else
+{
+    @safe auto measureTime(alias func)()
+        if (isSafe!({ StopWatch sw; unaryFun!func(sw.peek()); }))
+    {
+        struct Result
+        {
+            private StopWatch _sw = void;
+            this(AutoStart as)
+            {
+                _sw = StopWatch(as);
+            }
+            ~this()
+            {
+                unaryFun!func(_sw.peek());
+            }
+        }
+        return Result(AutoStart.yes);
+    }
+
+    auto measureTime(alias func)()
+        if (!isSafe!({ StopWatch sw; unaryFun!func(sw.peek()); }))
+    {
+        struct Result
+        {
+            private StopWatch _sw = void;
+            this(AutoStart as)
+            {
+                _sw = StopWatch(as);
+            }
+            ~this()
+            {
+                unaryFun!func(_sw.peek());
+            }
+        }
+        return Result(AutoStart.yes);
+    }
+}
+
+// Verify Example.
+unittest
+{
+    {
+        auto mt = measureTime!((TickDuration a)
+            { /+ do something when the scope is exited +/ });
+        // do something that needs to be timed
+    }
+
+    {
+        auto sw = StopWatch(AutoStart.yes);
+        scope(exit)
+        {
+            TickDuration a = sw.peek();
+            /+ do something when the scope is exited +/
+        }
+        // do something that needs to be timed
+    }
+}
+
+@safe unittest
+{
+    import std.math : isNaN;
+
+    @safe static void func(TickDuration td)
+    {
+        assert(!td.to!("seconds", real)().isNaN());
+    }
+
+    auto mt = measureTime!(func)();
+
+    /+
+    with (measureTime!((a){assert(a.seconds);}))
+    {
+        // doSomething();
+        // @@@BUG@@@ doesn't work yet.
+    }
+    +/
+}
+
+unittest
+{
+    import std.math : isNaN;
+
+    static void func(TickDuration td)
+    {
+        assert(!td.to!("seconds", real)().isNaN());
+    }
+
+    auto mt = measureTime!(func)();
+
+    /+
+    with (measureTime!((a){assert(a.seconds);}))
+    {
+        // doSomething();
+        // @@@BUG@@@ doesn't work yet.
+    }
+    +/
+}
+
+//Bug# 8450
+unittest
+{
+    @safe    void safeFunc() {}
+    @trusted void trustFunc() {}
+    @system  void sysFunc() {}
+    auto safeResult  = measureTime!((a){safeFunc();})();
+    auto trustResult = measureTime!((a){trustFunc();})();
+    auto sysResult   = measureTime!((a){sysFunc();})();
 }
 
 

@@ -107,14 +107,10 @@ module std.datetime;
 
 public import core.time;
 
-//import core.exception;
-import core.stdc.time;
+import core.stdc.time : time_t;
 
-import std.exception;
 import std.range.primitives;
 import std.traits;
-// FIXME
-import std.functional; //: unaryFun;
 
 version(Windows)
 {
@@ -208,18 +204,6 @@ enum AllowDayOverflow
 }
 
 /++
-    Indicates a direction in time. One example of its use is $(LREF2 .Interval, Interval)'s
-    $(LREF expand, expand) function which uses it to indicate whether the interval should
-    be expanded backwards (into the past), forwards (into the future), or both.
-  +/
-enum Direction
-{
-    bwd,    /// Backward.
-    fwd,    /// Forward.
-    both    /// Both backward and forward.
-}
-
-/++
     Used to indicate whether $(D popFront) should be called immediately upon
     creating a range. The idea is that for some functions used to generate a
     range for an interval, $(D front) is not necessarily a time point which
@@ -250,15 +234,6 @@ enum PopFirst
     yes     /// Yes, call popFront() before returning the range.
 }
 
-/++
-   Used by StopWatch to indicate whether it should start immediately upon
-   construction.
-  +/
-enum AutoStart
-{
-    no,     /// No, don't start the StopWatch when it is constructed.
-    yes     /// Yes, do start the StopWatch when it is constructed.
-}
 
 /++
     Array of the strings representing time units, starting with the smallest
@@ -1228,6 +1203,8 @@ afterDoW: stripAndCheckLen(value[3 .. value.length], ",7Dec1200:00A".length);
 ///
 unittest
 {
+    import std.exception : assertThrown;
+
     auto tz = new immutable SimpleTimeZone(hours(-8));
     assert(parseRFC822DateTime("Sat, 6 Jan 1990 12:14:19 -0800") ==
            SysTime(DateTime(1990, 1, 6, 12, 14, 19), tz));
@@ -1271,6 +1248,7 @@ unittest
     import std.string;
     import std.typecons;
     import std.typetuple;
+    import std.exception : assumeUnique;
 
     static struct Rand3Letters
     {
@@ -1540,6 +1518,7 @@ unittest
     import std.string;
     import std.typecons;
     import std.typetuple;
+    import std.exception : assertThrown, collectExceptionMsg, enforce;
 
     auto std1 = SysTime(DateTime(2012, 12, 21, 13, 14, 15), UTC());
     auto std2 = SysTime(DateTime(2012, 12, 21, 13, 14, 0), UTC());
@@ -1784,6 +1763,7 @@ int cmpTimeUnits(string lhs, string rhs) @safe pure
 {
     import std.format : format;
     import std.algorithm : countUntil;
+    import std.exception : enforce;
 
     auto tstrings = timeStrings;
     immutable indexOfLHS = countUntil(tstrings, lhs);
@@ -2161,154 +2141,6 @@ unittest
 }
 
 
-version(StdDdoc)
-{
-    /++
-        Function for starting to a stop watch time when the function is called
-        and stopping it when its return value goes out of scope and is destroyed.
-
-        When the value that is returned by this function is destroyed,
-        $(D func) will run. $(D func) is a unary function that takes a
-        $(CXREF time, TickDuration).
-
-        Examples:
-            --------------------
-            {
-                auto mt = measureTime!((TickDuration a)
-                    { /+ do something when the scope is exited +/ });
-                // do something that needs to be timed
-            }
-            --------------------
-
-        which is functionally equivalent to
-
-            --------------------
-            {
-                auto sw = StopWatch(AutoStart.yes);
-                scope(exit)
-                {
-                    TickDuration a = sw.peek();
-                    /+ do something when the scope is exited +/
-                }
-                // do something that needs to be timed
-            }
-            --------------------
-
-        See_Also:
-            $(LREF benchmark)
-      +/
-    auto measureTime(alias func)();
-}
-else
-{
-    @safe auto measureTime(alias func)()
-        if (isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
-    {
-        struct Result
-        {
-            private StopWatch _sw = void;
-            this(AutoStart as)
-            {
-                _sw = StopWatch(as);
-            }
-            ~this()
-            {
-                unaryFun!(func)(_sw.peek());
-            }
-        }
-        return Result(AutoStart.yes);
-    }
-
-    auto measureTime(alias func)()
-        if (!isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
-    {
-        struct Result
-        {
-            private StopWatch _sw = void;
-            this(AutoStart as)
-            {
-                _sw = StopWatch(as);
-            }
-            ~this()
-            {
-                unaryFun!(func)(_sw.peek());
-            }
-        }
-        return Result(AutoStart.yes);
-    }
-}
-
-// Verify Example.
-unittest
-{
-    {
-        auto mt = measureTime!((TickDuration a)
-            { /+ do something when the scope is exited +/ });
-        // do something that needs to be timed
-    }
-
-    {
-        auto sw = StopWatch(AutoStart.yes);
-        scope(exit)
-        {
-            TickDuration a = sw.peek();
-            /+ do something when the scope is exited +/
-        }
-        // do something that needs to be timed
-    }
-}
-
-@safe unittest
-{
-    import std.math : isNaN;
-
-    @safe static void func(TickDuration td)
-    {
-        assert(!td.to!("seconds", real)().isNaN());
-    }
-
-    auto mt = measureTime!(func)();
-
-    /+
-    with (measureTime!((a){assert(a.seconds);}))
-    {
-        // doSomething();
-        // @@@BUG@@@ doesn't work yet.
-    }
-    +/
-}
-
-unittest
-{
-    import std.math : isNaN;
-
-    static void func(TickDuration td)
-    {
-        assert(!td.to!("seconds", real)().isNaN());
-    }
-
-    auto mt = measureTime!(func)();
-
-    /+
-    with (measureTime!((a){assert(a.seconds);}))
-    {
-        // doSomething();
-        // @@@BUG@@@ doesn't work yet.
-    }
-    +/
-}
-
-//Bug# 8450
-unittest
-{
-    @safe    void safeFunc() {}
-    @trusted void trustFunc() {}
-    @system  void sysFunc() {}
-    auto safeResult  = measureTime!((a){safeFunc();})();
-    auto trustResult = measureTime!((a){trustFunc();})();
-    auto sysResult   = measureTime!((a){sysFunc();})();
-}
-
 //==============================================================================
 // Private Section.
 //==============================================================================
@@ -2593,6 +2425,8 @@ Month monthFromString(string monthStr) @safe pure
 
 unittest
 {
+    import std.exception : assertThrown;
+
     foreach (badStr; ["Ja", "Janu", "Januar", "Januarys", "JJanuary", "JANUARY",
                      "JAN", "january", "jaNuary", "jaN", "jaNuaRy", "jAn"])
     {
@@ -2723,6 +2557,7 @@ static Duration fracSecsFromISOString(S)(in S isoString) @trusted pure
     import std.string : representation;
     import std.conv : to;
     import std.algorithm : all;
+    import std.exception : enforce;
 
     if (isoString.empty)
         return Duration.zero;
@@ -2749,6 +2584,8 @@ static Duration fracSecsFromISOString(S)(in S isoString) @trusted pure
 
 unittest
 {
+    import std.exception : assertThrown;
+
     static void testFSInvalid(string isoString)
     {
         fracSecsFromISOString(isoString);

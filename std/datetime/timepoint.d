@@ -17,14 +17,10 @@ import std.datetime.timezone;
 
 public import core.time;
 
-//import core.exception;
 import core.stdc.time;
 
-import std.exception;
 import std.range.primitives;
 import std.traits;
-// FIXME
-import std.functional; //: unaryFun;
 
 version(Windows)
 {
@@ -38,6 +34,10 @@ else version(Posix)
     import core.sys.posix.sys.time;
 }
 
+version(unittest)
+{
+    import std.exception : assertThrown, assertNotThrown;
+}
 unittest
 {
     initializeTests();
@@ -89,6 +89,7 @@ unittest
 struct SysTime
 {
     import std.typecons : Rebindable;
+    import std.exception : enforce;
 
 public:
 
@@ -8493,6 +8494,8 @@ private:
  +/
 struct Date
 {
+    import std.exception : enforce;
+
 public:
 
     /++
@@ -12748,6 +12751,8 @@ private:
 +/
 struct TimeOfDay
 {
+    import std.exception : enforce;
+
 public:
 
     /++
@@ -16385,6 +16390,7 @@ public:
         import std.conv : to;
         import std.algorithm : countUntil;
         import std.format : format;
+        import std.exception : enforce;
 
         immutable dstr = to!dstring(strip(isoString));
 
@@ -16473,6 +16479,7 @@ public:
         import std.conv : to;
         import std.algorithm : countUntil;
         import std.format : format;
+        import std.exception : enforce;
 
         immutable dstr = to!dstring(strip(isoExtString));
 
@@ -16559,6 +16566,7 @@ public:
         import std.conv : to;
         import std.algorithm : countUntil;
         import std.format : format;
+        import std.exception : enforce;
 
         immutable dstr = to!dstring(strip(simpleString));
 
