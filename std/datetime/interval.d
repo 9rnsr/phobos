@@ -12,6 +12,33 @@
 +/
 module std.datetime.interval;
 
+import std.datetime;
+import std.datetime.timezone;
+
+public import core.time;
+
+//import core.exception;
+import core.stdc.time;
+
+import std.exception;
+import std.range.primitives;
+import std.traits;
+// FIXME
+import std.functional; //: unaryFun;
+
+version(Windows)
+{
+    import core.sys.windows.windows;
+    import core.sys.windows.winsock2;
+    import std.windows.registry;
+}
+else version(Posix)
+{
+    import core.sys.posix.stdlib;
+    import core.sys.posix.sys.time;
+}
+
+
 /++
     Represents an interval of time.
 

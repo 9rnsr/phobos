@@ -196,7 +196,8 @@ STD_PACKAGES = $(addprefix std/, algorithm container experimental/logger \
 STD_MODULES = $(addprefix std/, \
   array ascii base64 bigint bitmanip compiler complex concurrency \
   $(addprefix container/, array binaryheap dlist rbtree slist util) \
-  conv cstream csv datetime demangle \
+  conv cstream csv demangle \
+  $(addprefix datetime/, package timepoint interval timezone util) \
   $(addprefix digest/, digest crc md ripemd sha) \
   encoding exception \
   $(addprefix experimental/logger/, core filelogger nulllogger multilogger) \

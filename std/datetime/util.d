@@ -12,6 +12,10 @@
 +/
 module std.datetime.util;
 
+
+import std.datetime;
+
+
 /++
    $(D StopWatch) measures time as precisely as possible.
 
@@ -99,6 +103,8 @@ public:
 
     @trusted unittest
     {
+        import core.exception : AssertError;
+
         StopWatch sw;
         sw.start();
         auto t1 = sw.peek();
@@ -125,6 +131,8 @@ public:
 
     @trusted unittest
     {
+        import core.exception : AssertError;
+
         StopWatch sw;
         sw.start();
         sw.stop();

@@ -107,7 +107,7 @@ module std.datetime;
 
 public import core.time;
 
-import core.exception;
+//import core.exception;
 import core.stdc.time;
 
 import std.exception;
@@ -131,11 +131,6 @@ else version(Posix)
 version(unittest)
 {
     import std.stdio;
-}
-
-unittest
-{
-    initializeTests();
 }
 
 // Verify module example.
@@ -482,6 +477,8 @@ enum bool isTimePoint(T) =
 
 unittest
 {
+    import std.typetuple : TypeTuple;
+
     foreach (T; TypeTuple!(
                     Date,       const Date,         immutable Date,
                     DateTime,   const DateTime,     immutable DateTime,
@@ -1246,6 +1243,8 @@ version(unittest) void testParse822(alias cr)(string str, SysTime expected, size
 {
     import std.string;
     import std.format : format;
+    import core.exception : AssertError;
+
     auto value = cr(str);
     auto result = parseRFC822DateTime(value);
     if (result != expected)
@@ -1254,6 +1253,8 @@ version(unittest) void testParse822(alias cr)(string str, SysTime expected, size
 
 version(unittest) void testBadParse822(alias cr)(string str, size_t line = __LINE__)
 {
+    import core.exception : AssertError;
+
     try
         parseRFC822DateTime(cr(str));
     catch (DateTimeException)
@@ -2311,7 +2312,7 @@ unittest
 //==============================================================================
 // Private Section.
 //==============================================================================
-private:
+package:
 
 //==============================================================================
 // Section with private enums and constants.
@@ -2382,103 +2383,9 @@ template hnsecsPer(string units)
 }
 
 
-/+
-    Splits out a particular unit from hnsecs and gives the value for that
-    unit and the remaining hnsecs. It really shouldn't be used unless unless
-    all units larger than the given units have already been split out.
-
-    Params:
-        units  = The units to split out.
-        hnsecs = The current total hnsecs. Upon returning, it is the hnsecs left
-                 after splitting out the given units.
-
-    Returns:
-        The number of the given units from converting hnsecs to those units.
-  +/
-long splitUnitsFromHNSecs(string units)(ref long hnsecs) @safe pure nothrow
-    if (validTimeUnits(units) &&
-       CmpTimeUnits!(units, "months") < 0)
-{
-    immutable value = convert!("hnsecs", units)(hnsecs);
-    hnsecs -= convert!(units, "hnsecs")(value);
-
-    return value;
-}
-
-unittest
-{
-    auto hnsecs = 2595000000007L;
-    immutable days = splitUnitsFromHNSecs!"days"(hnsecs);
-    assert(days == 3);
-    assert(hnsecs == 3000000007);
-
-    immutable minutes = splitUnitsFromHNSecs!"minutes"(hnsecs);
-    assert(minutes == 5);
-    assert(hnsecs == 7);
-}
-
-
-/+
-    This function is used to split out the units without getting the remaining
-    hnsecs.
-
-    See_Also:
-        $(LREF splitUnitsFromHNSecs)
-
-    Params:
-        units  = The units to split out.
-        hnsecs = The current total hnsecs.
-
-    Returns:
-        The split out value.
-  +/
-long getUnitsFromHNSecs(string units)(long hnsecs) @safe pure nothrow
-    if (validTimeUnits(units) &&
-       CmpTimeUnits!(units, "months") < 0)
-{
-    return convert!("hnsecs", units)(hnsecs);
-}
-
-unittest
-{
-    auto hnsecs = 2595000000007L;
-    immutable days = getUnitsFromHNSecs!"days"(hnsecs);
-    assert(days == 3);
-    assert(hnsecs == 2595000000007L);
-}
-
-
-/+
-    This function is used to split out the units without getting the units but
-    just the remaining hnsecs.
-
-    See_Also:
-        $(LREF splitUnitsFromHNSecs)
-
-    Params:
-        units  = The units to split out.
-        hnsecs = The current total hnsecs.
-
-    Returns:
-        The remaining hnsecs.
-  +/
-long removeUnitsFromHNSecs(string units)(long hnsecs) @safe pure nothrow
-    if (validTimeUnits(units) &&
-       CmpTimeUnits!(units, "months") < 0)
-{
-    immutable value = convert!("hnsecs", units)(hnsecs);
-
-    return hnsecs - convert!(units, "hnsecs")(value);
-}
-
-unittest
-{
-    auto hnsecs = 2595000000007L;
-    auto returned = removeUnitsFromHNSecs!"days"(hnsecs);
-    assert(returned == 3000000007);
-    assert(hnsecs == 2595000000007L);
-}
-
+// splitUnitsFromHNSecs
+// getUnitsFromHNSecs
+// removeUnitsFromHNSecs
 
 /+
     The maximum valid Day in the given month in the given year.
@@ -2984,8 +2891,8 @@ unittest
     import std.typecons;
     import std.typetuple;
 
-    foreach (cr; TypeTuple!(function(string a){return cast(ubyte[])a;},
-                           function(string a){return map!(b => cast(char)b)(a.representation);}))
+    foreach (cr; TypeTuple!(function(string a) { return cast(ubyte[])a; },
+                            function(string a) { return map!(b => cast(char)b)(a.representation); }))
     (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         scope(failure) writeln(typeof(cr).stringof);
 
@@ -3187,6 +3094,8 @@ enum bool hasOverloadedOpBinaryWithSelf(T) =
 
 unittest
 {
+    import std.typetuple : TypeTuple;
+
     foreach (TP; TypeTuple!(Date, DateTime, TimeOfDay, SysTime))
     {
         static assert(hasMin!(TP));
@@ -3208,358 +3117,5 @@ unittest
         static assert(hasOverloadedOpBinaryWithSelf!(TP));
         static assert(hasOverloadedOpBinaryWithSelf!(const TP));
         static assert(hasOverloadedOpBinaryWithSelf!(immutable TP));
-    }
-}
-
-
-version(unittest)
-{
-    import std.typecons;
-    import std.algorithm;
-    //Variables to help in testing.
-    Duration currLocalDiffFromUTC;
-    immutable (TimeZone)[] testTZs;
-
-    //All of these helper arrays are sorted in ascending order.
-    auto testYearsBC = [-1999, -1200, -600, -4, -1, 0];
-    auto testYearsAD = [1, 4, 1000, 1999, 2000, 2012];
-
-    //I'd use a Tuple, but I get forward reference errors if I try.
-    struct MonthDay
-    {
-        Month month;
-        short day;
-
-        this(int m, short d)
-        {
-            month = cast(Month)m;
-            day = d;
-        }
-    }
-
-    MonthDay[] testMonthDays = [
-        MonthDay(1, 1),
-        MonthDay(1, 2),
-        MonthDay(3, 17),
-        MonthDay(7, 4),
-        MonthDay(10, 27),
-        MonthDay(12, 30),
-        MonthDay(12, 31)
-    ];
-
-    auto testDays = [1, 2, 9, 10, 16, 20, 25, 28, 29, 30, 31];
-
-    auto testTODs = [
-        TimeOfDay(0, 0, 0),
-        TimeOfDay(0, 0, 1),
-        TimeOfDay(0, 1, 0),
-        TimeOfDay(1, 0, 0),
-        TimeOfDay(13, 13, 13),
-        TimeOfDay(23, 59, 59)
-    ];
-
-    auto testHours = [0, 1, 12, 22, 23];
-    auto testMinSecs = [0, 1, 30, 58, 59];
-
-    //Throwing exceptions is incredibly expensive, so we want to use a smaller
-    //set of values for tests using assertThrown.
-    auto testTODsThrown = [
-        TimeOfDay(0, 0, 0),
-        TimeOfDay(13, 13, 13),
-        TimeOfDay(23, 59, 59)
-    ];
-
-    Date[] testDatesBC;
-    Date[] testDatesAD;
-
-    DateTime[] testDateTimesBC;
-    DateTime[] testDateTimesAD;
-
-    Duration[] testFracSecs;
-
-    SysTime[] testSysTimesBC;
-    SysTime[] testSysTimesAD;
-
-    //I'd use a Tuple, but I get forward reference errors if I try.
-    struct GregDay { int day; Date date; }
-    auto testGregDaysBC = [
-        GregDay(-1_373_427, Date(-3760, 9, 7)), //Start of the Hebrew Calendar
-        GregDay(-735_233, Date(-2012, 1, 1)),
-        GregDay(-735_202, Date(-2012, 2, 1)),
-        GregDay(-735_175, Date(-2012, 2, 28)),
-        GregDay(-735_174, Date(-2012, 2, 29)),
-        GregDay(-735_173, Date(-2012, 3, 1)),
-        GregDay(-734_502, Date(-2010, 1, 1)),
-        GregDay(-734_472, Date(-2010, 1, 31)),
-        GregDay(-734_471, Date(-2010, 2, 1)),
-        GregDay(-734_444, Date(-2010, 2, 28)),
-        GregDay(-734_443, Date(-2010, 3, 1)),
-        GregDay(-734_413, Date(-2010, 3, 31)),
-        GregDay(-734_412, Date(-2010, 4, 1)),
-        GregDay(-734_383, Date(-2010, 4, 30)),
-        GregDay(-734_382, Date(-2010, 5, 1)),
-        GregDay(-734_352, Date(-2010, 5, 31)),
-        GregDay(-734_351, Date(-2010, 6, 1)),
-        GregDay(-734_322, Date(-2010, 6, 30)),
-        GregDay(-734_321, Date(-2010, 7, 1)),
-        GregDay(-734_291, Date(-2010, 7, 31)),
-        GregDay(-734_290, Date(-2010, 8, 1)),
-        GregDay(-734_260, Date(-2010, 8, 31)),
-        GregDay(-734_259, Date(-2010, 9, 1)),
-        GregDay(-734_230, Date(-2010, 9, 30)),
-        GregDay(-734_229, Date(-2010, 10, 1)),
-        GregDay(-734_199, Date(-2010, 10, 31)),
-        GregDay(-734_198, Date(-2010, 11, 1)),
-        GregDay(-734_169, Date(-2010, 11, 30)),
-        GregDay(-734_168, Date(-2010, 12, 1)),
-        GregDay(-734_139, Date(-2010, 12, 30)),
-        GregDay(-734_138, Date(-2010, 12, 31)),
-        GregDay(-731_215, Date(-2001, 1, 1)),
-        GregDay(-730_850, Date(-2000, 1, 1)),
-        GregDay(-730_849, Date(-2000, 1, 2)),
-        GregDay(-730_486, Date(-2000, 12, 30)),
-        GregDay(-730_485, Date(-2000, 12, 31)),
-        GregDay(-730_484, Date(-1999, 1, 1)),
-        GregDay(-694_690, Date(-1901, 1, 1)),
-        GregDay(-694_325, Date(-1900, 1, 1)),
-        GregDay(-585_118, Date(-1601, 1, 1)),
-        GregDay(-584_753, Date(-1600, 1, 1)),
-        GregDay(-584_388, Date(-1600, 12, 31)),
-        GregDay(-584_387, Date(-1599, 1, 1)),
-        GregDay(-365_972, Date(-1001, 1, 1)),
-        GregDay(-365_607, Date(-1000, 1, 1)),
-        GregDay(-183_351, Date(-501, 1, 1)),
-        GregDay(-182_986, Date(-500, 1, 1)),
-        GregDay(-182_621, Date(-499, 1, 1)),
-        GregDay(-146_827, Date(-401, 1, 1)),
-        GregDay(-146_462, Date(-400, 1, 1)),
-        GregDay(-146_097, Date(-400, 12, 31)),
-        GregDay(-110_302, Date(-301, 1, 1)),
-        GregDay(-109_937, Date(-300, 1, 1)),
-        GregDay(-73_778, Date(-201, 1, 1)),
-        GregDay(-73_413, Date(-200, 1, 1)),
-        GregDay(-38_715, Date(-105, 1, 1)),
-        GregDay(-37_254, Date(-101, 1, 1)),
-        GregDay(-36_889, Date(-100, 1, 1)),
-        GregDay(-36_524, Date(-99, 1, 1)),
-        GregDay(-36_160, Date(-99, 12, 31)),
-        GregDay(-35_794, Date(-97, 1, 1)),
-        GregDay(-18_627, Date(-50, 1, 1)),
-        GregDay(-18_262, Date(-49, 1, 1)),
-        GregDay(-3652, Date(-9, 1, 1)),
-        GregDay(-2191, Date(-5, 1, 1)),
-        GregDay(-1827, Date(-5, 12, 31)),
-        GregDay(-1826, Date(-4, 1, 1)),
-        GregDay(-1825, Date(-4, 1, 2)),
-        GregDay(-1462, Date(-4, 12, 30)),
-        GregDay(-1461, Date(-4, 12, 31)),
-        GregDay(-1460, Date(-3, 1, 1)),
-        GregDay(-1096, Date(-3, 12, 31)),
-        GregDay(-1095, Date(-2, 1, 1)),
-        GregDay(-731, Date(-2, 12, 31)),
-        GregDay(-730, Date(-1, 1, 1)),
-        GregDay(-367, Date(-1, 12, 30)),
-        GregDay(-366, Date(-1, 12, 31)),
-        GregDay(-365, Date(0, 1, 1)),
-        GregDay(-31, Date(0, 11, 30)),
-        GregDay(-30, Date(0, 12, 1)),
-        GregDay(-1, Date(0, 12, 30)),
-        GregDay(0, Date(0, 12, 31))
-    ];
-
-    auto testGregDaysAD = [
-        GregDay(1, Date(1, 1, 1)),
-        GregDay(2, Date(1, 1, 2)),
-        GregDay(32, Date(1, 2, 1)),
-        GregDay(365, Date(1, 12, 31)),
-        GregDay(366, Date(2, 1, 1)),
-        GregDay(731, Date(3, 1, 1)),
-        GregDay(1096, Date(4, 1, 1)),
-        GregDay(1097, Date(4, 1, 2)),
-        GregDay(1460, Date(4, 12, 30)),
-        GregDay(1461, Date(4, 12, 31)),
-        GregDay(1462, Date(5, 1, 1)),
-        GregDay(17_898, Date(50, 1, 1)),
-        GregDay(35_065, Date(97, 1, 1)),
-        GregDay(36_160, Date(100, 1, 1)),
-        GregDay(36_525, Date(101, 1, 1)),
-        GregDay(37_986, Date(105, 1, 1)),
-        GregDay(72_684, Date(200, 1, 1)),
-        GregDay(73_049, Date(201, 1, 1)),
-        GregDay(109_208, Date(300, 1, 1)),
-        GregDay(109_573, Date(301, 1, 1)),
-        GregDay(145_732, Date(400, 1, 1)),
-        GregDay(146_098, Date(401, 1, 1)),
-        GregDay(182_257, Date(500, 1, 1)),
-        GregDay(182_622, Date(501, 1, 1)),
-        GregDay(364_878, Date(1000, 1, 1)),
-        GregDay(365_243, Date(1001, 1, 1)),
-        GregDay(584_023, Date(1600, 1, 1)),
-        GregDay(584_389, Date(1601, 1, 1)),
-        GregDay(693_596, Date(1900, 1, 1)),
-        GregDay(693_961, Date(1901, 1, 1)),
-        GregDay(729_755, Date(1999, 1, 1)),
-        GregDay(730_120, Date(2000, 1, 1)),
-        GregDay(730_121, Date(2000, 1, 2)),
-        GregDay(730_484, Date(2000, 12, 30)),
-        GregDay(730_485, Date(2000, 12, 31)),
-        GregDay(730_486, Date(2001, 1, 1)),
-        GregDay(733_773, Date(2010, 1, 1)),
-        GregDay(733_774, Date(2010, 1, 2)),
-        GregDay(733_803, Date(2010, 1, 31)),
-        GregDay(733_804, Date(2010, 2, 1)),
-        GregDay(733_831, Date(2010, 2, 28)),
-        GregDay(733_832, Date(2010, 3, 1)),
-        GregDay(733_862, Date(2010, 3, 31)),
-        GregDay(733_863, Date(2010, 4, 1)),
-        GregDay(733_892, Date(2010, 4, 30)),
-        GregDay(733_893, Date(2010, 5, 1)),
-        GregDay(733_923, Date(2010, 5, 31)),
-        GregDay(733_924, Date(2010, 6, 1)),
-        GregDay(733_953, Date(2010, 6, 30)),
-        GregDay(733_954, Date(2010, 7, 1)),
-        GregDay(733_984, Date(2010, 7, 31)),
-        GregDay(733_985, Date(2010, 8, 1)),
-        GregDay(734_015, Date(2010, 8, 31)),
-        GregDay(734_016, Date(2010, 9, 1)),
-        GregDay(734_045, Date(2010, 9, 30)),
-        GregDay(734_046, Date(2010, 10, 1)),
-        GregDay(734_076, Date(2010, 10, 31)),
-        GregDay(734_077, Date(2010, 11, 1)),
-        GregDay(734_106, Date(2010, 11, 30)),
-        GregDay(734_107, Date(2010, 12, 1)),
-        GregDay(734_136, Date(2010, 12, 30)),
-        GregDay(734_137, Date(2010, 12, 31)),
-        GregDay(734_503, Date(2012, 1, 1)),
-        GregDay(734_534, Date(2012, 2, 1)),
-        GregDay(734_561, Date(2012, 2, 28)),
-        GregDay(734_562, Date(2012, 2, 29)),
-        GregDay(734_563, Date(2012, 3, 1)),
-        GregDay(734_858, Date(2012, 12, 21))
-    ];
-
-    //I'd use a Tuple, but I get forward reference errors if I try.
-    struct DayOfYear { int day; MonthDay md; }
-    auto testDaysOfYear = [
-        DayOfYear(  1, MonthDay( 1,  1)),
-        DayOfYear(  2, MonthDay( 1,  2)),
-        DayOfYear(  3, MonthDay( 1,  3)),
-        DayOfYear( 31, MonthDay( 1, 31)),
-        DayOfYear( 32, MonthDay( 2,  1)),
-        DayOfYear( 59, MonthDay( 2, 28)),
-        DayOfYear( 60, MonthDay( 3,  1)),
-        DayOfYear( 90, MonthDay( 3, 31)),
-        DayOfYear( 91, MonthDay( 4,  1)),
-        DayOfYear(120, MonthDay( 4, 30)),
-        DayOfYear(121, MonthDay( 5,  1)),
-        DayOfYear(151, MonthDay( 5, 31)),
-        DayOfYear(152, MonthDay( 6,  1)),
-        DayOfYear(181, MonthDay( 6, 30)),
-        DayOfYear(182, MonthDay( 7,  1)),
-        DayOfYear(212, MonthDay( 7, 31)),
-        DayOfYear(213, MonthDay( 8,  1)),
-        DayOfYear(243, MonthDay( 8, 31)),
-        DayOfYear(244, MonthDay( 9,  1)),
-        DayOfYear(273, MonthDay( 9, 30)),
-        DayOfYear(274, MonthDay(10,  1)),
-        DayOfYear(304, MonthDay(10, 31)),
-        DayOfYear(305, MonthDay(11,  1)),
-        DayOfYear(334, MonthDay(11, 30)),
-        DayOfYear(335, MonthDay(12,  1)),
-        DayOfYear(363, MonthDay(12, 29)),
-        DayOfYear(364, MonthDay(12, 30)),
-        DayOfYear(365, MonthDay(12, 31))
-    ];
-
-    auto testDaysOfLeapYear = [DayOfYear(1, MonthDay(1, 1)),
-                               DayOfYear(2, MonthDay(1, 2)),
-                               DayOfYear(3, MonthDay(1, 3)),
-                               DayOfYear(31, MonthDay(1, 31)),
-                               DayOfYear(32, MonthDay(2, 1)),
-                               DayOfYear(59, MonthDay(2, 28)),
-                               DayOfYear(60, MonthDay(2, 29)),
-                               DayOfYear(61, MonthDay(3, 1)),
-                               DayOfYear(91, MonthDay(3, 31)),
-                               DayOfYear(92, MonthDay(4, 1)),
-                               DayOfYear(121, MonthDay(4, 30)),
-                               DayOfYear(122, MonthDay(5, 1)),
-                               DayOfYear(152, MonthDay(5, 31)),
-                               DayOfYear(153, MonthDay(6, 1)),
-                               DayOfYear(182, MonthDay(6, 30)),
-                               DayOfYear(183, MonthDay(7, 1)),
-                               DayOfYear(213, MonthDay(7, 31)),
-                               DayOfYear(214, MonthDay(8, 1)),
-                               DayOfYear(244, MonthDay(8, 31)),
-                               DayOfYear(245, MonthDay(9, 1)),
-                               DayOfYear(274, MonthDay(9, 30)),
-                               DayOfYear(275, MonthDay(10, 1)),
-                               DayOfYear(305, MonthDay(10, 31)),
-                               DayOfYear(306, MonthDay(11, 1)),
-                               DayOfYear(335, MonthDay(11, 30)),
-                               DayOfYear(336, MonthDay(12, 1)),
-                               DayOfYear(364, MonthDay(12, 29)),
-                               DayOfYear(365, MonthDay(12, 30)),
-                               DayOfYear(366, MonthDay(12, 31))];
-
-    void initializeTests()
-    {
-        immutable lt = LocalTime().utcToTZ(0);
-        currLocalDiffFromUTC = dur!"hnsecs"(lt);
-
-        immutable otherTZ = lt < 0 ? TimeZone.getTimeZone("Australia/Sydney")
-                                   : TimeZone.getTimeZone("America/Denver");
-        immutable ot = otherTZ.utcToTZ(0);
-
-        auto diffs = [0L, lt, ot];
-        auto diffAA = [0L : Rebindable!(immutable TimeZone)(UTC())];
-        diffAA[lt] = Rebindable!(immutable TimeZone)(LocalTime());
-        diffAA[ot] = Rebindable!(immutable TimeZone)(otherTZ);
-
-        sort(diffs);
-        testTZs = [diffAA[diffs[0]], diffAA[diffs[1]], diffAA[diffs[2]]];
-
-        testFracSecs = [Duration.zero, hnsecs(1), hnsecs(5007), hnsecs(9999999)];
-
-        foreach (year; testYearsBC)
-        {
-            foreach (md; testMonthDays)
-                testDatesBC ~= Date(year, md.month, md.day);
-        }
-
-        foreach (year; testYearsAD)
-        {
-            foreach (md; testMonthDays)
-                testDatesAD ~= Date(year, md.month, md.day);
-        }
-
-        foreach (dt; testDatesBC)
-        {
-            foreach (tod; testTODs)
-                testDateTimesBC ~= DateTime(dt, tod);
-        }
-
-        foreach (dt; testDatesAD)
-        {
-            foreach (tod; testTODs)
-                testDateTimesAD ~= DateTime(dt, tod);
-        }
-
-        foreach (dt; testDateTimesBC)
-        {
-            foreach (tz; testTZs)
-            {
-                foreach (fs; testFracSecs)
-                    testSysTimesBC ~= SysTime(dt, fs, tz);
-            }
-        }
-
-        foreach (dt; testDateTimesAD)
-        {
-            foreach (tz; testTZs)
-            {
-                foreach (fs; testFracSecs)
-                    testSysTimesAD ~= SysTime(dt, fs, tz);
-            }
-        }
     }
 }

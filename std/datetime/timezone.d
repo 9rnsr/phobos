@@ -12,6 +12,38 @@
 +/
 module std.datetime.timezone;
 
+import std.datetime;
+import std.datetime.timezone;
+
+public import core.time;
+
+//import core.exception;
+import core.stdc.time;
+
+import std.exception;
+import std.range.primitives;
+import std.traits;
+// FIXME
+import std.functional; //: unaryFun;
+
+version(Windows)
+{
+    import core.sys.windows.windows;
+    import core.sys.windows.winsock2;
+    import std.windows.registry;
+}
+else version(Posix)
+{
+    import core.sys.posix.stdlib;
+    import core.sys.posix.sys.time;
+}
+
+version(unittest)
+{
+    import std.stdio;
+}
+
+
 /++
     Represents a time zone. It is used with $(LREF SysTime) to indicate the time
     zone of a $(LREF SysTime).
@@ -204,6 +236,8 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
         import std.file : exists, isFile;
         import std.conv : to;
         import std.format : format;
+        import std.typecons : tuple;
+        import core.exception : AssertError;
 
 
         version(Posix) scope(exit) clearTZEnvVar();
@@ -965,6 +999,7 @@ public:
     unittest
     {
         import std.format : format;
+        import core.exception : AssertError;
 
         assert(LocalTime().tzToUTC(LocalTime().utcToTZ(0)) == 0);
         assert(LocalTime().utcToTZ(LocalTime().tzToUTC(0)) == 0);
@@ -1419,7 +1454,7 @@ public:
     }
 
 
-private:
+package:
 
     /+
         Returns a time zone as a string with an offset from UTC.
