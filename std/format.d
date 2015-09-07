@@ -2836,11 +2836,10 @@ if (hasToString!(T, Char))
 
 void enforceValidFormatSpec(T, Char)(ref FormatSpec!Char f)
 {
-    static if (!isInputRange!T && hasToString!(T, Char) != 4)
-    {
-        enforceFmt(f.spec == 's',
-            "Expected '%s' format specifier for type '" ~ T.stringof ~ "'");
-    }
+//    static if (!isInputRange!T && hasToString!(T, Char) != 4)
+//    {
+        enforceFmt(f.spec == 's');
+//    }
 }
 
 unittest
@@ -2915,41 +2914,44 @@ const string toString();
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (is(T == class) && !is(T == enum))
 {
+pragma(msg, "L", __LINE__);
     enforceValidFormatSpec!(T, Char)(f);
     // TODO: Change this once toString() works for shared objects.
-    static assert(!is(T == shared), "unable to format shared objects");
+    //static assert(!is(T == shared), "unable to format shared objects");
 
-    if (val is null)
-        put(w, "null");
-    else
+//    if (val is null)
+//        put(w, "null");
+//    else
     {
-        static if (hasToString!(T, Char) > 1 || (!isInputRange!T && !is(BuiltinTypeOf!T)))
-        {
-            formatObject!(Writer, T, Char)(w, val, f);
-        }
-        else
-        {
-          //string delegate() dg = &val.toString;
-            Object o = val;     // workaround
-            string delegate() dg = &o.toString;
-            if (dg.funcptr != &Object.toString) // toString is overridden
-            {
-                formatObject(w, val, f);
-            }
-            else static if (isInputRange!T)
-            {
-                formatRange(w, val, f);
-            }
-            else static if (is(BuiltinTypeOf!T X))
-            {
-                X x = val;
-                formatValue(w, x, f);
-            }
-            else
-            {
-                formatObject(w, val, f);
-            }
-        }
+//        static if (hasToString!(T, Char) > 1 || (!isInputRange!T && !is(BuiltinTypeOf!T)))
+//        {
+pragma(msg, "L", __LINE__);
+//            formatObject!(Writer, T, Char)(w, val, f);
+//        }
+//        else
+//        {
+//pragma(msg, "L", __LINE__);
+//          //string delegate() dg = &val.toString;
+//            Object o = val;     // workaround
+//            string delegate() dg = &o.toString;
+//            if (dg.funcptr != &Object.toString) // toString is overridden
+//            {
+//                formatObject(w, val, f);
+//            }
+//            else static if (isInputRange!T)
+//            {
+//                formatRange(w, val, f);
+//            }
+//            else static if (is(BuiltinTypeOf!T X))
+//            {
+//                X x = val;
+//                formatValue(w, x, f);
+//            }
+//            else
+//            {
+//                formatObject(w, val, f);
+//            }
+//        }
     }
 }
 
