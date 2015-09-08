@@ -1,6 +1,13 @@
 module std.format;
 
-import std.exception;
+template enforceEx(E : Throwable)
+{
+    T enforceEx(T)(T value, lazy string msg = "", string file = __FILE__, size_t line = __LINE__)
+    {
+        if (!value) throw new E(msg, file, line);
+        return value;
+    }
+}
 
 private alias enforceFmt = enforceEx!Exception;
 
@@ -14,7 +21,3 @@ void enforceValidFormatSpec(T, Char)(ref FormatSpec!Char f)
     enforceFmt(f.spec == 's');
 }
 
-string format(Char, Args...)(in Char[] fmt, Args args)
-{
-    return "";
-}
