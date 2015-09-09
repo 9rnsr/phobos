@@ -59,6 +59,15 @@ import std.file; //: getcwd;
 import std.range.primitives;
 import std.traits;
 
+
+enum bool isInputRangeOfChars(R) = isInputRange!R && isSomeChar!(ElementEncodingType!R);
+
+template RandomAccessRangeOf(alias pred)
+{
+    enum bool RandomAccessRangeOf(R) = isRandomAccessRange!R && pred!(ElementType!R);
+}
+enum bool isRandomAccessRangeOrString(R) = isRandomAccessRange!R && pred!(isSomeChar!R) || isNarrowString!R;
+
 /** String used to separate directory names in a path.  Under
     POSIX this is a slash, under Windows a backslash.
 */
@@ -117,9 +126,7 @@ version(Posix) private alias isSeparator = isDirSeparator;
     drive/directory separator in a string.  Returns -1 if none
     is found.
 */
-private ptrdiff_t lastSeparator(R)(R path)
-    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-        isNarrowString!R)
+private ptrdiff_t lastSeparator(R : isRandomAccessRangeOrString)(R path)
 {
     auto i = (cast(ptrdiff_t) path.length) - 1;
     while (i >= 0 && !isSeparator(path[i])) --i;
@@ -129,19 +136,15 @@ private ptrdiff_t lastSeparator(R)(R path)
 
 version (Windows)
 {
-    private bool isUNC(R)(R path)
-        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-            isNarrowString!R)
+    private bool isUNC(R : isRandomAccessRangeOrString)(R path)
     {
         return path.length >= 3 && isDirSeparator(path[0]) && isDirSeparator(path[1])
             && !isDirSeparator(path[2]);
     }
 
-    private ptrdiff_t uncRootLength(R)(R path)
-        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-            isNarrowString!R)
-        in { assert (isUNC(path)); }
-        body
+    private ptrdiff_t uncRootLength(R : isRandomAccessRangeOrString)(R path)
+    in { assert (isUNC(path)); }
+    body
     {
         ptrdiff_t i = 3;
         while (i < path.length && !isDirSeparator(path[i])) ++i;
@@ -158,16 +161,12 @@ version (Windows)
         return i;
     }
 
-    private bool hasDrive(R)(R path)
-        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-            isNarrowString!R)
+    private bool hasDrive(R : isRandomAccessRangeOrString)(R path)
     {
         return path.length >= 2 && isDriveSeparator(path[1]);
     }
 
-    private bool isDriveRoot(R)(R path)
-        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-            isNarrowString!R)
+    private bool isDriveRoot(R : isRandomAccessRangeOrString)(R path)
     {
         return path.length >= 3 && isDriveSeparator(path[1])
             && isDirSeparator(path[2]);
@@ -178,9 +177,7 @@ version (Windows)
 /*  Helper functions that strip leading/trailing slashes and backslashes
     from a path.
 */
-private auto ltrimDirSeparators(R)(R path)
-    if (isInputRange!R && isSomeChar!(ElementType!R) ||
-        isNarrowString!R)
+private auto ltrimDirSeparators(R : isRandomAccessRangeOrString)(R path)
 {
     static if (isRandomAccessRange!R && hasSlicing!R || isNarrowString!R)
     {
@@ -207,9 +204,13 @@ unittest
     assert(ltrimDirSeparators("//abc//".byDchar).array == "abc//"d);
 }
 
-private auto rtrimDirSeparators(R)(R path)
-    if (isBidirectionalRange!R && isSomeChar!(ElementType!R) ||
-        isNarrowString!R)
+//private auto rtrimDirSeparators(R)(R path)
+//    if (isBidirectionalRange!R && isSomeChar!(ElementType!R) ||
+//        isNarrowString!R)
+private auto rtrimDirSeparators(R : isBidirectionalRange, E : isSomeChar = ElementType!R)(R path)
+//private auto rtrimDirSeparators
+//    (R : isBidirectionalRange || isNarrowString, E : isSomeChar = ElementType!R)
+//    (R path)
 {
     static if (isRandomAccessRange!R && hasSlicing!R && hasLength!R || isNarrowString!R)
     {
@@ -1541,9 +1542,7 @@ unittest
     }
     ---
 */
-immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
-    @trusted pure nothrow
-    if (isSomeChar!C)
+immutable(C)[] buildNormalizedPath(C : isSomeChar)(const(C[])[] paths...) @trusted pure nothrow
 {
     import std.array;
 
@@ -1710,8 +1709,8 @@ unittest
 */
 
 auto asNormalizedPath(R)(R path)
-        if (isSomeChar!(ElementEncodingType!R) &&
-            (isRandomAccessRange!R && hasSlicing!R && hasLength!R || isNarrowString!R))
+    if (isSomeChar!(ElementEncodingType!R) &&
+        (isRandomAccessRange!R && hasSlicing!R && hasLength!R || isNarrowString!R))
 {
     alias C = Unqual!(ElementEncodingType!R);
     alias S = typeof(path[0..0]);
@@ -2723,10 +2722,8 @@ unittest
 */
 auto asRelativePath(CaseSensitive cs = CaseSensitive.osDefault, R1, R2)
     (R1 path, R2 base)
-    if ((isNarrowString!R1 ||
-         (isRandomAccessRange!R1 && hasSlicing!R1 && isSomeChar!(ElementType!R1))) &&
-        (isNarrowString!R2 ||
-         (isRandomAccessRange!R2 && hasSlicing!R2 && isSomeChar!(ElementType!R2))))
+    if ((isNarrowString!R1 || (isRandomAccessRange!R1 && hasSlicing!R1 && isSomeChar!(ElementType!R1))) &&
+        (isNarrowString!R2 || (isRandomAccessRange!R2 && hasSlicing!R2 && isSomeChar!(ElementType!R2))))
 {
     bool choosePath = !isAbsolute(path);
 
@@ -2938,13 +2935,13 @@ unittest
     }
     ---
 */
-int filenameCmp(CaseSensitive cs = CaseSensitive.osDefault, Range1, Range2)
-    (Range1 filename1, Range2 filename2)
-    if (isInputRange!Range1 && isSomeChar!(ElementEncodingType!Range1) &&
-        isInputRange!Range2 && isSomeChar!(ElementEncodingType!Range2))
+int filenameCmp(CaseSensitive cs = CaseSensitive.osDefault,
+                R1 : isInputRangeOfChars,
+                R2 : isInputRangeOfChars)
+    (R1 filename1, R2 filename2)
 {
-    alias C1 = Unqual!(ElementEncodingType!Range1);
-    alias C2 = Unqual!(ElementEncodingType!Range2);
+    alias C1 = ElementEncodingType!R1;//Unqual!(ElementEncodingType!R1);
+    alias C2 = ElementEncodingType!R2;//Unqual!(ElementEncodingType!R2);
 
     static if (!cs && (C1.sizeof < 4 || C2.sizeof < 4) ||
                C1.sizeof != C2.sizeof)
@@ -2954,8 +2951,8 @@ int filenameCmp(CaseSensitive cs = CaseSensitive.osDefault, Range1, Range2)
         import std.utf : byDchar;
         return filenameCmp!cs(filename1.byDchar, filename2.byDchar);
     }
-    else static if (isSomeString!Range1 && C1.sizeof < 4 ||
-                    isSomeString!Range2 && C2.sizeof < 4)
+    else static if (isSomeString!R1 && C1.sizeof < 4 ||
+                    isSomeString!R2 && C2.sizeof < 4)
     {
         // Avoid autodecoding
         import std.utf : byCodeUnit;
@@ -3068,11 +3065,11 @@ unittest
     }
     -----
  */
-bool globMatch(CaseSensitive cs = CaseSensitive.osDefault, C, Range)
-    (Range path, const(C)[] pattern)
+bool globMatch(CaseSensitive cs = CaseSensitive.osDefault, C, R)
+    (R path, const(C)[] pattern)
     @safe pure nothrow
-    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-        isSomeChar!C && is(Unqual!C == Unqual!(ElementEncodingType!Range)))
+    if (isForwardRange!R && isSomeChar!(ElementEncodingType!R) &&
+        isSomeChar!C && is(Unqual!C == Unqual!(ElementEncodingType!R)))
 in
 {
     // Verify that pattern[] is valid
@@ -3082,14 +3079,14 @@ in
 }
 body
 {
-    alias RC = Unqual!(ElementEncodingType!Range);
+    alias RC = Unqual!(ElementEncodingType!R);
 
-    static if (RC.sizeof == 1 && isSomeString!Range)
+    static if (RC.sizeof == 1 && isSomeString!R)
     {
         import std.utf : byChar;
         return globMatch!cs(path.byChar, pattern);
     }
-    else static if (RC.sizeof == 2 && isSomeString!Range)
+    else static if (RC.sizeof == 2 && isSomeString!R)
     {
         import std.utf : byWchar;
         return globMatch!cs(path.byWchar, pattern);
