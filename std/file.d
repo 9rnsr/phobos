@@ -1396,8 +1396,7 @@ assert(!"/etc/fonts/fonts.conf".isDir);
 assert("/usr/share/include".isDir);
 --------------------
   +/
-@property bool isDir(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
+@property bool isDir(R : isInputRange, E : isSomeChar = ElementEncodingType!R)(R name)
 {
     version(Windows)
     {
