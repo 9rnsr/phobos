@@ -30,6 +30,8 @@ import std.typecons;
 import std.typetuple;
 import std.internal.cstring;
 
+enum bool isInputRangeOfChars(R) = isInputRange!R && isSomeChar!(ElementEncodingType!R);
+
 version (Windows)
 {
     import core.sys.windows.windows, std.windows.syserror;
@@ -236,8 +238,7 @@ Returns: Untyped array of bytes _read.
 Throws: $(LREF FileException) on error.
  */
 
-void[] read(R)(R name, size_t upTo = size_t.max)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
+void[] read(R : isInputRangeOfChars)(R name, size_t upTo = size_t.max)
 {
     static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
         return readImpl(name, name.tempCString!FSChar(), upTo);
@@ -403,9 +404,7 @@ enforce(chomp(readText("deleteme")) == "abc");
 ----
  */
 
-S readText(S = string, R)(R name)
-    if (isSomeString!S &&
-        (isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R))
+S readText(S : isSomeString = string, R : isInputRangeOfChars)(R name)
 {
     import std.utf : validate;
     static auto trustedCast(void[] buf) @trusted { return cast(S)buf; }
@@ -443,8 +442,7 @@ void main()
 }
 ----
  */
-void write(R)(R name, const void[] buffer)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R)
+void write(R : isInputRangeOfChars)(R name, const void[] buffer)
 {
     static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
         writeImpl(name, name.tempCString!FSChar(), buffer, false);
@@ -475,8 +473,7 @@ void main()
 }
 ----
  */
-void append(R)(R name, const void[] buffer)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R)
+void append(R : isInputRangeOfChars)(R name, const void[] buffer)
 {
     static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
         writeImpl(name, name.tempCString!FSChar(), buffer, true);
@@ -553,9 +550,7 @@ version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez
  *    to = string or range of characters representing the target file name
  * Throws: $(D FileException) on error.
  */
-void rename(RF, RT)(RF from, RT to)
-    if ((isInputRange!RF && isSomeChar!(ElementEncodingType!RF) || isSomeString!RF) &&
-        (isInputRange!RT && isSomeChar!(ElementEncodingType!RT) || isSomeString!RT))
+void rename(RF : isInputRangeOfChars, RT : isInputRangeOfChars)(RF from, RT to)
 {
     // Place outside of @trusted block
     auto fromz = from.tempCString!FSChar();
@@ -626,8 +621,7 @@ Params:
 
 Throws: $(D FileException) on error.
  */
-void remove(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
+void remove(R : isInputRangeOfChars)(R name)
 {
     static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
         removeImpl(name, name.tempCString!FSChar());
@@ -656,8 +650,8 @@ private void removeImpl(const(char)[] name, const(FSChar)* namez) @trusted
     }
 }
 
-version(Windows) private WIN32_FILE_ATTRIBUTE_DATA getFileAttributesWin(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
+version(Windows) private
+auto getFileAttributesWin(R : isInputRangeOfChars)(R name)
 {
     auto namez = name.tempCString!FSChar();
 
@@ -703,8 +697,7 @@ Params:
 
 Throws: $(D FileException) on error (e.g., file not found).
  */
-ulong getSize(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
+ulong getSize(R : isInputRangeOfChars)(R name)
 {
     version(Windows)
     {
@@ -753,10 +746,9 @@ ulong getSize(R)(R name)
     Throws:
         $(D FileException) on error.
  +/
-void getTimes(R)(R name,
+void getTimes(R : isInputRangeOfChars)(R name,
               out SysTime accessTime,
               out SysTime modificationTime)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     version(Windows)
     {
@@ -859,17 +851,16 @@ unittest
     Throws:
         $(D FileException) on error.
  +/
-version(StdDdoc) void getTimesWin(R)(R name,
+version(StdDdoc) void getTimesWin(R : isInputRangeOfChars)(R name,
                                   out SysTime fileCreationTime,
                                   out SysTime fileAccessTime,
                                   out SysTime fileModificationTime)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R)) {}
+{}
 
-else version(Windows) void getTimesWin(R)(R name,
+else version(Windows) void getTimesWin(R : isInputRangeOfChars)(R name,
                                        out SysTime fileCreationTime,
                                        out SysTime fileAccessTime,
                                        out SysTime fileModificationTime)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     with (getFileAttributesWin(name))
     {
@@ -956,10 +947,9 @@ version(Windows) unittest
     Throws:
         $(D FileException) on error.
  +/
-void setTimes(R)(R name,
+void setTimes(R : isInputRangeOfChars)(R name,
               SysTime accessTime,
               SysTime modificationTime) @safe
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     version(Windows)
     {
@@ -1059,8 +1049,7 @@ unittest
     Throws:
         $(D FileException) if the given file does not exist.
 +/
-SysTime timeLastModified(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
+SysTime timeLastModified(R : isInputRangeOfChars)(R name)
 {
     version(Windows)
     {
@@ -1121,8 +1110,7 @@ else
 }
 --------------------
 +/
-SysTime timeLastModified(R)(R name, SysTime returnIfMissing)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
+SysTime timeLastModified(R : isInputRangeOfChars)(R name, SysTime returnIfMissing)
 {
     version(Windows)
     {
@@ -1178,8 +1166,7 @@ unittest
  * Returns:
  *    true if it exists
  */
-bool exists(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
+bool exists(R : isInputRangeOfChars)(R name)
 {
     return existsImpl(name.tempCString!FSChar());
 }
@@ -1251,8 +1238,7 @@ private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
 
  Throws: $(D FileException) on error.
   +/
-uint getAttributes(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
+uint getAttributes(R : isInputRangeOfChars)(R name)
 {
     version(Windows)
     {
@@ -1310,8 +1296,7 @@ uint getAttributes(R)(R name)
     Throws:
         $(D FileException) on error.
  +/
-uint getLinkAttributes(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
+uint getLinkAttributes(R : isInputRangeOfChars)(R name)
 {
     version(Windows)
     {
@@ -1345,8 +1330,7 @@ uint getLinkAttributes(R)(R name)
     Throws:
         $(D FileException) if the given file does not exist.
  +/
-void setAttributes(R)(R name, uint attributes)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
+void setAttributes(R : isInputRangeOfChars)(R name, uint attributes)
 {
     version (Windows)
     {
@@ -1396,7 +1380,7 @@ assert(!"/etc/fonts/fonts.conf".isDir);
 assert("/usr/share/include".isDir);
 --------------------
   +/
-@property bool isDir(R : isInputRange, E : isSomeChar = ElementEncodingType!R)(R name)
+@property bool isDir(R : isInputRangeOfChars)(R name)
 {
     version(Windows)
     {
@@ -1519,8 +1503,7 @@ assert("/etc/fonts/fonts.conf".isFile);
 assert(!"/usr/share/include".isFile);
 --------------------
   +/
-@property bool isFile(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
+@property bool isFile(R : isInputRangeOfChars)(R name)
 {
     version(Windows)
         return !name.isDir;
@@ -1635,8 +1618,7 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
     Throws:
         $(D FileException) if the given file does not exist.
   +/
-@property bool isSymlink(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
+@property bool isSymlink(R : isInputRangeOfChars)(R name)
 {
     version(Windows)
         return (getAttributes(name) & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
@@ -1751,8 +1733,7 @@ bool attrIsSymlink(uint attributes) @safe pure nothrow @nogc
  * Change directory to $(D pathname).
  * Throws: $(D FileException) on error.
  */
-void chdir(R)(R pathname)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
+void chdir(R : isInputRangeOfChars)(R pathname)
 {
     // Place outside of @trusted block
     auto pathz = pathname.tempCString!FSChar();
@@ -1784,8 +1765,7 @@ Make directory $(D pathname).
 Throws: $(D FileException) on Posix or $(D WindowsException) on Windows
         if an error occured.
  */
-void mkdir(R)(R pathname)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
+void mkdir(R : isInputRangeOfChars)(R pathname)
 {
     // Place outside of @trusted block
     auto pathz = pathname.tempCString!FSChar();
@@ -1908,8 +1888,7 @@ Params:
 
 Throws: $(D FileException) on error.
  */
-void rmdir(R)(R pathname)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
+void rmdir(R : isInputRangeOfChars)(R pathname)
 {
     // Place outside of @trusted block
     auto pathz = pathname.tempCString!FSChar();
@@ -2793,9 +2772,8 @@ Params:
 
 Throws: $(D FileException) on error.
  */
-void copy(RF, RT)(RF from, RT to, PreserveAttributes preserve = preserveAttributesDefault)
-    if (isInputRange!RF && isSomeChar!(ElementEncodingType!RF) &&
-        isInputRange!RT && isSomeChar!(ElementEncodingType!RT))
+void copy(RF : isInputRangeOfChars, RT : isInputRangeOfChars)
+         (RF from, RT to, PreserveAttributes preserve = preserveAttributesDefault)
 {
     // Place outside of @trusted block
     auto fromz = from.tempCString!FSChar();
@@ -3186,8 +3164,7 @@ private struct DirIteratorImpl
         }
     }
 
-    this(R)(R pathname, SpanMode mode, bool followSymlink)
-        if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
+    this(R : isInputRangeOfChars)(R pathname, SpanMode mode, bool followSymlink)
     {
         _mode = mode;
         _followSymlink = followSymlink;
