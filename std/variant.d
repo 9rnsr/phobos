@@ -2147,7 +2147,7 @@ unittest
 
 private template isAlgebraic(Type)
 {
-    static if (is(Type _ == VariantN!T, T...))
+    static if (is(Type _ : VariantN!T, T...))
         enum isAlgebraic = T.length >= 2; // T[0] == maxDataSize, T[1..$] == AllowedTypesParam
     else
         enum isAlgebraic = false;

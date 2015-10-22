@@ -5425,7 +5425,7 @@ unittest
 /**
  * Detect whether type $(D T) is a pointer.
  */
-enum bool isPointer(T) = is(T == U*, U) && !isAggregateType!T;
+enum bool isPointer(T) = is(T : U*, U) && !isAggregateType!T;
 
 unittest
 {
