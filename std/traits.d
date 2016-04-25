@@ -5851,12 +5851,17 @@ function call operator $(D $(LPAREN)...$(RPAREN)).
 template isCallable(T...)
     if (T.length == 1)
 {
-    static if (is(typeof(& T[0].opCall) == delegate))
-        // T is a object which has a member function opCall().
-        enum bool isCallable = true;
-    else static if (is(typeof(& T[0].opCall) V : V*) && is(V == function))
-        // T is a type which has a static member function opCall().
-        enum bool isCallable = true;
+    static if (is(T[0]) && isAggregateType!(T[0]))
+    {
+        static if (is(typeof(& T[0].opCall) == delegate))
+            // T is a object which has a member function opCall().
+            enum bool isCallable = true;
+        else static if (is(typeof(& T[0].opCall) V : V*) && is(V == function))
+            // T is a type which has a static member function opCall().
+            enum bool isCallable = true;
+        else
+            enum bool isCallable = false;
+    }
     else
         enum bool isCallable = isSomeFunction!T;
 }
