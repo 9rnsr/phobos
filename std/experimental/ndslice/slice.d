@@ -1796,7 +1796,7 @@ struct Slice(size_t _N, _Range)
     {
         private void opIndexAssignImpl(string op, size_t RN, RRange, Slices...)(Slice!(RN, RRange) value, Slices slices)
             if (isFullPureSlice!Slices
-                && RN <= ReturnType!(opIndex!Slices).N)
+                && RN <= typeof(opIndex(slices)).N)
         {
             auto slice = this[slices];
             assert(slice._lengths[$ - RN .. $] == value._lengths, __FUNCTION__ ~ ": argument must have the corresponding shape.");
@@ -1833,7 +1833,7 @@ struct Slice(size_t _N, _Range)
         private void opIndexAssignImpl(string op, T, Slices...)(T[] value, Slices slices)
             if (isFullPureSlice!Slices
                 && !isDynamicArray!DeepElemType
-                && DynamicArrayDimensionsCount!(T[]) <= ReturnType!(opIndex!Slices).N)
+                && DynamicArrayDimensionsCount!(T[]) <= typeof(opIndex(slices)).N)
         {
             auto slice = this[slices];
             version(none) //future optimization
@@ -1871,7 +1871,7 @@ struct Slice(size_t _N, _Range)
         +/
         void opIndexAssign(size_t RN, RRange, Slices...)(Slice!(RN, RRange) value, Slices slices)
             if (isFullPureSlice!Slices
-                && RN <= ReturnType!(opIndex!Slices).N)
+                && RN <= typeof(opIndex(slices)).N)
         {
             opIndexAssignImpl!""(value, slices);
         }
@@ -1921,7 +1921,7 @@ struct Slice(size_t _N, _Range)
         void opIndexAssign(T, Slices...)(T[] value, Slices slices)
             if (isFullPureSlice!Slices
                 && !isDynamicArray!DeepElemType
-                && DynamicArrayDimensionsCount!(T[]) <= ReturnType!(opIndex!Slices).N)
+                && DynamicArrayDimensionsCount!(T[]) <= typeof(opIndex(slices)).N)
         {
             opIndexAssignImpl!""(value, slices);
         }
@@ -2138,7 +2138,7 @@ struct Slice(size_t _N, _Range)
         +/
         void opIndexOpAssign(string op, size_t RN, RRange, Slices...)(Slice!(RN, RRange) value, Slices slices)
             if (isFullPureSlice!Slices
-                && RN <= ReturnType!(opIndex!Slices).N)
+                && RN <= typeof(opIndex(slices)).N)
         {
             opIndexAssignImpl!op(value, slices);
         }
@@ -2188,7 +2188,7 @@ struct Slice(size_t _N, _Range)
         void opIndexOpAssign(string op, T, Slices...)(T[] value, Slices slices)
             if (isFullPureSlice!Slices
                 && !isDynamicArray!DeepElemType
-                && DynamicArrayDimensionsCount!(T[]) <= ReturnType!(opIndex!Slices).N)
+                && DynamicArrayDimensionsCount!(T[]) <= typeof(opIndex(slices)).N)
         {
             opIndexAssignImpl!op(value, slices);
         }
